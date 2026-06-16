@@ -23,8 +23,12 @@ async function run(): Promise<void> {
     '--focus',
   ];
 
-  if (process.env.HERDR_WORKSPACE_ID) {
-    args.push('--workspace', process.env.HERDR_WORKSPACE_ID);
+  if (placement !== 'overlay') {
+    if (process.env.HERDR_PANE_ID) {
+      args.push('--target-pane', process.env.HERDR_PANE_ID);
+    } else if (process.env.HERDR_WORKSPACE_ID) {
+      args.push('--workspace', process.env.HERDR_WORKSPACE_ID);
+    }
   }
 
   await herdr.run(args);

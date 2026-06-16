@@ -6,7 +6,6 @@
   "description": "Herdr sessionizer plugin",
   "scripts": {
     "sessionizer": "bun run src/sessionizer.ts",
-    "fzf-smoke": "bun run src/fzf-smoke.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

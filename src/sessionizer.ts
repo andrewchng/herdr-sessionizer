@@ -87,7 +87,7 @@ export async function runSessionizer(): Promise<void> {
   const label = sanitizeName(projectName);
   const workspace = await workspaces.create({ cwd: project, label, focus: false });
 
-  await createProjectLayout(workspace, project, config.agent, tabs, panes);
+  await createProjectLayout(workspace, project, config, tabs, panes);
   await workspaces.focus(workspace.workspace_id);
 
   console.log(`✓ workspace '${label}' created and focused (${workspace.workspace_id})`);

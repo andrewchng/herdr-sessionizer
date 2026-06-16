@@ -1,6 +1,7 @@
 export {};
 
 import { Herdr } from './client/herdr.ts';
+import { loadConfig } from './config.ts';
 
 async function run(): Promise<void> {
   const pluginId = process.env.HERDR_PLUGIN_ID;
@@ -9,7 +10,8 @@ async function run(): Promise<void> {
   }
 
   const herdr = new Herdr();
-  const placement = process.env.SESSIONIZER_PANE_PLACEMENT ?? 'overlay';
+  const config = loadConfig();
+  const placement = process.env.SESSIONIZER_PANE_PLACEMENT ?? config.layout.placement;
   const args = [
     'plugin',
     'pane',

@@ -13,11 +13,6 @@ id = "open"
 title = "Open sessionizer"
 command = ["bun", "run", "src/open-pane.ts"]
 
-[[actions]]
-id = "fzf-smoke"
-title = "Run hello smoke test"
-command = ["bun", "run", "src/fzf-smoke.ts"]
-
 [[panes]]
 id = "sessionizer"
 title = "Sessionizer"

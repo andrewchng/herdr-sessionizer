@@ -132,28 +132,77 @@ The plugin and the standalone `herdr-worktree` CLI share the same config file:
 
 If the file does not exist yet, the plugin creates it automatically on first run.
 
+### Minimal example
+
+```toml
+[agents]
+# Command to run in panes with agent = true
+default = "opencode"
+
+[projects]
+# Parent folders searched by the interactive pickers
+roots = ["~/Projects", "~/Workspace"]
+
+[layout]
+# How the plugin pane itself opens
+placement = "overlay"
+# Which pane or tab to focus after layout creation
+focus = "agent"
+
+[tabs.terminal]
+# Create this tab
+enabled = true
+label = "terminal"
+
+[[tabs.terminal.panes]]
+# Root pane in this tab
+id = "shell"
+title = "shell"
+command = ""
+
+[[tabs.terminal.panes]]
+# Split from shell and run the configured agent command
+id = "agent"
+from = "shell"
+title = "agent"
+split = "right"
+agent = true
+```
+
+What this means:
+
+- `agents.default` is the command used for panes with `agent = true`
+- `enabled = true` means that tab should be created
+- if a tab has `enabled = false`, Sessionizer skips creating it
+
 ### Config shape
 
 ```toml
 [agents]
+# Command to run in panes with agent = true
 default = "opencode"
 
 [projects]
+# Parent folders searched by the interactive pickers
 roots = ["~/Projects", "~/Workspace", "~/dotfiles"]
 
 [layout]
+# How the plugin pane itself opens
 placement = "overlay"
+# Which pane or tab to focus after layout creation
 focus = "agent"
 
 [tabs.terminal]
 label = "terminal"
 
 [[tabs.terminal.panes]]
+# Root pane in this tab
 id = "shell"
 title = "shell"
 command = ""
 
 [[tabs.terminal.panes]]
+# Split from shell and run the configured agent command
 id = "agent"
 from = "shell"
 title = "agent"
@@ -183,11 +232,13 @@ enabled = true
 label = "layout-test"
 
 [[tabs.layout_test.panes]]
+# First pane becomes the root/anchor for later splits
 id = "top-left"
 title = "top-left"
 command = ""
 
 [[tabs.layout_test.panes]]
+# Split from an earlier pane by id
 id = "top-right"
 title = "top-right"
 from = "top-left"
@@ -213,9 +264,11 @@ command = "ls"
 
 - `projects.roots` controls which directories are searched for the first interactive picker
 - use a short list of parent folders that contain your repos, for example `~/Projects` or `~/Workspace`
+- `agents.default` is the default agent command for panes marked with `agent = true`
 - `layout.placement` controls how plugin panes open: `overlay`, `split`, `tab`, or `zoomed`
 - `layout.focus` chooses which tab or pane should be focused after workspace setup
 - `tabs` can include the built-in `terminal`, `editor`, and `server` tabs plus any extra custom tabs
+- `enabled` controls whether a tab is created at all
 - `[[tabs.<name>.panes]]` supports multiple panes per tab
 - `id` gives a pane a stable name that other panes can split from
 - `from` tells a pane which earlier pane in the same tab to split from

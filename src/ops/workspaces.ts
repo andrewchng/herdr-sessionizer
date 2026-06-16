@@ -24,6 +24,15 @@ export class Workspaces {
     return response.result.workspace;
   }
 
+  async get(workspaceId: string): Promise<Workspace | undefined> {
+    const response = await this.herdr.json<{ result: { workspace?: Workspace } }>([
+      'workspace',
+      'get',
+      workspaceId,
+    ]);
+    return response.result.workspace;
+  }
+
   async focus(workspaceId: string): Promise<void> {
     await this.herdr.run(['workspace', 'focus', workspaceId]);
   }

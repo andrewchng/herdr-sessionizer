@@ -13,8 +13,24 @@ id = "open"
 title = "Open sessionizer"
 command = ["bun", "run", "src/open-pane.ts"]
 
+[[actions]]
+id = "worktree-headless"
+title = "Run headless worktree"
+command = ["bun", "run", "src/worktree-action.ts"]
+
+[[actions]]
+id = "worktree-open"
+title = "Open worktree"
+command = ["bun", "run", "src/open-worktree-pane.ts"]
+
 [[panes]]
 id = "sessionizer"
 title = "Sessionizer"
 placement = "overlay"
 command = ["bun", "run", "src/sessionizer-pane.ts"]
+
+[[panes]]
+id = "worktree"
+title = "Worktree"
+placement = "overlay"
+command = ["bun", "run", "src/worktree-pane.ts"]

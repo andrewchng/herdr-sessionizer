@@ -4,8 +4,12 @@
   "private": true,
   "type": "module",
   "description": "Herdr sessionizer plugin",
+  "bin": {
+    "herdr-worktree": "./src/bin/herdr-worktree.ts"
+  },
   "scripts": {
     "sessionizer": "bun run src/sessionizer.ts",
+    "worktree": "bun run src/bin/herdr-worktree.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

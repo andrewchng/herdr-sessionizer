@@ -15,6 +15,11 @@ export async function createProjectLayout(
   config: SessionizerConfig,
   tabs: Tabs,
   panes: Panes,
+  options?: {
+    agentContext?: string;
+    branch?: string;
+    defaultServerCommand?: string;
+  },
 ): Promise<Workspace> {
   const id = workspace.workspace_id;
   let nextPaneIndex = 1;
@@ -29,6 +34,7 @@ export async function createProjectLayout(
     tabs,
     panes,
     config.layout.focus,
+    options,
   );
   nextPaneIndex = terminal.nextPaneIndex;
   if (matchesFocus(config.layout.focus, config.tabs.terminal, terminal.firstPaneId)) {
@@ -45,6 +51,7 @@ export async function createProjectLayout(
       tabs,
       panes,
       config.layout.focus,
+      options,
     );
     nextPaneIndex = editor.nextPaneIndex;
     if (matchesFocus(config.layout.focus, config.tabs.editor, editor.firstPaneId)) {
@@ -62,6 +69,7 @@ export async function createProjectLayout(
       tabs,
       panes,
       config.layout.focus,
+      options,
     );
     if (matchesFocus(config.layout.focus, config.tabs.server, server.firstPaneId)) {
       focusedTabId = server.tabId;
@@ -81,9 +89,14 @@ async function configureExistingTab(
   tabs: Tabs,
   panes: Panes,
   focusTarget: string,
+  options?: {
+    agentContext?: string;
+    branch?: string;
+    defaultServerCommand?: string;
+  },
 ): Promise<TabRuntime> {
   await tabs.rename(tabId, tab.label).catch(noop);
-  return configureTabPanes(tabId, firstPaneId, 2, tab, cwd, config, panes, focusTarget);
+  return configureTabPanes(tabId, firstPaneId, 2, tab, cwd, config, panes, focusTarget, options);
 }
 
 async function createAndConfigureTab(
@@ -95,6 +108,11 @@ async function createAndConfigureTab(
   tabs: Tabs,
   panes: Panes,
   focusTarget: string,
+  options?: {
+    agentContext?: string;
+    branch?: string;
+    defaultServerCommand?: string;
+  },
 ): Promise<TabRuntime> {
   const tabResult = await tabs
     .create({
@@ -106,7 +124,17 @@ async function createAndConfigureTab(
     .catch(noopTab);
 
   const tabId = tabResult?.tab_id ?? `${workspaceId}:unknown`;
-  return configureTabPanes(tabId, `${workspaceId}-${nextPaneIndex}`, nextPaneIndex + 1, tab, cwd, config, panes, focusTarget);
+  return configureTabPanes(
+    tabId,
+    `${workspaceId}-${nextPaneIndex}`,
+    nextPaneIndex + 1,
+    tab,
+    cwd,
+    config,
+    panes,
+    focusTarget,
+    options,
+  );
 }
 
 async function configureTabPanes(
@@ -118,11 +146,16 @@ async function configureTabPanes(
   config: SessionizerConfig,
   panes: Panes,
   focusTarget: string,
+  options?: {
+    agentContext?: string;
+    branch?: string;
+    defaultServerCommand?: string;
+  },
 ): Promise<TabRuntime> {
   const specs = tab.panes.length > 0 ? tab.panes : [{ title: '', command: '', agent: false }];
   let currentPaneId = firstPaneId;
 
-  await configurePane(currentPaneId, specs[0]!, cwd, config, panes).catch(noop);
+  await configurePane(currentPaneId, specs[0]!, cwd, config, panes, tab, options).catch(noop);
 
   for (let index = 1; index < specs.length; index += 1) {
     const spec = specs[index]!;
@@ -135,7 +168,7 @@ async function configureTabPanes(
       .catch(noopPane);
     const paneId = splitPane?.pane_id ?? workspacePaneId(firstPaneId, nextPaneIndex);
     nextPaneIndex += 1;
-    await configurePane(paneId, spec, cwd, config, panes).catch(noop);
+    await configurePane(paneId, spec, cwd, config, panes, tab, options).catch(noop);
     currentPaneId = paneId;
   }
 
@@ -148,25 +181,44 @@ async function configurePane(
   cwd: string,
   config: SessionizerConfig,
   panes: Panes,
+  tab: TabConfig,
+  options?: {
+    agentContext?: string;
+    branch?: string;
+    defaultServerCommand?: string;
+  },
 ): Promise<void> {
   if (spec.title) {
     await panes.rename(paneId, spec.title);
   }
 
-  const command = buildPaneCommand(spec, cwd, config.agent);
+  const command = buildPaneCommand(spec, cwd, config.agent, tab, options);
   if (command) {
     await panes.run(paneId, command);
   }
 }
 
-function buildPaneCommand(spec: PaneConfig, cwd: string, agent: string): string {
+function buildPaneCommand(
+  spec: PaneConfig,
+  cwd: string,
+  agent: string,
+  tab: TabConfig,
+  options?: {
+    agentContext?: string;
+    branch?: string;
+    defaultServerCommand?: string;
+  },
+): string {
   const quotedCwd = shellQuote(cwd);
   if (spec.agent) {
-    return `cd ${quotedCwd} && ${agent}`;
+    return `cd ${quotedCwd} && ${buildAgentCommand(agent, options?.agentContext)}`;
   }
-  if (spec.command) {
-    return `cd ${quotedCwd} && ${spec.command}`;
+
+  const rawCommand = spec.command || fallbackPaneCommand(tab, spec, options);
+  if (rawCommand) {
+    return `cd ${quotedCwd} && ${interpolateCommand(rawCommand, options?.branch)}`;
   }
+
   return `cd ${quotedCwd}`;
 }
 
@@ -193,4 +245,38 @@ function noopTab(): undefined {
 
 function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function buildAgentCommand(agent: string, context?: string): string {
+  if (!context) return agent;
+  const trimmed = agent.trim();
+  if (trimmed === 'kiro-cli') {
+    return `kiro-cli chat ${shellQuote(context)}`;
+  }
+  if (trimmed.startsWith('kiro-cli chat ')) {
+    return `${trimmed} ${shellQuote(context)}`;
+  }
+  if (trimmed === 'kiro-cli chat') {
+    return `kiro-cli chat ${shellQuote(context)}`;
+  }
+  return agent;
+}
+
+function fallbackPaneCommand(
+  tab: TabConfig,
+  spec: PaneConfig,
+  options?: {
+    agentContext?: string;
+    branch?: string;
+    defaultServerCommand?: string;
+  },
+): string {
+  if (options?.defaultServerCommand && tab.label === 'server' && spec.title === 'server') {
+    return options.defaultServerCommand;
+  }
+  return '';
+}
+
+function interpolateCommand(command: string, branch?: string): string {
+  return branch ? command.replaceAll('{branch}', branch) : command;
 }

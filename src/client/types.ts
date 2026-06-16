@@ -2,11 +2,22 @@ export interface Workspace {
   workspace_id: string;
   label?: string;
   cwd?: string;
+  worktree?: WorktreeProvenance;
+  tab_count?: number;
+  pane_count?: number;
   [key: string]: unknown;
 }
 
 export interface WorkspaceListResult {
   workspaces: Workspace[];
+}
+
+export interface WorktreeProvenance {
+  repo_workspace_id?: string;
+  branch?: string;
+  path?: string;
+  checkout_path?: string;
+  [key: string]: unknown;
 }
 
 export interface Tab {

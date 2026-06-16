@@ -71,15 +71,15 @@ export interface SessionizerConfig {
 }
 
 export function loadConfig(): SessionizerConfig {
-  const pluginConfigDir = process.env.HERDR_PLUGIN_CONFIG_DIR;
-  const pluginConfigPath = pluginConfigDir ? join(pluginConfigDir, 'config.toml') : undefined;
+  const pluginConfigDir = resolvePluginConfigDir();
+  const pluginConfigPath = join(pluginConfigDir, 'config.toml');
 
-  if (pluginConfigDir && pluginConfigPath && !existsSync(pluginConfigPath)) {
+  if (!existsSync(pluginConfigPath)) {
     mkdirSync(pluginConfigDir, { recursive: true });
     writeFileSync(pluginConfigPath, defaultConfigToml(), 'utf-8');
   }
 
-  const pluginConfig = pluginConfigPath ? loadRaw(pluginConfigPath) : undefined;
+  const pluginConfig = loadRaw(pluginConfigPath);
 
   return {
     agent: process.env.AI_AGENT ?? pluginConfig?.agents?.default ?? 'opencode',
@@ -104,6 +104,10 @@ export function loadConfig(): SessionizerConfig {
       ),
     },
   };
+}
+
+function resolvePluginConfigDir(): string {
+  return process.env.HERDR_PLUGIN_CONFIG_DIR ?? join(homedir(), '.config', 'herdr', 'plugins', 'config', 'sessionizer');
 }
 
 function loadRaw(path: string): RawConfig | undefined {

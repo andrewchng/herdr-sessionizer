@@ -174,59 +174,20 @@ What this means:
 - `agents.default` is the command used for panes with `agent = true`
 - `enabled = true` means that tab should be created
 - if a tab has `enabled = false`, Sessionizer skips creating it
+- common agent examples include `pi`, `claude`, and `copilot`
 
-### Config shape
+Example agent values:
 
 ```toml
 [agents]
-# Command to run in panes with agent = true
-default = "opencode"
+default = "pi"
+# default = "claude"
+# default = "copilot"
+```
 
-[projects]
-# Parent folders searched by the interactive pickers
-roots = ["~/Projects", "~/Workspace", "~/dotfiles"]
+### Anchored split example
 
-[layout]
-# How the plugin pane itself opens
-placement = "overlay"
-# Which pane or tab to focus after layout creation
-focus = "agent"
-
-[tabs.terminal]
-label = "terminal"
-
-[[tabs.terminal.panes]]
-# Root pane in this tab
-id = "shell"
-title = "shell"
-command = ""
-
-[[tabs.terminal.panes]]
-# Split from shell and run the configured agent command
-id = "agent"
-from = "shell"
-title = "agent"
-split = "right"
-agent = true
-
-[tabs.editor]
-enabled = true
-label = "editor"
-
-[[tabs.editor.panes]]
-id = "editor"
-title = "editor"
-command = "nvim"
-
-[tabs.server]
-enabled = true
-label = "server"
-
-[[tabs.server.panes]]
-id = "server"
-title = "server"
-command = ""
-
+```toml
 [tabs.layout_test]
 enabled = true
 label = "layout-test"
@@ -238,7 +199,7 @@ title = "top-left"
 command = ""
 
 [[tabs.layout_test.panes]]
-# Split from an earlier pane by id
+# Split to the right of top-left
 id = "top-right"
 title = "top-right"
 from = "top-left"
@@ -246,6 +207,7 @@ split = "right"
 command = "git status --short"
 
 [[tabs.layout_test.panes]]
+# Split below top-left
 id = "bottom-left"
 title = "bottom-left"
 from = "top-left"
@@ -253,6 +215,7 @@ split = "down"
 command = "pwd"
 
 [[tabs.layout_test.panes]]
+# Split below top-right
 id = "bottom-right"
 title = "bottom-right"
 from = "top-right"
@@ -265,6 +228,7 @@ command = "ls"
 - `projects.roots` controls which directories are searched for the first interactive picker
 - use a short list of parent folders that contain your repos, for example `~/Projects` or `~/Workspace`
 - `agents.default` is the default agent command for panes marked with `agent = true`
+- common values depend on what you have installed, for example `pi`, `claude`, `copilot`, or `opencode`
 - `layout.placement` controls how plugin panes open: `overlay`, `split`, `tab`, or `zoomed`
 - `layout.focus` chooses which tab or pane should be focused after workspace setup
 - `tabs` can include the built-in `terminal`, `editor`, and `server` tabs plus any extra custom tabs
@@ -272,6 +236,7 @@ command = "ls"
 - `[[tabs.<name>.panes]]` supports multiple panes per tab
 - `id` gives a pane a stable name that other panes can split from
 - `from` tells a pane which earlier pane in the same tab to split from
+- `split` currently supports only `right` and `down`
 - `agent = true` launches the configured agent command in that pane
 - worktree server panes can interpolate `{branch}` in commands
 

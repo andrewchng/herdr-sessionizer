@@ -37,13 +37,13 @@ bun install
 Link the Herdr plugin:
 
 ```sh
-herdr plugin link /Users/mac/dotfiles/herdr-plugins/sessionizer
+herdr plugin link /path/to/herdr-sessionizer
 ```
 
 Link the standalone `herdr-worktree` CLI:
 
 ```sh
-cd /Users/mac/dotfiles/herdr-plugins/sessionizer
+cd /path/to/herdr-sessionizer
 bun link
 ```
 
@@ -54,13 +54,13 @@ When plugin manifest or pane/action code changes, relink the plugin:
 
 ```sh
 herdr plugin unlink sessionizer || true
-herdr plugin link /Users/mac/dotfiles/herdr-plugins/sessionizer
+herdr plugin link /path/to/herdr-sessionizer
 ```
 
 When the standalone bin wiring changes, refresh the CLI link:
 
 ```sh
-cd /Users/mac/dotfiles/herdr-plugins/sessionizer
+cd /path/to/herdr-sessionizer
 bun link
 ```
 
@@ -74,11 +74,7 @@ Open the plugin pane directly:
 herdr plugin action invoke sessionizer.open
 ```
 
-Or use the configured keybinding:
-
-```text
-Ctrl-a f
-```
+Or use a keybinding you wire to `sessionizer.open` in your own Herdr config.
 
 ### Interactive worktree
 
@@ -88,11 +84,7 @@ Open the worktree pane:
 herdr plugin action invoke sessionizer.worktree-open
 ```
 
-Or use the configured keybinding:
-
-```text
-Ctrl-a Shift-u
-```
+Or use a keybinding you wire to `sessionizer.worktree-open` in your own Herdr config.
 
 ### Scripted worktree CLI
 
@@ -114,7 +106,7 @@ herdr-worktree \
 Run the interactive worktree flow from the package without linking:
 
 ```sh
-cd /Users/mac/dotfiles/herdr-plugins/sessionizer
+cd /path/to/herdr-sessionizer
 bun run worktree
 ```
 
@@ -182,14 +174,32 @@ command = ""
 - `agent = true` launches the configured agent command in that pane
 - worktree server panes can interpolate `{branch}` in commands
 
-## Keybindings
+## Example keybindings
 
-Current Herdr bindings in this repo:
+This plugin does not require a specific prefix or shortcut. Bind the plugin actions however you want in your own Herdr config.
+
+Example bindings:
 
 | Key | Command | Purpose |
 | --- | --- | --- |
-| `Ctrl-a f` | `sessionizer.open` | Project sessionizer |
-| `Ctrl-a Shift-u` | `sessionizer.worktree-open` | Interactive worktree flow |
+| `Prefix f` | `sessionizer.open` | Project sessionizer |
+| `Prefix Shift-u` | `sessionizer.worktree-open` | Interactive worktree flow |
+
+Example `config.toml` entries:
+
+```toml
+[[keys.command]]
+key = "prefix+f"
+type = "plugin_action"
+command = "sessionizer.open"
+description = "project sessionizer"
+
+[[keys.command]]
+key = "prefix+shift+u"
+type = "plugin_action"
+command = "sessionizer.worktree-open"
+description = "create worktree workspace"
+```
 
 ## Development
 

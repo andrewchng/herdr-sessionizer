@@ -8,6 +8,8 @@ type PanePlacement = 'overlay' | 'split' | 'tab' | 'zoomed';
 type SplitDirection = 'right' | 'down';
 
 interface RawPaneConfig {
+  id?: string;
+  from?: string;
   title?: string;
   split?: string;
   command?: string;
@@ -19,6 +21,10 @@ interface RawTabConfig {
   label?: string;
   command?: string;
   panes?: RawPaneConfig[];
+  agent?: {
+    enabled?: boolean;
+    title?: string;
+  };
 }
 
 interface RawConfig {
@@ -29,19 +35,12 @@ interface RawConfig {
     focus?: string;
     agent_split?: string;
   };
-  tabs?: {
-    terminal?: RawTabConfig & {
-      agent?: {
-        enabled?: boolean;
-        title?: string;
-      };
-    };
-    editor?: RawTabConfig;
-    server?: RawTabConfig;
-  };
+  tabs?: Record<string, RawTabConfig>;
 }
 
 export interface PaneConfig {
+  id?: string;
+  from?: string;
   title: string;
   split?: SplitDirection;
   command: string;
@@ -49,6 +48,7 @@ export interface PaneConfig {
 }
 
 export interface TabConfig {
+  id: string;
   enabled: boolean;
   label: string;
   panes: PaneConfig[];
@@ -63,11 +63,7 @@ export interface SessionizerConfig {
     placement: PanePlacement;
     focus: string;
   };
-  tabs: {
-    terminal: TabConfig;
-    editor: TabConfig;
-    server: TabConfig;
-  };
+  tabs: TabConfig[];
 }
 
 export function loadConfig(): SessionizerConfig {
@@ -90,19 +86,7 @@ export function loadConfig(): SessionizerConfig {
       placement: asPlacement(pluginConfig?.layout?.placement),
       focus: pluginConfig?.layout?.focus?.trim() || 'agent',
     },
-    tabs: {
-      terminal: buildTerminalTab(pluginConfig),
-      editor: buildStandardTab(
-        pluginConfig?.tabs?.editor,
-        'editor',
-        [{ title: 'editor', command: 'nvim', agent: false }],
-      ),
-      server: buildStandardTab(
-        pluginConfig?.tabs?.server,
-        'server',
-        [{ title: 'server', command: '', agent: false }],
-      ),
-    },
+    tabs: buildTabs(pluginConfig),
   };
 }
 
@@ -115,12 +99,31 @@ function loadRaw(path: string): RawConfig | undefined {
   return parse(readFileSync(path, 'utf-8')) as RawConfig;
 }
 
-function buildTerminalTab(config: RawConfig | undefined): TabConfig {
-  const raw = config?.tabs?.terminal;
+function buildTabs(config: RawConfig | undefined): TabConfig[] {
+  const rawTabs = config?.tabs ?? {};
+  const orderedIds = ['terminal', 'editor', 'server', ...Object.keys(rawTabs).filter((key) => !isBuiltInTab(key))];
+
+  return orderedIds.map((id) => {
+    const raw = rawTabs[id];
+    if (id === 'terminal') {
+      return buildTerminalTab(id, raw, config);
+    }
+    if (id === 'editor') {
+      return buildStandardTab(id, raw, 'editor', [{ id: 'editor', title: 'editor', command: 'nvim', agent: false }]);
+    }
+    if (id === 'server') {
+      return buildStandardTab(id, raw, 'server', [{ id: 'server', title: 'server', command: '', agent: false }]);
+    }
+    return buildStandardTab(id, raw, id, [{ id, title: id, command: '', agent: false }]);
+  });
+}
+
+function buildTerminalTab(id: string, raw: RawTabConfig | undefined, config: RawConfig | undefined): TabConfig {
   const fallbackAgentSplit = asSplitDirection(config?.layout?.agent_split);
   const explicitPanes = buildPanes(raw?.panes);
   if (explicitPanes.length > 0) {
     return {
+      id,
       enabled: raw?.enabled ?? true,
       label: raw?.label ?? 'terminal',
       panes: explicitPanes,
@@ -128,9 +131,11 @@ function buildTerminalTab(config: RawConfig | undefined): TabConfig {
   }
 
   const agentEnabled = raw?.agent?.enabled ?? true;
-  const panes: PaneConfig[] = [{ title: 'shell', command: '', agent: false }];
+  const panes: PaneConfig[] = [{ id: 'shell', title: 'shell', command: '', agent: false }];
   if (agentEnabled) {
     panes.push({
+      id: 'agent',
+      from: 'shell',
       title: raw?.agent?.title ?? 'agent',
       split: fallbackAgentSplit,
       command: '',
@@ -139,16 +144,18 @@ function buildTerminalTab(config: RawConfig | undefined): TabConfig {
   }
 
   return {
+    id,
     enabled: raw?.enabled ?? true,
     label: raw?.label ?? 'terminal',
     panes,
   };
 }
 
-function buildStandardTab(raw: RawTabConfig | undefined, label: string, fallbackPanes: PaneConfig[]): TabConfig {
+function buildStandardTab(id: string, raw: RawTabConfig | undefined, label: string, fallbackPanes: PaneConfig[]): TabConfig {
   const panes = buildPanes(raw?.panes);
   if (panes.length > 0) {
     return {
+      id,
       enabled: raw?.enabled ?? true,
       label: raw?.label ?? label,
       panes,
@@ -162,6 +169,7 @@ function buildStandardTab(raw: RawTabConfig | undefined, label: string, fallback
   }));
 
   return {
+    id,
     enabled,
     label: raw?.label ?? label,
     panes: fallback,
@@ -171,8 +179,10 @@ function buildStandardTab(raw: RawTabConfig | undefined, label: string, fallback
 function buildPanes(rawPanes: RawPaneConfig[] | undefined): PaneConfig[] {
   if (!rawPanes || rawPanes.length === 0) return [];
   return rawPanes.map((pane, index) => ({
+    id: pane.id?.trim() || undefined,
+    from: pane.from?.trim() || undefined,
     title: pane.title?.trim() ?? '',
-    split: index === 0 ? undefined : asSplitDirection(pane.split),
+    split: index === 0 && !pane.from ? undefined : asOptionalSplitDirection(pane.split),
     command: pane.command ?? '',
     agent: pane.agent ?? false,
   }));
@@ -194,10 +204,13 @@ function defaultConfigToml(): string {
     'label = "terminal"',
     '',
     '[[tabs.terminal.panes]]',
+    'id = "shell"',
     'title = "shell"',
     'command = ""',
     '',
     '[[tabs.terminal.panes]]',
+    'id = "agent"',
+    'from = "shell"',
     'title = "agent"',
     'split = "right"',
     'agent = true',
@@ -207,6 +220,7 @@ function defaultConfigToml(): string {
     'label = "editor"',
     '',
     '[[tabs.editor.panes]]',
+    'id = "editor"',
     'title = "editor"',
     'command = "nvim"',
     '',
@@ -215,6 +229,7 @@ function defaultConfigToml(): string {
     'label = "server"',
     '',
     '[[tabs.server.panes]]',
+    'id = "server"',
     'title = "server"',
     'command = ""',
     '',
@@ -229,8 +244,17 @@ function asSplitDirection(value: string | undefined): SplitDirection {
   return value === 'down' ? 'down' : 'right';
 }
 
+function asOptionalSplitDirection(value: string | undefined): SplitDirection | undefined {
+  if (!value) return undefined;
+  return asSplitDirection(value);
+}
+
 function defaultProjectRoots(): string[] {
   return ['~/'];
+}
+
+function isBuiltInTab(value: string): boolean {
+  return value === 'terminal' || value === 'editor' || value === 'server';
 }
 
 function expandHome(value: string): string {

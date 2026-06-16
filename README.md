@@ -130,7 +130,7 @@ If the file does not exist yet, the plugin creates it automatically on first run
 default = "opencode"
 
 [projects]
-roots = ["~/"]
+roots = ["~/Projects", "~/Workspace", "~/dotfiles"]
 
 [layout]
 placement = "overlay"
@@ -140,10 +140,13 @@ focus = "agent"
 label = "terminal"
 
 [[tabs.terminal.panes]]
+id = "shell"
 title = "shell"
 command = ""
 
 [[tabs.terminal.panes]]
+id = "agent"
+from = "shell"
 title = "agent"
 split = "right"
 agent = true
@@ -153,6 +156,7 @@ enabled = true
 label = "editor"
 
 [[tabs.editor.panes]]
+id = "editor"
 title = "editor"
 command = "nvim"
 
@@ -161,16 +165,51 @@ enabled = true
 label = "server"
 
 [[tabs.server.panes]]
+id = "server"
 title = "server"
 command = ""
+
+[tabs.layout_test]
+enabled = true
+label = "layout-test"
+
+[[tabs.layout_test.panes]]
+id = "top-left"
+title = "top-left"
+command = ""
+
+[[tabs.layout_test.panes]]
+id = "top-right"
+title = "top-right"
+from = "top-left"
+split = "right"
+command = "git status --short"
+
+[[tabs.layout_test.panes]]
+id = "bottom-left"
+title = "bottom-left"
+from = "top-left"
+split = "down"
+command = "pwd"
+
+[[tabs.layout_test.panes]]
+id = "bottom-right"
+title = "bottom-right"
+from = "top-right"
+split = "down"
+command = "ls"
 ```
 
 ### Config notes
 
 - `projects.roots` controls which directories are searched for the first interactive picker
+- use a short list of parent folders that contain your repos, for example `~/Projects` or `~/Workspace`
 - `layout.placement` controls how plugin panes open: `overlay`, `split`, `tab`, or `zoomed`
 - `layout.focus` chooses which tab or pane should be focused after workspace setup
+- `tabs` can include the built-in `terminal`, `editor`, and `server` tabs plus any extra custom tabs
 - `[[tabs.<name>.panes]]` supports multiple panes per tab
+- `id` gives a pane a stable name that other panes can split from
+- `from` tells a pane which earlier pane in the same tab to split from
 - `agent = true` launches the configured agent command in that pane
 - worktree server panes can interpolate `{branch}` in commands
 

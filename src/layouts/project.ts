@@ -22,57 +22,44 @@ export async function createProjectLayout(
   },
 ): Promise<Workspace> {
   const id = workspace.workspace_id;
+  const enabledTabs = config.tabs.filter((tab) => tab.enabled);
+  if (enabledTabs.length === 0) return workspace;
+
   let nextPaneIndex = 1;
   let focusedTabId = `${id}:1`;
 
-  const terminal = await configureExistingTab(
+  const [firstTab, ...remainingTabs] = enabledTabs;
+  const initial = await configureExistingTab(
     `${id}:1`,
     `${id}-${nextPaneIndex}`,
-    config.tabs.terminal,
+    firstTab!,
     cwd,
-    config,
+    config.agent,
     tabs,
     panes,
     config.layout.focus,
     options,
   );
-  nextPaneIndex = terminal.nextPaneIndex;
-  if (matchesFocus(config.layout.focus, config.tabs.terminal, terminal.firstPaneId)) {
-    focusedTabId = terminal.tabId;
+  nextPaneIndex = initial.nextPaneIndex;
+  if (matchesFocus(config.layout.focus, firstTab!, initial.firstPaneId)) {
+    focusedTabId = initial.tabId;
   }
 
-  if (config.tabs.editor.enabled) {
-    const editor = await createAndConfigureTab(
+  for (const tab of remainingTabs) {
+    const created = await createAndConfigureTab(
       id,
       nextPaneIndex,
-      config.tabs.editor,
+      tab,
       cwd,
-      config,
+      config.agent,
       tabs,
       panes,
       config.layout.focus,
       options,
     );
-    nextPaneIndex = editor.nextPaneIndex;
-    if (matchesFocus(config.layout.focus, config.tabs.editor, editor.firstPaneId)) {
-      focusedTabId = editor.tabId;
-    }
-  }
-
-  if (config.tabs.server.enabled) {
-    const server = await createAndConfigureTab(
-      id,
-      nextPaneIndex,
-      config.tabs.server,
-      cwd,
-      config,
-      tabs,
-      panes,
-      config.layout.focus,
-      options,
-    );
-    if (matchesFocus(config.layout.focus, config.tabs.server, server.firstPaneId)) {
-      focusedTabId = server.tabId;
+    nextPaneIndex = created.nextPaneIndex;
+    if (matchesFocus(config.layout.focus, tab, created.firstPaneId)) {
+      focusedTabId = created.tabId;
     }
   }
 
@@ -85,7 +72,7 @@ async function configureExistingTab(
   firstPaneId: string,
   tab: TabConfig,
   cwd: string,
-  config: SessionizerConfig,
+  agent: string,
   tabs: Tabs,
   panes: Panes,
   focusTarget: string,
@@ -96,7 +83,7 @@ async function configureExistingTab(
   },
 ): Promise<TabRuntime> {
   await tabs.rename(tabId, tab.label).catch(noop);
-  return configureTabPanes(tabId, firstPaneId, 2, tab, cwd, config, panes, focusTarget, options);
+  return configureTabPanes(tabId, firstPaneId, 2, tab, cwd, agent, panes, focusTarget, options);
 }
 
 async function createAndConfigureTab(
@@ -104,7 +91,7 @@ async function createAndConfigureTab(
   nextPaneIndex: number,
   tab: TabConfig,
   cwd: string,
-  config: SessionizerConfig,
+  agent: string,
   tabs: Tabs,
   panes: Panes,
   focusTarget: string,
@@ -130,7 +117,7 @@ async function createAndConfigureTab(
     nextPaneIndex + 1,
     tab,
     cwd,
-    config,
+    agent,
     panes,
     focusTarget,
     options,
@@ -143,7 +130,7 @@ async function configureTabPanes(
   nextPaneIndex: number,
   tab: TabConfig,
   cwd: string,
-  config: SessionizerConfig,
+  agent: string,
   panes: Panes,
   focusTarget: string,
   options?: {
@@ -152,23 +139,37 @@ async function configureTabPanes(
     defaultServerCommand?: string;
   },
 ): Promise<TabRuntime> {
-  const specs = tab.panes.length > 0 ? tab.panes : [{ title: '', command: '', agent: false }];
+  const specs = tab.panes.length > 0 ? tab.panes : [{ id: 'root', title: '', command: '', agent: false }];
+  validatePaneSpecs(tab, specs);
+
+  const paneIds = new Map<string, string>();
   let currentPaneId = firstPaneId;
 
-  await configurePane(currentPaneId, specs[0]!, cwd, config, panes, tab, options).catch(noop);
+  const rootSpec = specs[0]!;
+  if (rootSpec.id) {
+    paneIds.set(rootSpec.id, currentPaneId);
+  }
+  await configurePane(currentPaneId, rootSpec, cwd, agent, panes, tab, options).catch(noop);
 
   for (let index = 1; index < specs.length; index += 1) {
     const spec = specs[index]!;
+    const anchorPaneId = spec.from ? paneIds.get(spec.from) : currentPaneId;
+    if (!anchorPaneId) {
+      throw new Error(`Tab '${tab.label}' references unknown pane '${spec.from ?? ''}'.`);
+    }
     const splitPane = await panes
-      .split(currentPaneId, {
+      .split(anchorPaneId, {
         direction: spec.split ?? 'right',
         cwd,
-        focus: spec.title === focusTarget,
+        focus: matchesFocusTarget(focusTarget, spec),
       })
       .catch(noopPane);
     const paneId = splitPane?.pane_id ?? workspacePaneId(firstPaneId, nextPaneIndex);
     nextPaneIndex += 1;
-    await configurePane(paneId, spec, cwd, config, panes, tab, options).catch(noop);
+    if (spec.id) {
+      paneIds.set(spec.id, paneId);
+    }
+    await configurePane(paneId, spec, cwd, agent, panes, tab, options).catch(noop);
     currentPaneId = paneId;
   }
 
@@ -179,7 +180,7 @@ async function configurePane(
   paneId: string,
   spec: PaneConfig,
   cwd: string,
-  config: SessionizerConfig,
+  agent: string,
   panes: Panes,
   tab: TabConfig,
   options?: {
@@ -192,7 +193,7 @@ async function configurePane(
     await panes.rename(paneId, spec.title);
   }
 
-  const command = buildPaneCommand(spec, cwd, config.agent, tab, options);
+  const command = buildPaneCommand(spec, cwd, agent, tab, options);
   if (command) {
     await panes.run(paneId, command);
   }
@@ -224,9 +225,7 @@ function buildPaneCommand(
 
 function matchesFocus(focusTarget: string, tab: TabConfig, firstPaneId: string): boolean {
   if (focusTarget === tab.label) return true;
-  return tab.panes.some((pane, index) =>
-    pane.title === focusTarget || (index === 0 && focusTarget === 'shell' && firstPaneId.endsWith('-1')),
-  );
+  return tab.panes.some((pane) => matchesFocusTarget(focusTarget, pane));
 }
 
 function workspacePaneId(firstPaneId: string, index: number): string {
@@ -260,6 +259,32 @@ function buildAgentCommand(agent: string, context?: string): string {
     return `kiro-cli chat ${shellQuote(context)}`;
   }
   return agent;
+}
+
+function validatePaneSpecs(tab: TabConfig, specs: readonly PaneConfig[]): void {
+  const seenIds = new Set<string>();
+  for (let index = 0; index < specs.length; index += 1) {
+    const spec = specs[index]!;
+    if (index === 0) {
+      if (spec.from) {
+        throw new Error(`Tab '${tab.label}' cannot set 'from' on its first pane.`);
+      }
+    } else if (spec.from && !seenIds.has(spec.from)) {
+      throw new Error(
+        `Tab '${tab.label}' references pane '${spec.from}' before it is defined. List target panes earlier in the same tab.`,
+      );
+    }
+    if (spec.id) {
+      if (seenIds.has(spec.id)) {
+        throw new Error(`Tab '${tab.label}' has duplicate pane id '${spec.id}'.`);
+      }
+      seenIds.add(spec.id);
+    }
+  }
+}
+
+function matchesFocusTarget(focusTarget: string, pane: PaneConfig): boolean {
+  return pane.title === focusTarget || pane.id === focusTarget;
 }
 
 function fallbackPaneCommand(

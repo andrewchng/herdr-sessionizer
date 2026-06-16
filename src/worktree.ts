@@ -77,9 +77,8 @@ export async function runWorktree(argv: readonly string[] = process.argv.slice(2
         worktreeCheckoutPath(openedWorkspace) ??
         (await resolveLayoutCwd(workspaces, openedWorkspace, project));
       await createProjectLayout(openedWorkspace, layoutCwd, config, tabs, panes, {
-        agentContext: context,
+        commandContext: context,
         branch,
-        defaultServerCommand: makeServerSetupCommand(branch),
       });
       await workspaces.focus(openedWorkspace.workspace_id);
       console.log(`✓ bootstrapped layout for existing worktree '${branch}'`);
@@ -122,9 +121,8 @@ export async function runWorktree(argv: readonly string[] = process.argv.slice(2
     if (shouldBootstrapWorkspaceLayout(openedWorkspace) && openedWorkspace) {
       const layoutCwd = opened.worktreePath ?? worktreeCheckoutPath(openedWorkspace) ?? project;
       await createProjectLayout(openedWorkspace, layoutCwd, config, tabs, panes, {
-        agentContext: context,
+        commandContext: context,
         branch,
-        defaultServerCommand: makeServerSetupCommand(branch),
       });
       await workspaces.focus(openedWorkspace.workspace_id);
       console.log(`✓ bootstrapped layout for '${branch}'`);
@@ -136,9 +134,8 @@ export async function runWorktree(argv: readonly string[] = process.argv.slice(2
 
   const layoutCwd = await resolveLayoutCwd(workspaces, workspace, project);
   await createProjectLayout(workspace, layoutCwd, config, tabs, panes, {
-    agentContext: context,
+    commandContext: context,
     branch,
-    defaultServerCommand: makeServerSetupCommand(branch),
   });
   await workspaces.focus(workspace.workspace_id);
 
@@ -289,16 +286,4 @@ async function existingWorktreePathBySlug(project: string, branch: string): Prom
     if (worktreeSlug(basename(path)) === target) return path;
   }
   return undefined;
-}
-
-function shellQuote(value: string): string {
-  return `'${value.replace(/'/g, `'\\''`)}'`;
-}
-
-function makeServerSetupCommand(branch: string): string {
-  const quotedBranch = shellQuote(branch);
-  return [
-    `git switch --quiet ${quotedBranch}`,
-    "if [ -f package.json ]; then npm ci; else echo 'No package.json found; skipping npm ci'; fi",
-  ].join(' && ');
 }

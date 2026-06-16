@@ -16,9 +16,8 @@ export async function createProjectLayout(
   tabs: Tabs,
   panes: Panes,
   options?: {
-    agentContext?: string;
+    commandContext?: string;
     branch?: string;
-    defaultServerCommand?: string;
   },
 ): Promise<Workspace> {
   const id = workspace.workspace_id;
@@ -74,9 +73,8 @@ async function configureExistingTab(
   panes: Panes,
   focusTarget: string,
   options?: {
-    agentContext?: string;
+    commandContext?: string;
     branch?: string;
-    defaultServerCommand?: string;
   },
 ): Promise<TabRuntime> {
   await tabs.rename(tabId, tab.label).catch(noop);
@@ -92,9 +90,8 @@ async function createAndConfigureTab(
   panes: Panes,
   focusTarget: string,
   options?: {
-    agentContext?: string;
+    commandContext?: string;
     branch?: string;
-    defaultServerCommand?: string;
   },
 ): Promise<TabRuntime> {
   const tabResult = await tabs
@@ -128,9 +125,8 @@ async function configureTabPanes(
   panes: Panes,
   focusTarget: string,
   options?: {
-    agentContext?: string;
+    commandContext?: string;
     branch?: string;
-    defaultServerCommand?: string;
   },
 ): Promise<TabRuntime> {
   const specs = tab.panes.length > 0 ? tab.panes : [{ id: 'root', title: '', command: '' }];
@@ -177,9 +173,8 @@ async function configurePane(
   panes: Panes,
   tab: TabConfig,
   options?: {
-    agentContext?: string;
+    commandContext?: string;
     branch?: string;
-    defaultServerCommand?: string;
   },
 ): Promise<void> {
   if (spec.title) {
@@ -197,15 +192,14 @@ function buildPaneCommand(
   cwd: string,
   tab: TabConfig,
   options?: {
-    agentContext?: string;
+    commandContext?: string;
     branch?: string;
-    defaultServerCommand?: string;
   },
 ): string {
   const quotedCwd = shellQuote(cwd);
-  const rawCommand = spec.command || fallbackPaneCommand(tab, spec, options);
+  const rawCommand = spec.command;
   if (rawCommand) {
-    return `cd ${quotedCwd} && ${interpolateCommand(applyAgentContext(rawCommand, options?.agentContext), options?.branch)}`;
+    return `cd ${quotedCwd} && ${interpolateCommand(applyCommandContext(rawCommand, options?.commandContext), options?.branch)}`;
   }
 
   return `cd ${quotedCwd}`;
@@ -234,7 +228,7 @@ function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
-function applyAgentContext(command: string, context?: string): string {
+function applyCommandContext(command: string, context?: string): string {
   if (!context) return command;
   const trimmed = command.trim();
   if (trimmed === 'kiro-cli') {
@@ -273,21 +267,6 @@ function validatePaneSpecs(tab: TabConfig, specs: readonly PaneConfig[]): void {
 
 function matchesFocusTarget(focusTarget: string, pane: PaneConfig): boolean {
   return pane.title === focusTarget || pane.id === focusTarget;
-}
-
-function fallbackPaneCommand(
-  tab: TabConfig,
-  spec: PaneConfig,
-  options?: {
-    agentContext?: string;
-    branch?: string;
-    defaultServerCommand?: string;
-  },
-): string {
-  if (options?.defaultServerCommand && tab.label === 'server' && spec.title === 'server') {
-    return options.defaultServerCommand;
-  }
-  return '';
 }
 
 function interpolateCommand(command: string, branch?: string): string {

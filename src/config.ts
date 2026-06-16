@@ -27,7 +27,6 @@ interface RawConfig {
   layout?: {
     placement?: string;
     focus?: string;
-    agent_split?: string;
   };
   tabs?: Record<string, RawTabConfig>;
 }
@@ -68,14 +67,23 @@ export function loadConfig(): SessionizerConfig {
   }
 
   const pluginConfig = loadRaw(pluginConfigPath);
+  const roots = pluginConfig?.projects?.roots?.map(expandHome).filter((value) => value.trim().length > 0) ?? [];
+  if (roots.length === 0) {
+    throw new Error('Config must define at least one [projects].roots entry.');
+  }
+
+  const focus = pluginConfig?.layout?.focus?.trim();
+  if (!focus) {
+    throw new Error('Config must define [layout].focus.');
+  }
 
   return {
     projects: {
-      roots: (pluginConfig?.projects?.roots ?? defaultProjectRoots()).map(expandHome),
+      roots,
     },
     layout: {
       placement: asPlacement(pluginConfig?.layout?.placement),
-      focus: pluginConfig?.layout?.focus?.trim() || 'agent',
+      focus,
     },
     tabs: buildTabs(pluginConfig),
   };
@@ -91,80 +99,26 @@ function loadRaw(path: string): RawConfig | undefined {
 }
 
 function buildTabs(config: RawConfig | undefined): TabConfig[] {
-  const rawTabs = config?.tabs ?? {};
-  const orderedIds = ['terminal', 'editor', 'server', ...Object.keys(rawTabs).filter((key) => !isBuiltInTab(key))];
+  const rawTabs = config?.tabs;
+  if (!rawTabs || Object.keys(rawTabs).length === 0) {
+    throw new Error('Config must define at least one [tabs.<name>] section.');
+  }
 
-  return orderedIds.map((id) => {
-    const raw = rawTabs[id];
-    if (id === 'terminal') {
-      return buildTerminalTab(id, raw, config);
-    }
-    if (id === 'editor') {
-      return buildStandardTab(id, raw, 'editor', [{ id: 'editor', title: 'editor', command: 'nvim' }]);
-    }
-    if (id === 'server') {
-      return buildStandardTab(id, raw, 'server', [{ id: 'server', title: 'server', command: '' }]);
-    }
-    return buildStandardTab(id, raw, id, [{ id, title: id, command: '' }]);
+  return Object.entries(rawTabs).map(([id, raw]) => {
+    const panes = buildPanes(raw?.panes, id);
+    return {
+      id,
+      enabled: raw?.enabled ?? true,
+      label: raw?.label ?? id,
+      panes,
+    };
   });
 }
 
-function buildTerminalTab(id: string, raw: RawTabConfig | undefined, config: RawConfig | undefined): TabConfig {
-  const fallbackAgentSplit = asSplitDirection(config?.layout?.agent_split);
-  const explicitPanes = buildPanes(raw?.panes);
-  if (explicitPanes.length > 0) {
-    return {
-      id,
-      enabled: raw?.enabled ?? true,
-      label: raw?.label ?? 'terminal',
-      panes: explicitPanes,
-    };
+function buildPanes(rawPanes: RawPaneConfig[] | undefined, tabId: string): PaneConfig[] {
+  if (!rawPanes || rawPanes.length === 0) {
+    throw new Error(`Tab '${tabId}' must define at least one [[tabs.${tabId}.panes]] entry.`);
   }
-
-  return {
-    id,
-    enabled: raw?.enabled ?? true,
-    label: raw?.label ?? 'terminal',
-    panes: [
-      { id: 'shell', title: 'shell', command: '' },
-      {
-        id: 'agent',
-        from: 'shell',
-        title: 'agent',
-        split: fallbackAgentSplit,
-        command: process.env.AI_AGENT ?? 'opencode',
-      },
-    ],
-  };
-}
-
-function buildStandardTab(id: string, raw: RawTabConfig | undefined, label: string, fallbackPanes: PaneConfig[]): TabConfig {
-  const panes = buildPanes(raw?.panes);
-  if (panes.length > 0) {
-    return {
-      id,
-      enabled: raw?.enabled ?? true,
-      label: raw?.label ?? label,
-      panes,
-    };
-  }
-
-  const enabled = raw?.enabled ?? true;
-  const fallback = fallbackPanes.map((pane) => ({
-    ...pane,
-    command: raw?.command ?? pane.command,
-  }));
-
-  return {
-    id,
-    enabled,
-    label: raw?.label ?? label,
-    panes: fallback,
-  };
-}
-
-function buildPanes(rawPanes: RawPaneConfig[] | undefined): PaneConfig[] {
-  if (!rawPanes || rawPanes.length === 0) return [];
   return rawPanes.map((pane, index) => ({
     id: pane.id?.trim() || undefined,
     from: pane.from?.trim() || undefined,
@@ -177,13 +131,14 @@ function buildPanes(rawPanes: RawPaneConfig[] | undefined): PaneConfig[] {
 function defaultConfigToml(): string {
   return [
     '[projects]',
-    `roots = ["~/"]`,
+    `roots = ["~/Projects", "~/Workspace"]`,
     '',
     '[layout]',
     'placement = "overlay"',
-    'focus = "agent"',
+    'focus = "assistant"',
     '',
     '[tabs.terminal]',
+    'enabled = true',
     'label = "terminal"',
     '',
     '[[tabs.terminal.panes]]',
@@ -192,9 +147,9 @@ function defaultConfigToml(): string {
     'command = ""',
     '',
     '[[tabs.terminal.panes]]',
-    'id = "agent"',
+    'id = "assistant"',
     'from = "shell"',
-    'title = "agent"',
+    'title = "assistant"',
     'split = "right"',
     'command = "opencode"',
     '',
@@ -220,7 +175,8 @@ function defaultConfigToml(): string {
 }
 
 function asPlacement(value: string | undefined): PanePlacement {
-  return value === 'split' ? value : 'overlay';
+  if (value === 'overlay' || value === 'split') return value;
+  throw new Error("Config must define [layout].placement as 'overlay' or 'split'.");
 }
 
 function asSplitDirection(value: string | undefined): SplitDirection {
@@ -230,14 +186,6 @@ function asSplitDirection(value: string | undefined): SplitDirection {
 function asOptionalSplitDirection(value: string | undefined): SplitDirection | undefined {
   if (!value) return undefined;
   return asSplitDirection(value);
-}
-
-function defaultProjectRoots(): string[] {
-  return ['~/'];
-}
-
-function isBuiltInTab(value: string): boolean {
-  return value === 'terminal' || value === 'editor' || value === 'server';
 }
 
 function expandHome(value: string): string {

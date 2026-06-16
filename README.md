@@ -26,7 +26,32 @@ It currently supports two main workflows:
 - [Bun](https://bun.sh/)
 - `fzf` for the interactive picker flows
 
-## Local development setup
+## Setup
+
+### Install from GitHub
+
+Install the plugin directly with Herdr:
+
+```sh
+herdr plugin install andrewchng/herdr-sessionizer --yes
+```
+
+Open the plugin after install:
+
+```sh
+herdr plugin action invoke sessionizer.open
+```
+
+Find the plugin config directory:
+
+```sh
+herdr plugin config-dir sessionizer
+```
+
+> [!NOTE]
+> This is the main setup path. It gives you the Herdr plugin surfaces directly from GitHub.
+
+### Local development setup
 
 Install dependencies:
 
@@ -40,28 +65,11 @@ Link the Herdr plugin:
 herdr plugin link /path/to/herdr-sessionizer
 ```
 
-Link the standalone `herdr-worktree` CLI:
-
-```sh
-cd /path/to/herdr-sessionizer
-bun link
-```
-
-> [!NOTE]
-> `bun link` makes the local package behave like a globally installed CLI package. In this repo, it exposes the `herdr-worktree` command from `src/bin/herdr-worktree.ts`.
-
 When plugin manifest or pane/action code changes, relink the plugin:
 
 ```sh
 herdr plugin unlink sessionizer || true
 herdr plugin link /path/to/herdr-sessionizer
-```
-
-When the standalone bin wiring changes, refresh the CLI link:
-
-```sh
-cd /path/to/herdr-sessionizer
-bun link
 ```
 
 ## Usage
@@ -76,6 +84,18 @@ herdr plugin action invoke sessionizer.open
 
 Or use a keybinding you wire to `sessionizer.open` in your own Herdr config.
 
+What it does:
+
+- first shows an `fzf` picker of existing Herdr workspaces plus projects found under `projects.roots`
+- if you pick an existing workspace, Sessionizer focuses it
+- if you pick a project path, Sessionizer creates a new workspace for that project and applies the configured tab and pane layout
+- the layout can create terminal, editor, server, and extra custom tabs with named panes
+
+What the picker contains:
+
+- existing Herdr workspaces
+- repo folders discovered under your configured `projects.roots`
+
 ### Interactive worktree
 
 Open the worktree pane:
@@ -86,32 +106,21 @@ herdr plugin action invoke sessionizer.worktree-open
 
 Or use a keybinding you wire to `sessionizer.worktree-open` in your own Herdr config.
 
-### Scripted worktree CLI
+What it does:
 
-Run the standalone CLI directly:
+- shows an `fzf` picker of base project repositories found under `projects.roots`
+- after you pick a base repo, prompts for a branch name
+- if that worktree already exists, it reopens the matching workspace or checkout
+- if it does not exist yet, it creates the worktree, opens it as a Herdr workspace, and applies the configured tab and pane layout
 
-```sh
-herdr-worktree --project ~/Projects/my-repo --branch feat/new-flow
-```
+What the picker contains:
 
-Pass context through to the configured agent pane:
+- base project repositories, not existing worktree branches
 
-```sh
-herdr-worktree \
-  --project ~/Projects/my-repo \
-  --branch feat/new-flow \
-  --context "Fix the failing form validation and summarize changes"
-```
+What happens after the branch prompt:
 
-Run the interactive worktree flow from the package without linking:
-
-```sh
-cd /path/to/herdr-sessionizer
-bun run worktree
-```
-
-> [!TIP]
-> `herdr-worktree` keeps the old command name, but now runs the new migrated implementation from this package.
+- existing branch/worktree -> reopen and optionally bootstrap the layout if the workspace is still bare
+- new branch/worktree -> create, open, and bootstrap the layout
 
 ## Configuration
 
@@ -249,6 +258,42 @@ bun run typecheck
 bun run sessionizer
 bun run worktree --help
 ```
+
+## Optional standalone worktree CLI
+
+The standalone `herdr-worktree` command is available, but it is not the primary setup path.
+
+Link it locally with Bun:
+
+```sh
+cd /path/to/herdr-sessionizer
+bun link
+```
+
+Run it directly:
+
+```sh
+herdr-worktree --project ~/Projects/my-repo --branch feat/new-flow
+```
+
+Pass context through to the configured agent pane:
+
+```sh
+herdr-worktree \
+  --project ~/Projects/my-repo \
+  --branch feat/new-flow \
+  --context "Fix the failing form validation and summarize changes"
+```
+
+Without linking, you can still run it from a checkout:
+
+```sh
+cd /path/to/herdr-sessionizer
+bun run worktree --project ~/Projects/my-repo --branch feat/new-flow
+```
+
+> [!TIP]
+> `bun link` makes the local package behave like a globally installed CLI package. In this repo, it exposes the `herdr-worktree` command from `src/bin/herdr-worktree.ts`.
 
 ## Current workflow guidance
 

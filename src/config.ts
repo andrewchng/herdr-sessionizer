@@ -2,6 +2,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 
+import { expandHome } from './discovery.ts';
+
 import { parse } from 'smol-toml';
 
 type PanePlacement = 'overlay' | 'split';
@@ -196,6 +198,4 @@ function asOptionalSplitDirection(value: string | undefined): SplitDirection | u
   return asSplitDirection(value);
 }
 
-function expandHome(value: string): string {
-  return value.startsWith('~/') ? value.replace('~', homedir()) : value;
-}
+

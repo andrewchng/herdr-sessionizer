@@ -3,6 +3,8 @@ import type { Workspace } from '../client/types.ts';
 import type { Panes } from '../ops/panes.ts';
 import type { Tabs } from '../ops/tabs.ts';
 
+import { shellQuote } from '../discovery.ts';
+
 interface TabRuntime {
   tabId: string;
   firstPaneId: string;
@@ -224,9 +226,7 @@ function noopTab(): undefined {
   return undefined;
 }
 
-function shellQuote(value: string): string {
-  return `'${value.replace(/'/g, `'\\''`)}'`;
-}
+
 
 function applyCommandContext(command: string, context?: string): string {
   if (!context) return command;

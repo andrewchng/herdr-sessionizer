@@ -1,6 +1,8 @@
 import { basename, join } from 'node:path';
 import { existsSync, readdirSync } from 'node:fs';
 
+import { listProjects, sanitizeName, normalizePath, worktreeSlug } from './discovery.ts';
+
 import { Herdr } from './client/herdr.ts';
 import { HerdrError } from './client/errors.ts';
 import type { SessionizerConfig } from './config.ts';
@@ -183,25 +185,7 @@ async function promptBranchName(): Promise<string> {
   }
 }
 
-function listProjects(bases: readonly string[]): string[] {
-  const seen = new Set<string>();
-  for (const base of bases) {
-    if (!existsSync(base)) continue;
-    for (const entry of readdirSync(base, { withFileTypes: true })) {
-      if (entry.isDirectory()) seen.add(join(base, entry.name));
-    }
-  }
-  return [...seen].sort();
-}
 
-function sanitizeName(name: string): string {
-  return name.replace(/[^a-zA-Z0-9_-]/g, '_');
-}
-
-function normalizePath(path: string | undefined): string {
-  if (!path) return '';
-  return path.replace(/\/+$/, '');
-}
 
 function findRepoWorkspaceId(workspaces: Workspace[], projectPath: string): string | undefined {
   const normalizedProject = normalizePath(projectPath);
@@ -267,9 +251,7 @@ async function existingWorktreePathFromGit(project: string, branch: string): Pro
   return undefined;
 }
 
-function worktreeSlug(branch: string): string {
-  return branch.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase();
-}
+
 
 async function existingWorktreePathBySlug(project: string, branch: string): Promise<string | undefined> {
   const proc = Bun.spawn(['git', '-C', project, 'worktree', 'list', '--porcelain'], {

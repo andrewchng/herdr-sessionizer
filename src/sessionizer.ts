@@ -1,5 +1,4 @@
-import { existsSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { listProjects, sanitizeName } from './discovery.ts';
 
 import type { Workspace } from './client/types.ts';
 import { Herdr } from './client/herdr.ts';
@@ -19,21 +18,7 @@ const PROJECT_PREVIEW = [
   'fi',
 ].join(' ');
 
-function listProjects(bases: readonly string[]): string[] {
-  const seen = new Set<string>();
-  for (const base of bases) {
-    if (!existsSync(base)) continue;
-    for (const entry of readdirSync(base, { withFileTypes: true })) {
-      if (entry.isDirectory()) seen.add(join(base, entry.name));
-    }
-  }
 
-  return [...seen].sort();
-}
-
-function sanitizeName(name: string): string {
-  return name.replace(/[^a-zA-Z0-9_-]/g, '_');
-}
 
 function workspaceRow(workspace: Workspace): string {
   return `${workspace.workspace_id} ${workspace.label ?? ''}`;

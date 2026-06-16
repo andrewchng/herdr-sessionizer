@@ -1,0 +1,19 @@
+{
+  "name": "herdr-plugin-sessionizer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Herdr sessionizer plugin",
+  "scripts": {
+    "sessionizer": "bun run src/sessionizer.ts",
+    "fzf-smoke": "bun run src/fzf-smoke.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "smol-toml": "^1.3.4"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.6.0"
+  }
+}

@@ -2,7 +2,7 @@ id = "sessionizer"
 name = "Sessionizer"
 version = "0.1.0"
 min_herdr_version = "0.7.0"
-description = "Focus an existing Herdr workspace or create a new project workspace with the standard terminal, editor, and server tabs."
+description = "Focus an existing Herdr workspace or create a new project workspace from your Sessionizer layout config."
 platforms = ["macos", "linux"]
 
 [[build]]

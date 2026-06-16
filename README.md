@@ -18,7 +18,7 @@ It currently supports two primary interactive workflows:
 | Plugin action | `sessionizer.worktree-open` | Open the interactive worktree pane |
 | Plugin pane | `sessionizer` | Interactive project picker and workspace bootstrap |
 | Plugin pane | `worktree` | Interactive worktree flow |
-| Bun bin | `herdr-worktree` | Optional scripted/headless worktree flow with `--project` and `--branch` |
+| Bun bin | `herdr-worktree` | Optional scripted worktree flow with `--project` and `--branch` |
 
 ## Requirements
 

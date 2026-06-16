@@ -23,4 +23,8 @@ export class Panes {
   async run(paneId: string, command: string): Promise<void> {
     await this.herdr.run(['pane', 'run', paneId, command]);
   }
+
+  async rename(paneId: string, label: string): Promise<void> {
+    await this.herdr.run(['pane', 'rename', paneId, label]);
+  }
 }

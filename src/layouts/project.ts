@@ -14,8 +14,11 @@ export async function createProjectLayout(
 
   await tabs.rename(`${id}:1`, 'terminal').catch(noop);
   await panes.run(`${id}-1`, `cd ${quotedCwd}`).catch(noop);
-  await panes.split(`${id}-1`, { direction: 'right', cwd, focus: false }).catch(noop);
-  await panes.run(`${id}-2`, `cd ${quotedCwd} && ${agent}`).catch(noop);
+  const agentPane = await panes.split(`${id}-1`, { direction: 'right', cwd, focus: true }).catch(noopPane);
+  if (agentPane) {
+    await panes.rename(agentPane.pane_id, 'agent').catch(noop);
+  }
+  await panes.run(agentPane?.pane_id ?? `${id}-2`, `cd ${quotedCwd} && ${agent}`).catch(noop);
   await tabs.create({ workspace_id: id, cwd, label: 'editor', focus: false }).catch(noop);
   await panes.run(`${id}-3`, 'nvim').catch(noop);
   await tabs.create({ workspace_id: id, cwd, label: 'server', focus: false }).catch(noop);
@@ -25,6 +28,10 @@ export async function createProjectLayout(
 }
 
 function noop(): void {}
+
+function noopPane(): undefined {
+  return undefined;
+}
 
 function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;

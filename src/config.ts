@@ -4,7 +4,7 @@ import { homedir } from 'node:os';
 
 import { parse } from 'smol-toml';
 
-type PanePlacement = 'overlay' | 'split' | 'tab' | 'zoomed';
+type PanePlacement = 'overlay' | 'split';
 type SplitDirection = 'right' | 'down';
 
 interface RawPaneConfig {
@@ -237,7 +237,7 @@ function defaultConfigToml(): string {
 }
 
 function asPlacement(value: string | undefined): PanePlacement {
-  return value === 'split' || value === 'tab' || value === 'zoomed' ? value : 'overlay';
+  return value === 'split' ? value : 'overlay';
 }
 
 function asSplitDirection(value: string | undefined): SplitDirection {

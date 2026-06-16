@@ -144,7 +144,7 @@ default = "opencode"
 roots = ["~/Projects", "~/Workspace"]
 
 [layout]
-# How the plugin pane itself opens
+# How the plugin pane itself opens: overlay | split
 placement = "overlay"
 # Which pane or tab to focus after layout creation
 focus = "agent"
@@ -229,7 +229,7 @@ command = "ls"
 - use a short list of parent folders that contain your repos, for example `~/Projects` or `~/Workspace`
 - `agents.default` is the default agent command for panes marked with `agent = true`
 - common values depend on what you have installed, for example `pi`, `claude`, `copilot`, or `opencode`
-- `layout.placement` controls how plugin panes open: `overlay`, `split`, `tab`, or `zoomed`
+- `layout.placement` controls how plugin panes open: `overlay` or `split`
 - `layout.focus` chooses which tab or pane should be focused after workspace setup
 - `tabs` can include the built-in `terminal`, `editor`, and `server` tabs plus any extra custom tabs
 - `enabled` controls whether a tab is created at all

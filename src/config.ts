@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { homedir } from 'node:os';
 
 import { parse } from 'smol-toml';
 
@@ -22,6 +23,7 @@ interface RawTabConfig {
 
 interface RawConfig {
   agents?: { default?: string };
+  projects?: { roots?: string[] };
   layout?: {
     placement?: string;
     focus?: string;
@@ -54,6 +56,9 @@ export interface TabConfig {
 
 export interface SessionizerConfig {
   agent: string;
+  projects: {
+    roots: string[];
+  };
   layout: {
     placement: PanePlacement;
     focus: string;
@@ -78,6 +83,9 @@ export function loadConfig(): SessionizerConfig {
 
   return {
     agent: process.env.AI_AGENT ?? pluginConfig?.agents?.default ?? 'opencode',
+    projects: {
+      roots: (pluginConfig?.projects?.roots ?? defaultProjectRoots()).map(expandHome),
+    },
     layout: {
       placement: asPlacement(pluginConfig?.layout?.placement),
       focus: pluginConfig?.layout?.focus?.trim() || 'agent',
@@ -171,6 +179,9 @@ function defaultConfigToml(): string {
     '[agents]',
     'default = "opencode"',
     '',
+    '[projects]',
+    `roots = ["~/"]`,
+    '',
     '[layout]',
     'placement = "overlay"',
     'focus = "agent"',
@@ -212,4 +223,12 @@ function asPlacement(value: string | undefined): PanePlacement {
 
 function asSplitDirection(value: string | undefined): SplitDirection {
   return value === 'down' ? 'down' : 'right';
+}
+
+function defaultProjectRoots(): string[] {
+  return ['~/'];
+}
+
+function expandHome(value: string): string {
+  return value.startsWith('~/') ? value.replace('~', homedir()) : value;
 }

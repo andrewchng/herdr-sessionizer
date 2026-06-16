@@ -1,6 +1,5 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { homedir } from 'node:os';
 
 import type { Workspace } from './client/types.ts';
 import { Herdr } from './client/herdr.ts';
@@ -11,8 +10,6 @@ import { Tabs } from './ops/tabs.ts';
 import { Workspaces } from './ops/workspaces.ts';
 import { pick } from './ui/fzf.ts';
 
-const PROJECT_BASES = [`${homedir()}/Projects`, `${homedir()}/Resources`, `${homedir()}/dotfiles`];
-
 const PROJECT_PREVIEW = [
   'path={};',
   'if [ -f "$path/README.md" ]; then',
@@ -22,11 +19,7 @@ const PROJECT_PREVIEW = [
   'fi',
 ].join(' ');
 
-function listProjects(): string[] {
-  const bases = [...PROJECT_BASES];
-  const hse = `${homedir()}/Projects/HSE`;
-  if (existsSync(hse)) bases.push(hse);
-
+function listProjects(bases: readonly string[]): string[] {
   const seen = new Set<string>();
   for (const base of bases) {
     if (!existsSync(base)) continue;
@@ -67,7 +60,7 @@ export async function runSessionizer(): Promise<void> {
     return;
   }
 
-  const projects = listProjects();
+  const projects = listProjects(config.projects.roots);
   if (projects.length === 0) {
     console.error('No projects found in configured directories.');
     process.exit(1);

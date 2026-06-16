@@ -1,14 +1,14 @@
 # Sessionizer
 
-Herdr plugin and companion CLI for opening project workspaces with a consistent tab and pane layout.
+Herdr plugin for opening project workspaces with a consistent tab and pane layout, with an optional companion CLI for scripted worktree flows.
 
-It currently supports two main workflows:
+It currently supports two primary interactive workflows:
 
 - **Sessionizer**: open or create a project workspace from an interactive picker
-- **Worktree**: create or reopen a Git worktree workspace, either interactively or from a scripted CLI
+- **Worktree**: create or reopen a Git worktree workspace from an interactive picker
 
 > [!IMPORTANT]
-> Interactive flows belong in Herdr-managed plugin panes. For scripted worktree automation, use the standalone `herdr-worktree` Bun-linked CLI.
+> The primary use case is interactive plugin-driven workflow through Herdr panes. The standalone `herdr-worktree` CLI is optional and mainly useful for scripted worktree automation.
 
 ## What this package provides
 
@@ -18,7 +18,7 @@ It currently supports two main workflows:
 | Plugin action | `sessionizer.worktree-open` | Open the interactive worktree pane |
 | Plugin pane | `sessionizer` | Interactive project picker and workspace bootstrap |
 | Plugin pane | `worktree` | Interactive worktree flow |
-| Bun bin | `herdr-worktree` | Scripted/headless worktree flow with `--project` and `--branch` |
+| Bun bin | `herdr-worktree` | Optional scripted/headless worktree flow with `--project` and `--branch` |
 
 ## Requirements
 
@@ -267,7 +267,7 @@ bun run worktree --help
 
 ## Optional standalone worktree CLI
 
-The standalone `herdr-worktree` command is available, but it is not the primary setup path.
+The standalone `herdr-worktree` command is available for scripting, but it is not the primary plugin workflow.
 
 Link it locally with Bun:
 
@@ -303,7 +303,7 @@ bun run worktree --project ~/Projects/my-repo --branch feat/new-flow
 
 ## Current workflow guidance
 
-Use the plugin for interactive flows and the standalone CLI for scripted worktree automation:
+Use the plugin first, and reach for the standalone CLI only when you want shell-driven worktree automation:
 
 - **interactive project picker** -> `sessionizer.open`
 - **interactive worktree picker/prompt** -> `sessionizer.worktree-open`

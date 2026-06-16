@@ -34,7 +34,6 @@ export async function createProjectLayout(
     `${id}-${nextPaneIndex}`,
     firstTab!,
     cwd,
-    config.agent,
     tabs,
     panes,
     config.layout.focus,
@@ -51,7 +50,6 @@ export async function createProjectLayout(
       nextPaneIndex,
       tab,
       cwd,
-      config.agent,
       tabs,
       panes,
       config.layout.focus,
@@ -72,7 +70,6 @@ async function configureExistingTab(
   firstPaneId: string,
   tab: TabConfig,
   cwd: string,
-  agent: string,
   tabs: Tabs,
   panes: Panes,
   focusTarget: string,
@@ -83,7 +80,7 @@ async function configureExistingTab(
   },
 ): Promise<TabRuntime> {
   await tabs.rename(tabId, tab.label).catch(noop);
-  return configureTabPanes(tabId, firstPaneId, 2, tab, cwd, agent, panes, focusTarget, options);
+  return configureTabPanes(tabId, firstPaneId, 2, tab, cwd, panes, focusTarget, options);
 }
 
 async function createAndConfigureTab(
@@ -91,7 +88,6 @@ async function createAndConfigureTab(
   nextPaneIndex: number,
   tab: TabConfig,
   cwd: string,
-  agent: string,
   tabs: Tabs,
   panes: Panes,
   focusTarget: string,
@@ -117,7 +113,6 @@ async function createAndConfigureTab(
     nextPaneIndex + 1,
     tab,
     cwd,
-    agent,
     panes,
     focusTarget,
     options,
@@ -130,7 +125,6 @@ async function configureTabPanes(
   nextPaneIndex: number,
   tab: TabConfig,
   cwd: string,
-  agent: string,
   panes: Panes,
   focusTarget: string,
   options?: {
@@ -139,7 +133,7 @@ async function configureTabPanes(
     defaultServerCommand?: string;
   },
 ): Promise<TabRuntime> {
-  const specs = tab.panes.length > 0 ? tab.panes : [{ id: 'root', title: '', command: '', agent: false }];
+  const specs = tab.panes.length > 0 ? tab.panes : [{ id: 'root', title: '', command: '' }];
   validatePaneSpecs(tab, specs);
 
   const paneIds = new Map<string, string>();
@@ -149,7 +143,7 @@ async function configureTabPanes(
   if (rootSpec.id) {
     paneIds.set(rootSpec.id, currentPaneId);
   }
-  await configurePane(currentPaneId, rootSpec, cwd, agent, panes, tab, options).catch(noop);
+  await configurePane(currentPaneId, rootSpec, cwd, panes, tab, options).catch(noop);
 
   for (let index = 1; index < specs.length; index += 1) {
     const spec = specs[index]!;
@@ -169,7 +163,7 @@ async function configureTabPanes(
     if (spec.id) {
       paneIds.set(spec.id, paneId);
     }
-    await configurePane(paneId, spec, cwd, agent, panes, tab, options).catch(noop);
+    await configurePane(paneId, spec, cwd, panes, tab, options).catch(noop);
     currentPaneId = paneId;
   }
 
@@ -180,7 +174,6 @@ async function configurePane(
   paneId: string,
   spec: PaneConfig,
   cwd: string,
-  agent: string,
   panes: Panes,
   tab: TabConfig,
   options?: {
@@ -193,7 +186,7 @@ async function configurePane(
     await panes.rename(paneId, spec.title);
   }
 
-  const command = buildPaneCommand(spec, cwd, agent, tab, options);
+  const command = buildPaneCommand(spec, cwd, tab, options);
   if (command) {
     await panes.run(paneId, command);
   }
@@ -202,7 +195,6 @@ async function configurePane(
 function buildPaneCommand(
   spec: PaneConfig,
   cwd: string,
-  agent: string,
   tab: TabConfig,
   options?: {
     agentContext?: string;
@@ -211,13 +203,9 @@ function buildPaneCommand(
   },
 ): string {
   const quotedCwd = shellQuote(cwd);
-  if (spec.agent) {
-    return `cd ${quotedCwd} && ${buildAgentCommand(agent, options?.agentContext)}`;
-  }
-
   const rawCommand = spec.command || fallbackPaneCommand(tab, spec, options);
   if (rawCommand) {
-    return `cd ${quotedCwd} && ${interpolateCommand(rawCommand, options?.branch)}`;
+    return `cd ${quotedCwd} && ${interpolateCommand(applyAgentContext(rawCommand, options?.agentContext), options?.branch)}`;
   }
 
   return `cd ${quotedCwd}`;
@@ -246,9 +234,9 @@ function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
-function buildAgentCommand(agent: string, context?: string): string {
-  if (!context) return agent;
-  const trimmed = agent.trim();
+function applyAgentContext(command: string, context?: string): string {
+  if (!context) return command;
+  const trimmed = command.trim();
   if (trimmed === 'kiro-cli') {
     return `kiro-cli chat ${shellQuote(context)}`;
   }
@@ -258,7 +246,7 @@ function buildAgentCommand(agent: string, context?: string): string {
   if (trimmed === 'kiro-cli chat') {
     return `kiro-cli chat ${shellQuote(context)}`;
   }
-  return agent;
+  return command;
 }
 
 function validatePaneSpecs(tab: TabConfig, specs: readonly PaneConfig[]): void {

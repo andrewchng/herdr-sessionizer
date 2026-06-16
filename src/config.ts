@@ -13,7 +13,6 @@ interface RawPaneConfig {
   title?: string;
   split?: string;
   command?: string;
-  agent?: boolean;
 }
 
 interface RawTabConfig {
@@ -21,14 +20,9 @@ interface RawTabConfig {
   label?: string;
   command?: string;
   panes?: RawPaneConfig[];
-  agent?: {
-    enabled?: boolean;
-    title?: string;
-  };
 }
 
 interface RawConfig {
-  agents?: { default?: string };
   projects?: { roots?: string[] };
   layout?: {
     placement?: string;
@@ -44,7 +38,6 @@ export interface PaneConfig {
   title: string;
   split?: SplitDirection;
   command: string;
-  agent: boolean;
 }
 
 export interface TabConfig {
@@ -55,7 +48,6 @@ export interface TabConfig {
 }
 
 export interface SessionizerConfig {
-  agent: string;
   projects: {
     roots: string[];
   };
@@ -78,7 +70,6 @@ export function loadConfig(): SessionizerConfig {
   const pluginConfig = loadRaw(pluginConfigPath);
 
   return {
-    agent: process.env.AI_AGENT ?? pluginConfig?.agents?.default ?? 'opencode',
     projects: {
       roots: (pluginConfig?.projects?.roots ?? defaultProjectRoots()).map(expandHome),
     },
@@ -109,12 +100,12 @@ function buildTabs(config: RawConfig | undefined): TabConfig[] {
       return buildTerminalTab(id, raw, config);
     }
     if (id === 'editor') {
-      return buildStandardTab(id, raw, 'editor', [{ id: 'editor', title: 'editor', command: 'nvim', agent: false }]);
+      return buildStandardTab(id, raw, 'editor', [{ id: 'editor', title: 'editor', command: 'nvim' }]);
     }
     if (id === 'server') {
-      return buildStandardTab(id, raw, 'server', [{ id: 'server', title: 'server', command: '', agent: false }]);
+      return buildStandardTab(id, raw, 'server', [{ id: 'server', title: 'server', command: '' }]);
     }
-    return buildStandardTab(id, raw, id, [{ id, title: id, command: '', agent: false }]);
+    return buildStandardTab(id, raw, id, [{ id, title: id, command: '' }]);
   });
 }
 
@@ -130,24 +121,20 @@ function buildTerminalTab(id: string, raw: RawTabConfig | undefined, config: Raw
     };
   }
 
-  const agentEnabled = raw?.agent?.enabled ?? true;
-  const panes: PaneConfig[] = [{ id: 'shell', title: 'shell', command: '', agent: false }];
-  if (agentEnabled) {
-    panes.push({
-      id: 'agent',
-      from: 'shell',
-      title: raw?.agent?.title ?? 'agent',
-      split: fallbackAgentSplit,
-      command: '',
-      agent: true,
-    });
-  }
-
   return {
     id,
     enabled: raw?.enabled ?? true,
     label: raw?.label ?? 'terminal',
-    panes,
+    panes: [
+      { id: 'shell', title: 'shell', command: '' },
+      {
+        id: 'agent',
+        from: 'shell',
+        title: 'agent',
+        split: fallbackAgentSplit,
+        command: process.env.AI_AGENT ?? 'opencode',
+      },
+    ],
   };
 }
 
@@ -184,15 +171,11 @@ function buildPanes(rawPanes: RawPaneConfig[] | undefined): PaneConfig[] {
     title: pane.title?.trim() ?? '',
     split: index === 0 && !pane.from ? undefined : asOptionalSplitDirection(pane.split),
     command: pane.command ?? '',
-    agent: pane.agent ?? false,
   }));
 }
 
 function defaultConfigToml(): string {
   return [
-    '[agents]',
-    'default = "opencode"',
-    '',
     '[projects]',
     `roots = ["~/"]`,
     '',
@@ -213,7 +196,7 @@ function defaultConfigToml(): string {
     'from = "shell"',
     'title = "agent"',
     'split = "right"',
-    'agent = true',
+    'command = "opencode"',
     '',
     '[tabs.editor]',
     'enabled = true',

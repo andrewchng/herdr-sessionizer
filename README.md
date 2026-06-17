@@ -1,14 +1,14 @@
 # Sessionizer
 
-Herdr plugin for opening project workspaces with a consistent tab and pane layout, with an optional companion CLI for scripted worktree flows.
+Sessionizer is a [Herdr](https://herdr.dev/) plugin for getting into the right workspace quickly.
 
 It currently supports two primary interactive workflows:
 
-- **Sessionizer**: open or create a project workspace from an interactive picker
-- **Worktree**: create or reopen a Git worktree workspace from an interactive picker
+- **Sessionizer** — focus an existing workspace or create a new project workspace from an interactive picker
+- **Worktree** — create or reopen a Git worktree workspace from an interactive picker
 
 > [!IMPORTANT]
-> The primary use case is interactive plugin-driven workflow through Herdr panes. The standalone `herdr-worktree` CLI is optional and mainly useful for scripted worktree automation.
+> The primary product is the interactive Herdr plugin. The standalone `herdr-worktree` CLI is an optional companion for scripted worktree automation, not the main workflow.
 
 ## What this package provides
 
@@ -53,7 +53,7 @@ herdr plugin config-dir sessionizer
 ```
 
 > [!NOTE]
-> This is the main setup path. It gives you the Herdr plugin surfaces directly from GitHub.
+> This is the main setup path. Most users only need the plugin install and a couple of keybindings.
 
 ### Local development setup
 
@@ -93,7 +93,7 @@ What it does:
 - first shows an `fzf` picker of existing Herdr workspaces plus projects found under `projects.roots`
 - if you pick an existing workspace, Sessionizer focuses it
 - if you pick a project path, Sessionizer creates a new workspace for that project and applies the configured tab and pane layout
-- the layout can create terminal, editor, server, and extra custom tabs with named panes
+- the layout comes entirely from your config file
 
 What the picker contains:
 
@@ -137,6 +137,9 @@ The plugin and the standalone `herdr-worktree` CLI share the same config file:
 If the file does not exist yet, the plugin creates it automatically on first run.
 
 At runtime, the plugin reads this file literally. It does not invent extra tabs, panes, or commands beyond what is in your config.
+
+> [!NOTE]
+> Existing workspaces are reopened as-is. Layout bootstrap only happens for newly created workspaces.
 
 ### Minimal example
 
@@ -271,7 +274,7 @@ bun run worktree --help
 
 ## Optional standalone worktree CLI
 
-The standalone `herdr-worktree` command is available for scripting, but it is not the primary plugin workflow.
+The standalone `herdr-worktree` command is available for shell automation, but it is secondary to the interactive plugin workflow.
 
 Link it locally with Bun:
 

@@ -10,12 +10,20 @@ import { Workspaces } from './ops/workspaces.ts';
 import { pick } from './ui/fzf.ts';
 
 const PROJECT_PREVIEW = [
-  'path={};',
+  "sh -c '",
+  'path="$1";',
   'if [ -f "$path/README.md" ]; then',
-  '  bat --color=always "$path/README.md" 2>/dev/null || head -50 "$path/README.md";',
+  '  if command -v bat >/dev/null 2>&1; then',
+  '    bat --color=always -- "$path/README.md";',
+  '  else',
+  '    head -50 "$path/README.md";',
+  '  fi;',
+  'elif [ -d "$path" ]; then',
+  '  command ls -la -- "$path" 2>/dev/null | head -50;',
   'else',
-  '  ls -la "$path";',
+  '  printf "%s\\n" "$path";',
   'fi',
+  "' sh {}",
 ].join(' ');
 
 

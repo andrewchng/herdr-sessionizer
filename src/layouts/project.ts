@@ -1,9 +1,9 @@
 import type { SessionizerConfig, PaneConfig, TabConfig } from '../config.ts';
-import type { Workspace } from '../client/types.ts';
-import type { Panes } from '../ops/panes.ts';
-import type { Tabs } from '../ops/tabs.ts';
-
-import { shellQuote } from '../discovery.ts';
+import type { Pane, Tab, Workspace } from '../client/types.ts';
+import type { SplitOptions } from '../ops/panes.ts';
+import type { TabCreateOptions } from '../ops/tabs.ts';
+import { buildPaneCommand, type LayoutCommandOptions } from './command-builder.ts';
+import { createLenientLayoutErrorPolicy, type LayoutErrorPolicy } from './error-policy.ts';
 
 interface TabRuntime {
   tabId: string;
@@ -11,16 +11,26 @@ interface TabRuntime {
   nextPaneIndex: number;
 }
 
+export interface LayoutTabs {
+  create(options: TabCreateOptions): Promise<Tab>;
+  rename(tabId: string, label: string): Promise<void>;
+  focus(tabId: string): Promise<void>;
+}
+
+export interface LayoutPanes {
+  split(paneId: string, options: SplitOptions): Promise<Pane>;
+  run(paneId: string, command: string): Promise<void>;
+  rename(paneId: string, label: string): Promise<void>;
+}
+
 export async function createProjectLayout(
   workspace: Workspace,
   cwd: string,
   config: SessionizerConfig,
-  tabs: Tabs,
-  panes: Panes,
-  options?: {
-    commandContext?: string;
-    branch?: string;
-  },
+  tabs: LayoutTabs,
+  panes: LayoutPanes,
+  options?: LayoutCommandOptions,
+  errorPolicy: LayoutErrorPolicy = createLenientLayoutErrorPolicy(),
 ): Promise<Workspace> {
   const id = workspace.workspace_id;
   const enabledTabs = config.tabs.filter((tab) => tab.enabled);
@@ -39,6 +49,7 @@ export async function createProjectLayout(
     panes,
     config.layout.focus,
     options,
+    errorPolicy,
   );
   nextPaneIndex = initial.nextPaneIndex;
   if (matchesFocus(config.layout.focus, firstTab!, initial.firstPaneId)) {
@@ -55,6 +66,7 @@ export async function createProjectLayout(
       panes,
       config.layout.focus,
       options,
+      errorPolicy,
     );
     nextPaneIndex = created.nextPaneIndex;
     if (matchesFocus(config.layout.focus, tab, created.firstPaneId)) {
@@ -62,7 +74,7 @@ export async function createProjectLayout(
     }
   }
 
-  await tabs.focus(focusedTabId).catch(noop);
+  await errorPolicy.ignore(`focus tab '${focusedTabId}'`, () => tabs.focus(focusedTabId));
   return workspace;
 }
 
@@ -71,16 +83,14 @@ async function configureExistingTab(
   firstPaneId: string,
   tab: TabConfig,
   cwd: string,
-  tabs: Tabs,
-  panes: Panes,
+  tabs: LayoutTabs,
+  panes: LayoutPanes,
   focusTarget: string,
-  options?: {
-    commandContext?: string;
-    branch?: string;
-  },
+  options?: LayoutCommandOptions,
+  errorPolicy?: LayoutErrorPolicy,
 ): Promise<TabRuntime> {
-  await tabs.rename(tabId, tab.label).catch(noop);
-  return configureTabPanes(tabId, firstPaneId, 2, tab, cwd, panes, focusTarget, options);
+  await errorPolicy!.ignore(`rename tab '${tab.label}'`, () => tabs.rename(tabId, tab.label));
+  return configureTabPanes(tabId, firstPaneId, 2, tab, cwd, panes, focusTarget, options, errorPolicy!);
 }
 
 async function createAndConfigureTab(
@@ -88,22 +98,20 @@ async function createAndConfigureTab(
   nextPaneIndex: number,
   tab: TabConfig,
   cwd: string,
-  tabs: Tabs,
-  panes: Panes,
+  tabs: LayoutTabs,
+  panes: LayoutPanes,
   focusTarget: string,
-  options?: {
-    commandContext?: string;
-    branch?: string;
-  },
+  options?: LayoutCommandOptions,
+  errorPolicy?: LayoutErrorPolicy,
 ): Promise<TabRuntime> {
-  const tabResult = await tabs
-    .create({
+  const tabResult = await errorPolicy!.optional(`create tab '${tab.label}'`, () =>
+    tabs.create({
       workspace_id: workspaceId,
       cwd,
       label: tab.label,
       focus: matchesFocus(focusTarget, tab, `${workspaceId}-${nextPaneIndex}`),
-    })
-    .catch(noopTab);
+    }),
+  );
 
   const tabId = tabResult?.tab_id ?? `${workspaceId}:unknown`;
   return configureTabPanes(
@@ -115,6 +123,7 @@ async function createAndConfigureTab(
     panes,
     focusTarget,
     options,
+    errorPolicy!,
   );
 }
 
@@ -124,12 +133,10 @@ async function configureTabPanes(
   nextPaneIndex: number,
   tab: TabConfig,
   cwd: string,
-  panes: Panes,
+  panes: LayoutPanes,
   focusTarget: string,
-  options?: {
-    commandContext?: string;
-    branch?: string;
-  },
+  options?: LayoutCommandOptions,
+  errorPolicy?: LayoutErrorPolicy,
 ): Promise<TabRuntime> {
   const specs = tab.panes.length > 0 ? tab.panes : [{ id: 'root', title: '', command: '' }];
   validatePaneSpecs(tab, specs);
@@ -141,7 +148,9 @@ async function configureTabPanes(
   if (rootSpec.id) {
     paneIds.set(rootSpec.id, currentPaneId);
   }
-  await configurePane(currentPaneId, rootSpec, cwd, panes, tab, options).catch(noop);
+  await errorPolicy!.ignore(`configure root pane '${rootSpec.title || currentPaneId}'`, () =>
+    configurePane(currentPaneId, rootSpec, cwd, panes, options),
+  );
 
   for (let index = 1; index < specs.length; index += 1) {
     const spec = specs[index]!;
@@ -149,19 +158,21 @@ async function configureTabPanes(
     if (!anchorPaneId) {
       throw new Error(`Tab '${tab.label}' references unknown pane '${spec.from ?? ''}'.`);
     }
-    const splitPane = await panes
-      .split(anchorPaneId, {
+    const splitPane = await errorPolicy!.optional(`split pane from '${anchorPaneId}'`, () =>
+      panes.split(anchorPaneId, {
         direction: spec.split ?? 'right',
         cwd,
         focus: matchesFocusTarget(focusTarget, spec),
-      })
-      .catch(noopPane);
+      }),
+    );
     const paneId = splitPane?.pane_id ?? workspacePaneId(firstPaneId, nextPaneIndex);
     nextPaneIndex += 1;
     if (spec.id) {
       paneIds.set(spec.id, paneId);
     }
-    await configurePane(paneId, spec, cwd, panes, tab, options).catch(noop);
+    await errorPolicy!.ignore(`configure pane '${spec.title || paneId}'`, () =>
+      configurePane(paneId, spec, cwd, panes, options),
+    );
     currentPaneId = paneId;
   }
 
@@ -172,39 +183,17 @@ async function configurePane(
   paneId: string,
   spec: PaneConfig,
   cwd: string,
-  panes: Panes,
-  tab: TabConfig,
-  options?: {
-    commandContext?: string;
-    branch?: string;
-  },
+  panes: LayoutPanes,
+  options?: LayoutCommandOptions,
 ): Promise<void> {
   if (spec.title) {
     await panes.rename(paneId, spec.title);
   }
 
-  const command = buildPaneCommand(spec, cwd, tab, options);
+  const command = buildPaneCommand(spec, cwd, options);
   if (command) {
     await panes.run(paneId, command);
   }
-}
-
-function buildPaneCommand(
-  spec: PaneConfig,
-  cwd: string,
-  tab: TabConfig,
-  options?: {
-    commandContext?: string;
-    branch?: string;
-  },
-): string {
-  const quotedCwd = shellQuote(cwd);
-  const rawCommand = spec.command;
-  if (rawCommand) {
-    return `cd ${quotedCwd} && ${interpolateCommand(applyCommandContext(rawCommand, options?.commandContext), options?.branch)}`;
-  }
-
-  return `cd ${quotedCwd}`;
 }
 
 function matchesFocus(focusTarget: string, tab: TabConfig, firstPaneId: string): boolean {
@@ -214,33 +203,6 @@ function matchesFocus(focusTarget: string, tab: TabConfig, firstPaneId: string):
 
 function workspacePaneId(firstPaneId: string, index: number): string {
   return firstPaneId.replace(/-\d+$/, `-${index}`);
-}
-
-function noop(): void {}
-
-function noopPane(): undefined {
-  return undefined;
-}
-
-function noopTab(): undefined {
-  return undefined;
-}
-
-
-
-function applyCommandContext(command: string, context?: string): string {
-  if (!context) return command;
-  const trimmed = command.trim();
-  if (trimmed === 'kiro-cli') {
-    return `kiro-cli chat ${shellQuote(context)}`;
-  }
-  if (trimmed.startsWith('kiro-cli chat ')) {
-    return `${trimmed} ${shellQuote(context)}`;
-  }
-  if (trimmed === 'kiro-cli chat') {
-    return `kiro-cli chat ${shellQuote(context)}`;
-  }
-  return command;
 }
 
 function validatePaneSpecs(tab: TabConfig, specs: readonly PaneConfig[]): void {
@@ -267,8 +229,4 @@ function validatePaneSpecs(tab: TabConfig, specs: readonly PaneConfig[]): void {
 
 function matchesFocusTarget(focusTarget: string, pane: PaneConfig): boolean {
   return pane.title === focusTarget || pane.id === focusTarget;
-}
-
-function interpolateCommand(command: string, branch?: string): string {
-  return branch ? command.replaceAll('{branch}', branch) : command;
 }

@@ -36,6 +36,10 @@
     <strong>✅ Candidate 2 completed:</strong> Extracted <code>src/worktree-resolver.ts</code> to isolate existing-worktree resolution, simplified <code>src/worktree.ts</code>, and added focused recovery-flow tests in <code>src/worktree-resolver.test.ts</code> and <code>src/worktree.test.ts</code>.
   </div>
 
+  <div class="bg-green-100 border border-green-300 text-green-800 rounded-xl p-4 mb-6">
+    <strong>✅ Candidate 3 completed:</strong> Extracted <code>src/layouts/command-builder.ts</code> and <code>src/layouts/error-policy.ts</code>, simplified <code>src/layouts/project.ts</code> into a clearer orchestration layer, and added targeted layout tests.
+  </div>
+
   <!-- Summary -->
   <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
     <h2 class="text-lg font-semibold mb-3">Codebase overview</h2>
@@ -257,7 +261,7 @@
   <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-xl font-bold">3. Deepen the layout builder seam</h2>
-      <span class="badge-worth text-white text-xs font-bold px-2.5 py-1 rounded">WORTH EXPLORING</span>
+      <span class="badge-strong text-white text-xs font-bold px-2.5 py-1 rounded">✓ COMPLETED</span>
     </div>
 
     <div class="grid grid-cols-2 gap-4 mb-4">
@@ -271,7 +275,7 @@
       </div>
       <div>
         <h3 class="font-semibold text-gray-700">Recommendation strength</h3>
-        <p class="text-sm text-gray-600"><span class="font-bold text-amber-700">Worth exploring</span> — the module works but has implicit state, noop error recovery, and a large interface.</p>
+        <p class="text-sm text-gray-600"><span class="font-bold text-green-700">Completed</span> — command building and error policy now have dedicated seams, and the layout orchestrator has focused coverage.</p>
       </div>
     </div>
 
@@ -512,8 +516,11 @@
     <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
       <strong>✅ Candidate 2 completed</strong> — <code>worktree-resolver.ts</code> extracted, the duplicate-branch recovery path was simplified, and targeted worktree tests were added.
     </div>
+    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
+      <strong>✅ Candidate 3 completed</strong> — command building and lenient layout error handling were extracted, and <code>createProjectLayout()</code> now sits on a clearer orchestration seam with dedicated tests.
+    </div>
     <p class="text-gray-700 mb-3">
-      Next: <strong>Candidate 3 (layout builder seam)</strong> — <code>src/layouts/project.ts</code> is now the deepest remaining module and the best place to look for the next cleanup seam.
+      Next: <strong>Candidate 6 (CONTEXT.md and ADR)</strong> — the remaining code is easier to navigate now, so the next leverage point is documenting the domain language and the key workflow decisions.
     </p>
     <p class="text-gray-700">
       Candidates 3 and 4 are worth exploring but need the context gained from simpler refactors first.

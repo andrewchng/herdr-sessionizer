@@ -24,7 +24,11 @@ It currently supports two primary interactive workflows:
 
 - [Herdr](https://herdr.dev/) `>= 0.7.0`
 - [Bun](https://bun.sh/)
-- `fzf` for the interactive picker flows
+
+## Optional dependencies
+
+- [fzf](https://github.com/junegunn/fzf) for the interactive picker flows
+- [bat](https://github.com/sharkdp/bat) for richer `README.md` previews in the picker UI
 
 ## Setup
 

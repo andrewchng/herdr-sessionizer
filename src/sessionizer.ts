@@ -1,3 +1,5 @@
+import { basename } from 'node:path';
+
 import { listProjects, sanitizeName } from './discovery.ts';
 
 import type { Workspace } from './client/types.ts';
@@ -26,14 +28,54 @@ const PROJECT_PREVIEW = [
   "' sh {}",
 ].join(' ');
 
+const WORKSPACE_PREVIEW = [
+  "sh -c '",
+  'label="$1";',
+  'summary="$2";',
+  'cwd="$3";',
+  'branch="$4";',
+  'tabs="$5";',
+  'panes="$6";',
+  'printf \"label: %s\\n\" \"$label\";',
+  'printf \"summary: %s\\n\" \"$summary\";',
+  'if [ -n \"$branch\" ]; then printf \"branch: %s\\n\" \"$branch\"; fi;',
+  'if [ -n \"$cwd\" ]; then printf \"cwd: %s\\n\" \"$cwd\"; fi;',
+  'printf \"tabs: %s\\npanes: %s\\n\\n\" \"$tabs\" \"$panes\";',
+  'if [ -n \"$cwd\" ] && [ -f \"$cwd/README.md\" ]; then',
+  '  if command -v bat >/dev/null 2>&1; then',
+  '    bat --color=always -- \"$cwd/README.md\";',
+  '  else',
+  '    head -50 \"$cwd/README.md\";',
+  '  fi;',
+  'elif [ -n \"$cwd\" ] && [ -d \"$cwd\" ]; then',
+  '  command ls -la -- \"$cwd\" 2>/dev/null | head -50;',
+  'fi',
+  "' sh {2} {3} {4} {5} {6} {7}",
+].join(' ');
 
+const WORKSPACE_ROW_DELIMITER = '\t';
 
 function workspaceRow(workspace: Workspace): string {
-  return `${workspace.workspace_id} ${workspace.label ?? ''}`;
+  const label = rowField(workspace.label || workspaceName(workspace));
+  const summary = rowField(workspaceSummary(workspace));
+  const cwd = rowField(workspacePath(workspace));
+  const branch = rowField(workspace.worktree?.branch);
+  const tabCount = String(workspace.tab_count ?? 0);
+  const paneCount = String(workspace.pane_count ?? 0);
+
+  return [
+    workspace.workspace_id,
+    label,
+    summary,
+    cwd,
+    branch,
+    tabCount,
+    paneCount,
+  ].join(WORKSPACE_ROW_DELIMITER);
 }
 
 function extractWorkspaceId(row: string): string {
-  return row.split(' ')[0] ?? row;
+  return row.split(WORKSPACE_ROW_DELIMITER)[0] ?? row;
 }
 
 export async function runSessionizer(): Promise<void> {
@@ -46,6 +88,10 @@ export async function runSessionizer(): Promise<void> {
   const existing = await pick((await workspaces.list()).map(workspaceRow), {
     prompt: 'Switch session (Esc for new): ',
     header: '↑↓ navigate, Enter select, Esc → new project',
+    delimiter: WORKSPACE_ROW_DELIMITER,
+    withNth: '2',
+    preview: WORKSPACE_PREVIEW,
+    previewWindow: 'right:50%',
   });
 
   if (existing && existing.length > 0) {
@@ -77,6 +123,44 @@ export async function runSessionizer(): Promise<void> {
   await workspaces.focus(workspace.workspace_id);
 
   console.log(`✓ workspace '${label}' created and focused (${workspace.workspace_id})`);
+}
+
+function workspaceName(workspace: Workspace): string {
+  const path = workspacePath(workspace);
+  if (path) {
+    return basename(path);
+  }
+
+  return workspace.workspace_id;
+}
+
+function workspaceSummary(workspace: Workspace): string {
+  const path = workspacePath(workspace);
+  const location = path ? basename(path) : workspace.worktree?.repo_name;
+  const branch = workspace.worktree?.branch;
+  if (branch) {
+    return location ? `${branch} · ${location}` : branch;
+  }
+
+  if (location) {
+    return location;
+  }
+
+  const tabs = workspace.tab_count ?? 0;
+  const panes = workspace.pane_count ?? 0;
+  return `${tabs} tabs · ${panes} panes`;
+}
+
+function workspacePath(workspace: Workspace): string | undefined {
+  return workspace.cwd ?? workspace.worktree?.checkout_path ?? workspace.worktree?.repo_root ?? workspace.worktree?.path;
+}
+
+function rowField(value: unknown): string {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  return value.replaceAll('\t', ' ').replaceAll('\n', ' ').trim();
 }
 
 if (import.meta.main) {

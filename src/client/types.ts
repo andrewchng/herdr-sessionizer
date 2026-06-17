@@ -17,6 +17,9 @@ export interface WorktreeProvenance {
   branch?: string;
   path?: string;
   checkout_path?: string;
+  repo_name?: string;
+  repo_root?: string;
+  is_linked_worktree?: boolean;
   [key: string]: unknown;
 }
 

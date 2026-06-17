@@ -2,6 +2,8 @@ export interface PickOptions {
   prompt?: string;
   header?: string;
   multi?: boolean;
+  delimiter?: string;
+  withNth?: string;
   preview?: string;
   previewWindow?: string;
   bin?: string;
@@ -19,6 +21,8 @@ export async function pick<T extends string>(
   if (options.prompt) args.push('--prompt', options.prompt);
   if (options.header) args.push('--header', options.header);
   if (options.multi) args.push('--multi');
+  if (options.delimiter) args.push('--delimiter', options.delimiter);
+  if (options.withNth) args.push('--with-nth', options.withNth);
   if (options.preview) args.push('--preview', options.preview);
   if (options.previewWindow) args.push('--preview-window', options.previewWindow);
 

@@ -24,10 +24,10 @@ It currently supports two primary interactive workflows:
 
 - [Herdr](https://herdr.dev/) `>= 0.7.0`
 - [Bun](https://bun.sh/)
+- [fzf](https://github.com/junegunn/fzf) for the interactive picker flows
 
 ## Optional dependencies
 
-- [fzf](https://github.com/junegunn/fzf) for the interactive picker flows
 - [bat](https://github.com/sharkdp/bat) for richer `README.md` previews in the picker UI
 
 ## Setup
@@ -114,7 +114,7 @@ What it does:
 
 - shows an `fzf` picker of base project repositories found under `projects.roots`
 - after you pick a base repo, prompts for a branch name
-- if that worktree already exists, it reopens the matching workspace or checkout
+- if that worktree already exists, it reopens the matching workspace or checkout as-is
 - if it does not exist yet, it creates the worktree, opens it as a Herdr workspace, and applies the configured tab and pane layout
 
 What the picker contains:

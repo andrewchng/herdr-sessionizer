@@ -11,48 +11,7 @@ import { Panes } from './ops/panes.ts';
 import { Tabs } from './ops/tabs.ts';
 import { Workspaces } from './ops/workspaces.ts';
 import { pick, type PickOptions } from './ui/fzf.ts';
-
-const PROJECT_PREVIEW = [
-  "sh -c '",
-  'path="$1";',
-  'if [ -f "$path/README.md" ]; then',
-  '  if command -v bat >/dev/null 2>&1; then',
-  '    bat --color=always -- "$path/README.md";',
-  '  else',
-  '    head -50 "$path/README.md";',
-  '  fi;',
-  'elif [ -d "$path" ]; then',
-  '  command ls -la -- "$path" 2>/dev/null | head -50;',
-  'else',
-  '  printf "%s\\n" "$path";',
-  'fi',
-  "' sh {}",
-].join(' ');
-
-const WORKSPACE_PREVIEW = [
-  "sh -c '",
-  'label="$1";',
-  'summary="$2";',
-  'cwd="$3";',
-  'branch="$4";',
-  'tabs="$5";',
-  'panes="$6";',
-  'printf \"label: %s\\n\" \"$label\";',
-  'printf \"summary: %s\\n\" \"$summary\";',
-  'if [ -n \"$branch\" ]; then printf \"branch: %s\\n\" \"$branch\"; fi;',
-  'if [ -n \"$cwd\" ]; then printf \"cwd: %s\\n\" \"$cwd\"; fi;',
-  'printf \"tabs: %s\\npanes: %s\\n\\n\" \"$tabs\" \"$panes\";',
-  'if [ -n \"$cwd\" ] && [ -f \"$cwd/README.md\" ]; then',
-  '  if command -v bat >/dev/null 2>&1; then',
-  '    bat --color=always -- \"$cwd/README.md\";',
-  '  else',
-  '    head -50 \"$cwd/README.md\";',
-  '  fi;',
-  'elif [ -n \"$cwd\" ] && [ -d \"$cwd\" ]; then',
-  '  command ls -la -- \"$cwd\" 2>/dev/null | head -50;',
-  'fi',
-  "' sh {2} {3} {4} {5} {6} {7}",
-].join(' ');
+import { PROJECT_PREVIEW, WORKSPACE_PREVIEW } from './ui/previews.ts';
 
 const WORKSPACE_ROW_DELIMITER = '\t';
 

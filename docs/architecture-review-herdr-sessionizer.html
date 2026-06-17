@@ -40,6 +40,10 @@
     <strong>✅ Candidate 3 completed:</strong> Extracted <code>src/layouts/command-builder.ts</code> and <code>src/layouts/error-policy.ts</code>, simplified <code>src/layouts/project.ts</code> into a clearer orchestration layer, and added targeted layout tests.
   </div>
 
+  <div class="bg-green-100 border border-green-300 text-green-800 rounded-xl p-4 mb-6">
+    <strong>✅ Candidate 6 completed:</strong> Added <code>CONTEXT.md</code> to define the domain language and <code>docs/adr/ADR-0001-workspace-reopen-and-layout-bootstrap.md</code> to record the reopen-versus-bootstrap rule.
+  </div>
+
   <!-- Summary -->
   <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
     <h2 class="text-lg font-semibold mb-3">Codebase overview</h2>
@@ -476,7 +480,7 @@
   <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-xl font-bold">6. Create CONTEXT.md and ADR-0001</h2>
-      <span class="badge-worth text-white text-xs font-bold px-2.5 py-1 rounded">WORTH EXPLORING</span>
+      <span class="badge-strong text-white text-xs font-bold px-2.5 py-1 rounded">✓ COMPLETED</span>
     </div>
 
     <div class="grid grid-cols-2 gap-4 mb-4">
@@ -489,7 +493,7 @@
       </div>
       <div>
         <h3 class="font-semibold text-gray-700">Recommendation strength</h3>
-        <p class="text-sm text-gray-600"><span class="font-bold text-amber-700">Worth exploring</span> — no domain glossary or ADRs exists. This makes architecture reviews harder because terms aren't sharpened.</p>
+        <p class="text-sm text-gray-600"><span class="font-bold text-green-700">Completed</span> — the domain language and the reopen-versus-bootstrap rule are now explicit reference documents.</p>
       </div>
     </div>
 
@@ -500,7 +504,7 @@
 
     <h3 class="font-semibold text-gray-700 mb-1">Solution</h3>
     <p class="text-sm text-gray-700 mb-3">
-      Create a <code>CONTEXT.md</code> with the domain language. Also create <code>ADR-0001</code> recording the current decision to treat worktree existence as an error path (or revisit it as part of candidate 2).
+      Create a <code>CONTEXT.md</code> with the domain language. Also create <code>ADR-0001</code> recording the current decision to reopen existing workspaces as-is and reserve layout bootstrap for newly created workspaces.
     </p>
   </div>
 
@@ -519,8 +523,11 @@
     <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
       <strong>✅ Candidate 3 completed</strong> — command building and lenient layout error handling were extracted, and <code>createProjectLayout()</code> now sits on a clearer orchestration seam with dedicated tests.
     </div>
+    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
+      <strong>✅ Candidate 6 completed</strong> — domain language and the reopen/bootstrap rule now live in <code>CONTEXT.md</code> and <code>docs/adr/ADR-0001-workspace-reopen-and-layout-bootstrap.md</code>.
+    </div>
     <p class="text-gray-700 mb-3">
-      Next: <strong>Candidate 6 (CONTEXT.md and ADR)</strong> — the remaining code is easier to navigate now, so the next leverage point is documenting the domain language and the key workflow decisions.
+      Next: <strong>No strong cleanup candidate remains</strong> — the remaining opportunities are more speculative than urgent, so the codebase is in a good place for feature work.
     </p>
     <p class="text-gray-700">
       Candidates 3 and 4 are worth exploring but need the context gained from simpler refactors first.

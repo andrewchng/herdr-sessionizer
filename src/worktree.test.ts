@@ -5,7 +5,7 @@ import type { Workspace } from './client/types.ts';
 import { runWorktree } from './worktree.ts';
 
 describe('runWorktree', () => {
-  it('reopens an existing worktree after create hits a duplicate-branch error and bootstraps layout', async () => {
+  it('reopens an existing worktree after create hits a duplicate-branch error without relayout', async () => {
     const duplicateBranchError = new HerdrError(
       ['worktree', 'create'],
       1,
@@ -41,7 +41,6 @@ describe('runWorktree', () => {
       throw duplicateBranchError;
     });
     const list = mock(async () => []);
-    const get = mock(async () => existingWorkspace);
     const focus = mock(async () => {});
     const resolveExisting = mock(async () => ({
       path: '/repo/feature-test-flow',
@@ -53,7 +52,7 @@ describe('runWorktree', () => {
 
     await runWorktree(['--project', '/repo', '--branch', 'feature/test-flow', '--context', 'copilot'], {
       worktrees: { open, create },
-      workspaces: { list, get, focus },
+      workspaces: { list, get: mock(async () => existingWorkspace), focus },
       tabs: {},
       panes: {},
       config: {
@@ -98,23 +97,9 @@ describe('runWorktree', () => {
       path: '/repo/feature-test-flow',
       focus: true,
     });
-    expect(createLayout).toHaveBeenCalledWith(
-      existingWorkspace,
-      '/repo/feature-test-flow',
-      {
-        projects: { roots: ['/repo'] },
-        layout: { placement: 'overlay', focus: 'terminal' },
-        tabs: [],
-      },
-      {},
-      {},
-      {
-        commandContext: 'copilot',
-        branch: 'feature/test-flow',
-      },
-    );
-    expect(focus).toHaveBeenCalledWith('ws-feature');
-    expect(log).toHaveBeenCalledWith("✓ bootstrapped layout for 'feature/test-flow'");
+    expect(createLayout).not.toHaveBeenCalled();
+    expect(focus).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith("✓ opened existing worktree path '/repo/feature-test-flow' for 'feature/test-flow'");
   });
 
   it('rethrows the duplicate-branch herdr error when no existing worktree can be resolved', async () => {

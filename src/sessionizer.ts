@@ -4,12 +4,13 @@ import { listProjects, sanitizeName } from './discovery.ts';
 
 import type { Workspace } from './client/types.ts';
 import { Herdr } from './client/herdr.ts';
+import type { SessionizerConfig } from './config.ts';
 import { loadConfig } from './config.ts';
-import { createProjectLayout } from './layouts/project.ts';
+import { createProjectLayout, type LayoutPanes, type LayoutTabs } from './layouts/project.ts';
 import { Panes } from './ops/panes.ts';
 import { Tabs } from './ops/tabs.ts';
 import { Workspaces } from './ops/workspaces.ts';
-import { pick } from './ui/fzf.ts';
+import { pick, type PickOptions } from './ui/fzf.ts';
 
 const PROJECT_PREVIEW = [
   "sh -c '",
@@ -55,6 +56,32 @@ const WORKSPACE_PREVIEW = [
 
 const WORKSPACE_ROW_DELIMITER = '\t';
 
+type LayoutApplier = (
+  workspace: Workspace,
+  cwd: string,
+  config: SessionizerConfig,
+  tabs: LayoutTabs,
+  panes: LayoutPanes,
+) => Promise<Workspace>;
+
+interface SessionizerWorkspaceRuntime {
+  list(): Promise<Workspace[]>;
+  create(options: { cwd: string; label: string; focus?: boolean }): Promise<Workspace>;
+  focus(workspaceId: string): Promise<void>;
+}
+
+interface SessionizerRuntime {
+  workspaces: SessionizerWorkspaceRuntime;
+  tabs: LayoutTabs;
+  panes: LayoutPanes;
+  config: SessionizerConfig;
+  pickRows: (rows: readonly string[], options?: PickOptions) => Promise<string[] | null>;
+  listProjects: (roots: string[]) => string[];
+  createLayout: LayoutApplier;
+  logger: Pick<typeof console, 'log' | 'error'>;
+  exit: (code: number) => never;
+}
+
 function workspaceRow(workspace: Workspace): string {
   const label = rowField(workspace.label || workspaceName(workspace));
   const summary = rowField(workspaceSummary(workspace));
@@ -78,14 +105,10 @@ function extractWorkspaceId(row: string): string {
   return row.split(WORKSPACE_ROW_DELIMITER)[0] ?? row;
 }
 
-export async function runSessionizer(): Promise<void> {
-  const herdr = new Herdr();
-  const workspaces = new Workspaces(herdr);
-  const tabs = new Tabs(herdr);
-  const panes = new Panes(herdr);
-  const config = loadConfig();
+export async function runSessionizer(runtime: SessionizerRuntime = createRuntime()): Promise<void> {
+  const { workspaces, tabs, panes, config } = runtime;
 
-  const existing = await pick((await workspaces.list()).map(workspaceRow), {
+  const existing = await runtime.pickRows((await workspaces.list()).map(workspaceRow), {
     prompt: 'Switch session (Esc for new): ',
     header: '↑↓ navigate, Enter select, Esc → new project',
     delimiter: WORKSPACE_ROW_DELIMITER,
@@ -99,13 +122,13 @@ export async function runSessionizer(): Promise<void> {
     return;
   }
 
-  const projects = listProjects(config.projects.roots);
+  const projects = runtime.listProjects(config.projects.roots);
   if (projects.length === 0) {
-    console.error('No projects found in configured directories.');
-    process.exit(1);
+    runtime.logger.error('No projects found in configured directories.');
+    runtime.exit(1);
   }
 
-  const selected = await pick(projects, {
+  const selected = await runtime.pickRows(projects, {
     prompt: 'Project: ',
     header: 'Select a project to create a workspace',
     preview: PROJECT_PREVIEW,
@@ -119,10 +142,10 @@ export async function runSessionizer(): Promise<void> {
   const label = sanitizeName(projectName);
   const workspace = await workspaces.create({ cwd: project, label, focus: false });
 
-  await createProjectLayout(workspace, project, config, tabs, panes);
+  await runtime.createLayout(workspace, project, config, tabs, panes);
   await workspaces.focus(workspace.workspace_id);
 
-  console.log(`✓ workspace '${label}' created and focused (${workspace.workspace_id})`);
+  runtime.logger.log(`✓ workspace '${label}' created and focused (${workspace.workspace_id})`);
 }
 
 function workspaceName(workspace: Workspace): string {
@@ -161,6 +184,22 @@ function rowField(value: unknown): string {
   }
 
   return value.replaceAll('\t', ' ').replaceAll('\n', ' ').trim();
+}
+
+function createRuntime(): SessionizerRuntime {
+  const herdr = new Herdr();
+
+  return {
+    workspaces: new Workspaces(herdr),
+    tabs: new Tabs(herdr),
+    panes: new Panes(herdr),
+    config: loadConfig(),
+    pickRows: pick,
+    listProjects,
+    createLayout: createProjectLayout,
+    logger: console,
+    exit: (code) => process.exit(code),
+  };
 }
 
 if (import.meta.main) {

@@ -123,7 +123,7 @@ What the picker contains:
 
 What happens after the branch prompt:
 
-- existing branch/worktree -> reopen and optionally bootstrap the layout if the workspace is still bare
+- existing branch/worktree -> reopen the existing workspace or checkout as-is
 - new branch/worktree -> create, open, and bootstrap the layout
 
 ## Configuration

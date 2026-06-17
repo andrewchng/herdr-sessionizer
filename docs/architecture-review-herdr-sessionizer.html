@@ -195,7 +195,7 @@
     <h3 class="font-semibold text-gray-700 mb-1">Solution</h3>
     <p class="text-sm text-gray-700 mb-3">
       Extract a <code>WorktreeResolver</code> module with a single interface: <code>resolveExisting(project, branch): ExistingWorktree | null</code>. It encapsulates all 4 resolution strategies (stderr parsing, git porcelain by branch, git porcelain by slug, and future strategies). The worktree flow becomes:
-      <br><code>1. try resolveExisting → if found, open and optionally bootstrap</code>
+      <br><code>1. try resolveExisting → if found, open the existing workspace as-is</code>
       <br><code>2. else try create → if HerdrError, resolveExisting again → open</code>
       <br>No error-path-as-control-flow pattern.
     </p>

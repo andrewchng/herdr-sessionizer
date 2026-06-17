@@ -99,26 +99,12 @@ export async function runWorktree(
   const repoWorkspaceId = findRepoWorkspaceId(await workspaces.list(), project);
 
   try {
-    const opened = await worktrees.open({
+    await worktrees.open({
       workspaceId: repoWorkspaceId,
       cwd: repoWorkspaceId ? undefined : project,
       branch,
       focus: true,
     });
-    const openedWorkspace = opened.workspace;
-    if (shouldBootstrapWorkspaceLayout(openedWorkspace) && openedWorkspace) {
-      const layoutCwd =
-        opened.worktreePath ??
-        worktreeCheckoutPath(openedWorkspace) ??
-        (await resolveLayoutCwd(workspaces, openedWorkspace, project));
-      await runtime.createLayout(openedWorkspace, layoutCwd, config, tabs, panes, {
-        commandContext: context,
-        branch,
-      });
-      await workspaces.focus(openedWorkspace.workspace_id);
-      runtime.logger.log(`✓ bootstrapped layout for existing worktree '${branch}'`);
-      return;
-    }
     runtime.logger.log(`✓ opened existing worktree '${branch}'`);
     return;
   } catch (error) {
@@ -140,23 +126,12 @@ export async function runWorktree(
     const existing = await resolver.resolveExisting({ project, branch, error: herdrError });
     if (!existing) throw herdrError;
 
-    const opened = await worktrees.open({
+    await worktrees.open({
       workspaceId: repoWorkspaceId,
       cwd: repoWorkspaceId ? undefined : project,
       path: existing.path,
       focus: true,
     });
-    const openedWorkspace = opened.workspace;
-    if (shouldBootstrapWorkspaceLayout(openedWorkspace) && openedWorkspace) {
-      const layoutCwd = opened.worktreePath ?? worktreeCheckoutPath(openedWorkspace) ?? project;
-      await runtime.createLayout(openedWorkspace, layoutCwd, config, tabs, panes, {
-        commandContext: context,
-        branch,
-      });
-      await workspaces.focus(openedWorkspace.workspace_id);
-      runtime.logger.log(`✓ bootstrapped layout for '${branch}'`);
-      return;
-    }
     runtime.logger.log(`✓ opened existing worktree path '${existing.path}' for '${branch}'`);
     return;
   }
@@ -236,11 +211,6 @@ function createRuntime(): WorktreeRuntime {
 function findRepoWorkspaceId(workspaces: Workspace[], projectPath: string): string | undefined {
   const normalizedProject = normalizePath(projectPath);
   return workspaces.find((workspace) => !workspace.worktree && normalizePath(workspace.cwd) === normalizedProject)?.workspace_id;
-}
-
-function shouldBootstrapWorkspaceLayout(workspace: Workspace | undefined): boolean {
-  if (!workspace) return false;
-  return workspace.tab_count === 1 && workspace.pane_count === 1;
 }
 
 function worktreeCheckoutPath(workspace: Workspace | undefined): string | undefined {

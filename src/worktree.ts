@@ -1,7 +1,4 @@
-import { basename, join } from 'node:path';
-import { existsSync, readdirSync } from 'node:fs';
-
-import { listProjects, sanitizeName, normalizePath, worktreeSlug } from './discovery.ts';
+import { listProjects, sanitizeName, normalizePath } from './discovery.ts';
 
 import { Herdr } from './client/herdr.ts';
 import { HerdrError } from './client/errors.ts';
@@ -15,6 +12,7 @@ import { Workspaces } from './ops/workspaces.ts';
 import { Worktrees } from './ops/worktrees.ts';
 import { pick } from './ui/fzf.ts';
 import { promptText } from './ui/prompt.ts';
+import { WorktreeResolver } from './worktree-resolver.ts';
 
 interface CliArgs {
   project?: string;
@@ -22,14 +20,49 @@ interface CliArgs {
   context?: string;
 }
 
-export async function runWorktree(argv: readonly string[] = process.argv.slice(2)): Promise<void> {
+type LayoutApplier = (
+  workspace: Workspace,
+  cwd: string,
+  config: SessionizerConfig,
+  tabs: unknown,
+  panes: unknown,
+  options?: {
+    commandContext?: string;
+    branch?: string;
+  },
+) => Promise<Workspace>;
+
+interface WorktreeWorkspaceRuntime {
+  list(): Promise<Workspace[]>;
+  get(workspaceId: string): Promise<Workspace | undefined>;
+  focus(workspaceId: string): Promise<void>;
+}
+
+interface WorktreeServiceRuntime {
+  open: Worktrees['open'];
+  create: Worktrees['create'];
+}
+
+interface WorktreeRuntime {
+  worktrees: WorktreeServiceRuntime;
+  workspaces: WorktreeWorkspaceRuntime;
+  tabs: unknown;
+  panes: unknown;
+  config: SessionizerConfig;
+  resolver: Pick<WorktreeResolver, 'resolveExisting'>;
+  createLayout: LayoutApplier;
+  pickProject: typeof pick;
+  promptBranch: () => Promise<string>;
+  logger: Pick<typeof console, 'log' | 'error'>;
+  exit: (code: number) => never;
+}
+
+export async function runWorktree(
+  argv: readonly string[] = process.argv.slice(2),
+  runtime: WorktreeRuntime = createRuntime(),
+): Promise<void> {
   const args = parseArgs(argv);
-  const herdr = new Herdr();
-  const worktrees = new Worktrees(herdr);
-  const workspaces = new Workspaces(herdr);
-  const tabs = new Tabs(herdr);
-  const panes = new Panes(herdr);
-  const config = loadConfig();
+  const { worktrees, workspaces, tabs, panes, config, resolver } = runtime;
 
   let project = args.project;
   let branch = args.branch;
@@ -42,11 +75,11 @@ export async function runWorktree(argv: readonly string[] = process.argv.slice(2
   if (!project && !branch) {
     const projects = listProjects(config.projects.roots);
     if (projects.length === 0) {
-      console.error('No projects found in configured directories.');
-      process.exit(1);
+      runtime.logger.error('No projects found in configured directories.');
+      runtime.exit(1);
     }
 
-    const selected = await pick(projects, {
+    const selected = await runtime.pickProject(projects, {
       prompt: 'Base project for worktree: ',
       header: 'Select a repo to spin off a worktree workspace',
     });
@@ -54,7 +87,7 @@ export async function runWorktree(argv: readonly string[] = process.argv.slice(2
     if (!selected || selected.length === 0) return;
 
     project = selected[0]!;
-    branch = await promptBranchName();
+    branch = await runtime.promptBranch();
   }
 
   if (!project || !branch) return;
@@ -78,15 +111,15 @@ export async function runWorktree(argv: readonly string[] = process.argv.slice(2
         opened.worktreePath ??
         worktreeCheckoutPath(openedWorkspace) ??
         (await resolveLayoutCwd(workspaces, openedWorkspace, project));
-      await createProjectLayout(openedWorkspace, layoutCwd, config, tabs, panes, {
+      await runtime.createLayout(openedWorkspace, layoutCwd, config, tabs, panes, {
         commandContext: context,
         branch,
       });
       await workspaces.focus(openedWorkspace.workspace_id);
-      console.log(`✓ bootstrapped layout for existing worktree '${branch}'`);
+      runtime.logger.log(`✓ bootstrapped layout for existing worktree '${branch}'`);
       return;
     }
-    console.log(`✓ opened existing worktree '${branch}'`);
+    runtime.logger.log(`✓ opened existing worktree '${branch}'`);
     return;
   } catch (error) {
     if (!asHerdrError(error)) throw error;
@@ -104,44 +137,38 @@ export async function runWorktree(argv: readonly string[] = process.argv.slice(2
   } catch (error) {
     const herdrError = asHerdrError(error);
     if (!herdrError) throw error;
-    let existingPath = existingWorktreePathFromError(herdrError);
-    if (!existingPath && herdrError.stderr.includes('a branch named')) {
-      existingPath = await existingWorktreePathFromGit(project, branch);
-      if (!existingPath) {
-        existingPath = await existingWorktreePathBySlug(project, branch);
-      }
-    }
-    if (!existingPath) throw herdrError;
+    const existing = await resolver.resolveExisting({ project, branch, error: herdrError });
+    if (!existing) throw herdrError;
 
     const opened = await worktrees.open({
       workspaceId: repoWorkspaceId,
       cwd: repoWorkspaceId ? undefined : project,
-      path: existingPath,
+      path: existing.path,
       focus: true,
     });
     const openedWorkspace = opened.workspace;
     if (shouldBootstrapWorkspaceLayout(openedWorkspace) && openedWorkspace) {
       const layoutCwd = opened.worktreePath ?? worktreeCheckoutPath(openedWorkspace) ?? project;
-      await createProjectLayout(openedWorkspace, layoutCwd, config, tabs, panes, {
+      await runtime.createLayout(openedWorkspace, layoutCwd, config, tabs, panes, {
         commandContext: context,
         branch,
       });
       await workspaces.focus(openedWorkspace.workspace_id);
-      console.log(`✓ bootstrapped layout for '${branch}'`);
+      runtime.logger.log(`✓ bootstrapped layout for '${branch}'`);
       return;
     }
-    console.log(`✓ opened existing worktree path '${existingPath}' for '${branch}'`);
+    runtime.logger.log(`✓ opened existing worktree path '${existing.path}' for '${branch}'`);
     return;
   }
 
   const layoutCwd = await resolveLayoutCwd(workspaces, workspace, project);
-  await createProjectLayout(workspace, layoutCwd, config, tabs, panes, {
+  await runtime.createLayout(workspace, layoutCwd, config, tabs, panes, {
     commandContext: context,
     branch,
   });
   await workspaces.focus(workspace.workspace_id);
 
-  console.log(`✓ worktree '${branch}' created and focused (${workspace.workspace_id})`);
+  runtime.logger.log(`✓ worktree '${branch}' created and focused (${workspace.workspace_id})`);
 }
 
 function parseArgs(argv: readonly string[]): CliArgs {
@@ -185,6 +212,25 @@ async function promptBranchName(): Promise<string> {
   }
 }
 
+function createRuntime(): WorktreeRuntime {
+  const herdr = new Herdr();
+
+  return {
+    worktrees: new Worktrees(herdr),
+    workspaces: new Workspaces(herdr),
+    tabs: new Tabs(herdr),
+    panes: new Panes(herdr),
+    config: loadConfig(),
+    resolver: new WorktreeResolver(),
+    createLayout: (workspace, cwd, config, tabs, panes, options) =>
+      createProjectLayout(workspace, cwd, config, tabs as Tabs, panes as Panes, options),
+    pickProject: pick,
+    promptBranch: promptBranchName,
+    logger: console,
+    exit: (code) => process.exit(code),
+  };
+}
+
 
 
 function findRepoWorkspaceId(workspaces: Workspace[], projectPath: string): string | undefined {
@@ -202,17 +248,12 @@ function worktreeCheckoutPath(workspace: Workspace | undefined): string | undefi
 }
 
 async function resolveLayoutCwd(
-  workspaces: Workspaces,
+  workspaces: Pick<WorktreeWorkspaceRuntime, 'get'>,
   workspace: Workspace,
   fallback: string,
 ): Promise<string> {
   const current = await workspaces.get(workspace.workspace_id);
   return worktreeCheckoutPath(current) ?? current?.cwd ?? worktreeCheckoutPath(workspace) ?? workspace.cwd ?? fallback;
-}
-
-function existingWorktreePathFromError(error: HerdrError): string | undefined {
-  const match = error.stderr.match(/already used by worktree at '([^']+)'/);
-  return match?.[1];
 }
 
 function asHerdrError(error: unknown): HerdrError | undefined {
@@ -224,48 +265,6 @@ function asHerdrError(error: unknown): HerdrError | undefined {
     typeof (error as { stderr: unknown }).stderr === 'string'
   ) {
     return error as HerdrError;
-  }
-  return undefined;
-}
-
-async function existingWorktreePathFromGit(project: string, branch: string): Promise<string | undefined> {
-  const proc = Bun.spawn(['git', '-C', project, 'worktree', 'list', '--porcelain'], {
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-  const [stdout, exitCode] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
-  if (exitCode !== 0) return undefined;
-
-  const target = `refs/heads/${branch}`;
-  let currentPath: string | undefined;
-  for (const line of stdout.split('\n')) {
-    if (line.startsWith('worktree ')) {
-      currentPath = line.slice('worktree '.length).trim();
-      continue;
-    }
-    if (line.startsWith('branch ')) {
-      const ref = line.slice('branch '.length).trim();
-      if (ref === target) return currentPath;
-    }
-  }
-  return undefined;
-}
-
-
-
-async function existingWorktreePathBySlug(project: string, branch: string): Promise<string | undefined> {
-  const proc = Bun.spawn(['git', '-C', project, 'worktree', 'list', '--porcelain'], {
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-  const [stdout, exitCode] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
-  if (exitCode !== 0) return undefined;
-
-  const target = worktreeSlug(branch);
-  for (const line of stdout.split('\n')) {
-    if (!line.startsWith('worktree ')) continue;
-    const path = line.slice('worktree '.length).trim();
-    if (worktreeSlug(basename(path)) === target) return path;
   }
   return undefined;
 }

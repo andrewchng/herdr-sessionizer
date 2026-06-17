@@ -32,6 +32,10 @@
     <strong>✅ Candidate 1 completed:</strong> Extracted <code>src/discovery.ts</code> with 6 shared utility functions. 4 callers updated. 31 unit tests added. See <code>src/discovery.ts</code> and <code>src/discovery.test.ts</code>.
   </div>
 
+  <div class="bg-green-100 border border-green-300 text-green-800 rounded-xl p-4 mb-6">
+    <strong>✅ Candidate 2 completed:</strong> Extracted <code>src/worktree-resolver.ts</code> to isolate existing-worktree resolution, simplified <code>src/worktree.ts</code>, and added focused recovery-flow tests in <code>src/worktree-resolver.test.ts</code> and <code>src/worktree.test.ts</code>.
+  </div>
+
   <!-- Summary -->
   <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
     <h2 class="text-lg font-semibold mb-3">Codebase overview</h2>
@@ -157,7 +161,7 @@
   <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-xl font-bold">2. Consolidate worktree existence resolution</h2>
-      <span class="badge-strong text-white text-xs font-bold px-2.5 py-1 rounded">STRONG</span>
+      <span class="badge-strong text-white text-xs font-bold px-2.5 py-1 rounded">✓ COMPLETED</span>
     </div>
 
     <div class="grid grid-cols-2 gap-4 mb-4">
@@ -171,7 +175,7 @@
       </div>
       <div>
         <h3 class="font-semibold text-gray-700">Recommendation strength</h3>
-        <p class="text-sm text-gray-600"><span class="font-bold text-green-700">Strong</span> — the worktree "open-or-create" flow has 4 fallback strategies with no test coverage. This is where bugs hide.</p>
+        <p class="text-sm text-gray-600"><span class="font-bold text-green-700">Completed</span> — the worktree recovery path now lives behind <code>WorktreeResolver</code> and has focused parser and flow coverage.</p>
       </div>
     </div>
 
@@ -505,8 +509,11 @@
     <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
       <strong>✅ Candidate 1 completed</strong> — <code>discovery.ts</code> extracted, 4 callers updated, 31 tests added.
     </div>
+    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
+      <strong>✅ Candidate 2 completed</strong> — <code>worktree-resolver.ts</code> extracted, the duplicate-branch recovery path was simplified, and targeted worktree tests were added.
+    </div>
     <p class="text-gray-700 mb-3">
-      Next: <strong>Candidate 2 (WorktreeResolver)</strong> — the riskiest area. The worktree error-recovery chain is untested and tightly coupled. This is where real bugs will surface.
+      Next: <strong>Candidate 3 (layout builder seam)</strong> — <code>src/layouts/project.ts</code> is now the deepest remaining module and the best place to look for the next cleanup seam.
     </p>
     <p class="text-gray-700">
       Candidates 3 and 4 are worth exploring but need the context gained from simpler refactors first.

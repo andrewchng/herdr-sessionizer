@@ -1,6 +1,6 @@
 # Sessionizer
 
-Sessionizer is a [Herdr](https://herdr.dev/) plugin for getting into the right workspace quickly.
+Sessionizer is a [Herdr](https://herdr.dev/) plugin that uses fuzzy pickers to open projects and worktrees into Herdr workspaces using your configured tab and pane layout.
 
 It currently supports two primary interactive workflows:
 

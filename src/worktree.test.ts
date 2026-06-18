@@ -47,6 +47,7 @@ describe('runWorktree', () => {
       source: 'git-branch' as const,
     }));
     const createLayout = mock(async (workspace: Workspace) => workspace);
+    const attachExistingBranch = mock(async () => '/repo/feature-test-flow');
     const log = mock(() => {});
     const error = mock(() => {});
 
@@ -64,6 +65,7 @@ describe('runWorktree', () => {
       createLayout,
       pickProject: mock(async () => []),
       promptBranch: mock(async () => 'feature/test-flow'),
+      attachExistingBranch,
       logger: { log, error },
       exit: (code) => {
         throw new Error(`unexpected exit ${code}`);
@@ -98,22 +100,120 @@ describe('runWorktree', () => {
       focus: true,
     });
     expect(createLayout).not.toHaveBeenCalled();
+    expect(attachExistingBranch).not.toHaveBeenCalled();
     expect(focus).not.toHaveBeenCalled();
     expect(log).toHaveBeenCalledWith("✓ opened existing worktree path '/repo/feature-test-flow' for 'feature/test-flow'");
   });
 
-  it('rethrows the duplicate-branch herdr error when no existing worktree can be resolved', async () => {
+  it('attaches an existing branch as a new worktree when no existing checkout can be resolved', async () => {
     const duplicateBranchError = new HerdrError(
       ['worktree', 'create'],
       1,
       "fatal: a branch named 'feature/test-flow' already exists",
     );
+    const createdWorkspace: Workspace = {
+      workspace_id: 'ws-feature',
+      cwd: '/repo',
+      tab_count: 1,
+      pane_count: 1,
+      worktree: {
+        checkout_path: '/Users/mac/.herdr/worktrees/repo/feature-test-flow',
+      },
+    };
 
-    const open = mock(async () => {
-      throw duplicateBranchError;
+    const open = mock(async (options: {
+      workspaceId?: string;
+      cwd?: string;
+      branch?: string;
+      path?: string;
+      label?: string;
+      focus?: boolean;
+    }) => {
+      if (options.branch) {
+        throw duplicateBranchError;
+      }
+
+      return {
+        workspace: createdWorkspace,
+        worktreePath: '/Users/mac/.herdr/worktrees/repo/feature-test-flow',
+      };
     });
     const create = mock(async () => {
       throw duplicateBranchError;
+    });
+    const resolveExisting = mock(async () => undefined);
+    const createLayout = mock(async (workspace: Workspace) => workspace);
+    const focus = mock(async () => {});
+    const attachExistingBranch = mock(async () => '/Users/mac/.herdr/worktrees/repo/feature-test-flow');
+    const log = mock(() => {});
+    const error = mock(() => {});
+
+    await runWorktree(['--project', '/repo', '--branch', 'feature/test-flow'], {
+      worktrees: { open, create },
+      workspaces: {
+        list: mock(async () => []),
+        get: mock(async () => createdWorkspace),
+        focus,
+      },
+      tabs: {},
+      panes: {},
+      config: {
+        projects: { roots: ['/repo'] },
+        layout: { placement: 'overlay', focus: 'terminal' },
+        tabs: [],
+      },
+      resolver: { resolveExisting },
+      createLayout,
+      pickProject: mock(async () => []),
+      promptBranch: mock(async () => 'feature/test-flow'),
+      attachExistingBranch,
+      logger: { log, error },
+      exit: (code) => {
+        throw new Error(`unexpected exit ${code}`);
+      },
+    });
+
+    expect(resolveExisting).toHaveBeenCalledWith({
+      project: '/repo',
+      branch: 'feature/test-flow',
+      error: duplicateBranchError,
+    });
+    expect(attachExistingBranch).toHaveBeenCalledWith('/repo', 'feature/test-flow');
+    expect(open).toHaveBeenCalledTimes(2);
+    expect(open.mock.calls[1]?.[0]).toEqual({
+      workspaceId: undefined,
+      cwd: '/repo',
+      path: '/Users/mac/.herdr/worktrees/repo/feature-test-flow',
+      label: 'feature_test-flow',
+      focus: false,
+    });
+    expect(createLayout).toHaveBeenCalledWith(
+      createdWorkspace,
+      '/Users/mac/.herdr/worktrees/repo/feature-test-flow',
+      {
+        projects: { roots: ['/repo'] },
+        layout: { placement: 'overlay', focus: 'terminal' },
+        tabs: [],
+      },
+      {},
+      {},
+      {
+        commandContext: undefined,
+        branch: 'feature/test-flow',
+      },
+    );
+    expect(focus).toHaveBeenCalledWith('ws-feature');
+    expect(log).toHaveBeenCalledWith("✓ worktree 'feature/test-flow' created and focused (ws-feature)");
+  });
+
+  it('rethrows non-duplicate create errors when no existing worktree can be resolved', async () => {
+    const createError = new HerdrError(['worktree', 'create'], 1, 'fatal: repository is bare');
+
+    const open = mock(async () => {
+      throw createError;
+    });
+    const create = mock(async () => {
+      throw createError;
     });
     const resolveExisting = mock(async () => undefined);
 
@@ -136,17 +236,12 @@ describe('runWorktree', () => {
         createLayout: mock(async (workspace: Workspace) => workspace),
         pickProject: mock(async () => []),
         promptBranch: mock(async () => 'feature/test-flow'),
+        attachExistingBranch: mock(async () => '/unused'),
         logger: { log: mock(() => {}), error: mock(() => {}) },
         exit: (code) => {
           throw new Error(`unexpected exit ${code}`);
         },
       }),
-    ).rejects.toBe(duplicateBranchError);
-
-    expect(resolveExisting).toHaveBeenCalledWith({
-      project: '/repo',
-      branch: 'feature/test-flow',
-      error: duplicateBranchError,
-    });
+    ).rejects.toBe(createError);
   });
 });

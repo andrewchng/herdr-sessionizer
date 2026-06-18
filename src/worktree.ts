@@ -12,6 +12,7 @@ import { Workspaces } from './ops/workspaces.ts';
 import { Worktrees } from './ops/worktrees.ts';
 import { pick } from './ui/fzf.ts';
 import { promptText } from './ui/prompt.ts';
+import { attachExistingBranchWorktree } from './worktree-branch-fallback.ts';
 import { WorktreeResolver } from './worktree-resolver.ts';
 
 interface CliArgs {
@@ -53,6 +54,7 @@ interface WorktreeRuntime {
   createLayout: LayoutApplier;
   pickProject: typeof pick;
   promptBranch: () => Promise<string>;
+  attachExistingBranch: (project: string, branch: string) => Promise<string>;
   logger: Pick<typeof console, 'log' | 'error'>;
   exit: (code: number) => never;
 }
@@ -124,15 +126,38 @@ export async function runWorktree(
     const herdrError = asHerdrError(error);
     if (!herdrError) throw error;
     const existing = await resolver.resolveExisting({ project, branch, error: herdrError });
-    if (!existing) throw herdrError;
+    if (existing) {
+      await worktrees.open({
+        workspaceId: repoWorkspaceId,
+        cwd: repoWorkspaceId ? undefined : project,
+        path: existing.path,
+        focus: true,
+      });
+      runtime.logger.log(`✓ opened existing worktree path '${existing.path}' for '${branch}'`);
+      return;
+    }
+    if (!isDuplicateBranchError(herdrError)) throw herdrError;
 
-    await worktrees.open({
+    const path = await runtime.attachExistingBranch(project, branch);
+    const reopened = await worktrees.open({
       workspaceId: repoWorkspaceId,
       cwd: repoWorkspaceId ? undefined : project,
-      path: existing.path,
-      focus: true,
+      path,
+      label,
+      focus: false,
     });
-    runtime.logger.log(`✓ opened existing worktree path '${existing.path}' for '${branch}'`);
+    const reopenedWorkspace = reopened.workspace;
+    if (!reopenedWorkspace) {
+      throw new Error(`worktree open succeeded but no workspace was returned for '${path}'`);
+    }
+
+    const layoutCwd = await resolveLayoutCwd(workspaces, reopenedWorkspace, reopened.worktreePath ?? path);
+    await runtime.createLayout(reopenedWorkspace, layoutCwd, config, tabs, panes, {
+      commandContext: context,
+      branch,
+    });
+    await workspaces.focus(reopenedWorkspace.workspace_id);
+    runtime.logger.log(`✓ worktree '${branch}' created and focused (${reopenedWorkspace.workspace_id})`);
     return;
   }
 
@@ -201,6 +226,7 @@ function createRuntime(): WorktreeRuntime {
       createProjectLayout(workspace, cwd, config, tabs as Tabs, panes as Panes, options),
     pickProject: pick,
     promptBranch: promptBranchName,
+    attachExistingBranch: attachExistingBranchWorktree,
     logger: console,
     exit: (code) => process.exit(code),
   };
@@ -237,4 +263,8 @@ function asHerdrError(error: unknown): HerdrError | undefined {
     return error as HerdrError;
   }
   return undefined;
+}
+
+function isDuplicateBranchError(error: HerdrError): boolean {
+  return error.stderr.includes('a branch named');
 }

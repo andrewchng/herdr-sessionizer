@@ -15,7 +15,7 @@ function testConfig(overrides?: Partial<SessionizerConfig>): SessionizerConfig {
         label: 'Terminal',
         panes: [
           { id: 'root', title: 'terminal', command: '' },
-          { id: 'assistant', from: 'root', title: 'assistant', split: 'right', command: 'kiro-cli' },
+          { id: 'assistant', from: 'root', title: 'assistant', split: 'right', command: 'kiro-cli', command_context: 'kiro-cli chat {context}' },
         ],
       },
     ],

@@ -15,6 +15,7 @@ interface RawPaneConfig {
   title?: string;
   split?: string;
   command?: string;
+  command_context?: string;
 }
 
 interface RawTabConfig {
@@ -39,6 +40,7 @@ export interface PaneConfig {
   title: string;
   split?: SplitDirection;
   command: string;
+  command_context?: string;
 }
 
 export interface TabConfig {
@@ -127,6 +129,7 @@ function buildPanes(rawPanes: RawPaneConfig[] | undefined, tabId: string): PaneC
     title: pane.title?.trim() ?? '',
     split: index === 0 && !pane.from ? undefined : asOptionalSplitDirection(pane.split),
     command: pane.command ?? '',
+    command_context: pane.command_context,
   }));
 }
 
@@ -160,6 +163,9 @@ function defaultConfigToml(): string {
     'title = "assistant"',
     'split = "right"',
     'command = "opencode"',
+    '# Optional: command used when a context string is available (e.g. worktree --context)',
+    '# The {context} placeholder is auto shell-quoted; {branch} is interpolated raw.',
+    '# command_context = "opencode {context}"',
     '',
     '[tabs.editor]',
     'enabled = true',

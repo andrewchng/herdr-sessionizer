@@ -181,6 +181,37 @@ What this means:
 - if a tab has `enabled = false`, Sessionizer skips creating it
 - common assistant/tool command examples include `pi`, `claude`, `copilot`, and `opencode`
 
+### Pane context (optional)
+
+A pane can opt in to receiving a context string (for example, the `--context` flag passed to `herdr-worktree`) by adding a `command_context` field. When context is available, the plugin runs `command_context`; when it is not, the plugin falls back to `command`.
+
+```toml
+[[tabs.assistant.panes]]
+id = "assistant"
+title = "assistant"
+command = "kiro-cli"                          # default (no context)
+command_context = "kiro-cli chat {context}"  # used when --context is provided
+```
+
+Behavior matrix:
+
+| Flow | Context available? | Runs |
+| --- | --- | --- |
+| Sessionizer | No | `command` |
+| Worktree + `--context "..."` | Yes | `command_context` |
+| Worktree (interactive, prompt skipped) | No | `command` |
+| Worktree (interactive, user typed context) | Yes | `command_context` |
+
+Placeholders:
+
+- `{context}` — the context string. Auto shell-quoted, so spaces and shell metacharacters are safe.
+- `{branch}` — the worktree branch name. Interpolated raw (no quoting). Already supported in the worktree flow.
+
+Panes without `command_context` never receive context, even if the worktree flow has one to give.
+
+> [!NOTE]
+> The `command_context` field is a breaking change for existing `kiro-cli` configs. The old code recognized `kiro-cli` by string prefix and rewrote it to `kiro-cli chat <context>`. After this change, that implicit behavior is gone — you must declare it explicitly via `command_context = "kiro-cli chat {context}"`.
+
 ### Anchored split example
 
 ```toml
@@ -224,6 +255,7 @@ command = "ls"
 - `projects.roots` controls which directories are searched for the first interactive picker
 - use a short list of parent folders that contain your repos, for example `~/Projects` or `~/Workspace`
 - `command` is the exact command a pane should run, for example `nvim`, `pi`, `claude`, `copilot`, or `opencode`
+- `command_context` is the optional command used when a context string is available; supports `{context}` (auto-quoted) and `{branch}` (raw) placeholders
 - `layout.placement` controls how plugin panes open: `overlay` or `split`
 - `layout.focus` chooses which tab or pane should be focused after workspace setup
 - `tabs` are created exactly from the `[tabs.<name>]` sections you define
@@ -234,6 +266,7 @@ command = "ls"
 - `split` currently supports only `right` and `down`
 - each tab must define at least one `[[tabs.<name>.panes]]` entry
 - worktree server panes can interpolate `{branch}` in commands
+- only panes that declare `command_context` will receive the `--context` value from the worktree flow
 
 ## Example keybindings
 

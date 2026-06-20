@@ -13,29 +13,32 @@ export function buildPaneCommand(
   options?: LayoutCommandOptions,
 ): string {
   const quotedCwd = shellQuote(cwd);
-  const rawCommand = spec.command;
-  if (rawCommand) {
-    return `cd ${quotedCwd} && ${interpolateCommand(applyCommandContext(rawCommand, options?.commandContext), options?.branch)}`;
+  const resolved = resolvePaneCommand(spec, options);
+  if (resolved) {
+    return `cd ${quotedCwd} && ${interpolatePlaceholders(resolved, {
+      branch: options?.branch,
+      context: options?.commandContext,
+    })}`;
   }
 
   return `cd ${quotedCwd}`;
 }
 
-export function applyCommandContext(command: string, context?: string): string {
-  if (!context) return command;
-  const trimmed = command.trim();
-  if (trimmed === 'kiro-cli') {
-    return `kiro-cli chat ${shellQuote(context)}`;
+export function resolvePaneCommand(spec: PaneConfig, options?: LayoutCommandOptions): string {
+  if (options?.commandContext && spec.command_context) {
+    return spec.command_context;
   }
-  if (trimmed.startsWith('kiro-cli chat ')) {
-    return `${trimmed} ${shellQuote(context)}`;
-  }
-  if (trimmed === 'kiro-cli chat') {
-    return `kiro-cli chat ${shellQuote(context)}`;
-  }
-  return command;
+  return spec.command;
 }
 
-export function interpolateCommand(command: string, branch?: string): string {
-  return branch ? command.replaceAll('{branch}', branch) : command;
+export function interpolatePlaceholders(
+  command: string,
+  values: Record<string, string | undefined>,
+): string {
+  return command.replaceAll(/\{(\w+)\}/g, (_match, key: string) => {
+    const value = values[key];
+    if (value === undefined) return '';
+    if (key === 'context') return shellQuote(value);
+    return value;
+  });
 }

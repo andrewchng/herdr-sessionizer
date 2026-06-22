@@ -181,36 +181,35 @@ What this means:
 - if a tab has `enabled = false`, Sessionizer skips creating it
 - common assistant/tool command examples include `pi`, `claude`, `copilot`, and `opencode`
 
-### Pane context (optional)
+### Worktree command override (optional)
 
-A pane can opt in to receiving a context string (for example, the `--context` flag passed to `herdr-worktree`) by adding a `command_context` field. When context is available, the plugin runs `command_context`; when it is not, the plugin falls back to `command`.
+A pane can opt in to receiving a raw worktree command override by setting `accept_command_override = true`. When `herdr-worktree --command '...'` is used, that pane runs the provided command exactly as passed. When `--command` is absent, the pane falls back to its normal `command`.
 
 ```toml
 [[tabs.assistant.panes]]
 id = "assistant"
 title = "assistant"
-command = "kiro-cli"                          # default (no context)
-command_context = "kiro-cli chat {context}"  # used when --context is provided
+command = "kiro-cli"
+accept_command_override = true
 ```
 
 Behavior matrix:
 
-| Flow | Context available? | Runs |
+| Flow | Command override available? | Runs |
 | --- | --- | --- |
 | Sessionizer | No | `command` |
-| Worktree + `--context "..."` | Yes | `command_context` |
-| Worktree (interactive, prompt skipped) | No | `command` |
-| Worktree (interactive, user typed context) | Yes | `command_context` |
+| Worktree + `--command 'kiro-cli chat "..."'` | Yes | raw `--command` value |
+| Worktree without `--command` | No | `command` |
 
-Placeholders:
+Rules:
 
-- `{context}` — the context string. Auto shell-quoted, so spaces and shell metacharacters are safe.
-- `{branch}` — the worktree branch name. Interpolated raw (no quoting). Already supported in the worktree flow.
-
-Panes without `command_context` never receive context, even if the worktree flow has one to give.
+- exactly one pane should declare `accept_command_override = true`
+- if `--command` is provided and no pane accepts it, the flow errors clearly
+- if multiple panes accept it, the flow errors clearly
+- panes without `accept_command_override` always run their normal `command`
 
 > [!NOTE]
-> The `command_context` field is a breaking change for existing `kiro-cli` configs. The old code recognized `kiro-cli` by string prefix and rewrote it to `kiro-cli chat <context>`. After this change, that implicit behavior is gone — you must declare it explicitly via `command_context = "kiro-cli chat {context}"`.
+> `--command` is treated as a raw shell command override. It is not shell-quoted or templated by the plugin.
 
 ### Anchored split example
 
@@ -255,7 +254,7 @@ command = "ls"
 - `projects.roots` controls which directories are searched for the first interactive picker
 - use a short list of parent folders that contain your repos, for example `~/Projects` or `~/Workspace`
 - `command` is the exact command a pane should run, for example `nvim`, `pi`, `claude`, `copilot`, or `opencode`
-- `command_context` is the optional command used when a context string is available; supports `{context}` (auto-quoted) and `{branch}` (raw) placeholders
+- `accept_command_override = true` marks the single pane that may receive a raw `herdr-worktree --command '...'` override
 - `layout.placement` controls how plugin panes open: `overlay` or `split`
 - `layout.focus` chooses which tab or pane should be focused after workspace setup
 - `tabs` are created exactly from the `[tabs.<name>]` sections you define
@@ -266,7 +265,7 @@ command = "ls"
 - `split` currently supports only `right` and `down`
 - each tab must define at least one `[[tabs.<name>.panes]]` entry
 - worktree server panes can interpolate `{branch}` in commands
-- only panes that declare `command_context` will receive the `--context` value from the worktree flow
+- raw worktree command overrides are routed only to the pane that declares `accept_command_override = true`
 
 ## Example keybindings
 
@@ -322,13 +321,13 @@ Run it directly:
 herdr-worktree --project ~/Projects/my-repo --branch feat/new-flow
 ```
 
-Pass context through to the configured assistant/tool pane command:
+Pass a raw command override through to the configured assistant/tool pane:
 
 ```sh
 herdr-worktree \
   --project ~/Projects/my-repo \
   --branch feat/new-flow \
-  --context "Fix the failing form validation and summarize changes"
+  --command 'kiro-cli chat "Fix the failing form validation and summarize changes"'
 ```
 
 Without linking, you can still run it from a checkout:

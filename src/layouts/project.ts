@@ -34,6 +34,7 @@ export async function createProjectLayout(
 ): Promise<Workspace> {
   const id = workspace.workspace_id;
   const enabledTabs = config.tabs.filter((tab) => tab.enabled);
+  validateCommandOverrideTargets(enabledTabs, options);
   if (enabledTabs.length === 0) return workspace;
 
   let nextPaneIndex = 1;
@@ -224,6 +225,28 @@ function validatePaneSpecs(tab: TabConfig, specs: readonly PaneConfig[]): void {
       }
       seenIds.add(spec.id);
     }
+  }
+}
+
+function validateCommandOverrideTargets(tabs: readonly TabConfig[], options?: LayoutCommandOptions): void {
+  if (!options?.commandOverride) {
+    return;
+  }
+
+  const targets = tabs.flatMap((tab) =>
+    tab.panes
+      .filter((pane) => pane.accept_command_override)
+      .map((pane) => `${tab.label}/${pane.id ?? (pane.title || 'unnamed')}`),
+  );
+
+  if (targets.length === 0) {
+    throw new Error("Worktree command override was provided, but no pane declares 'accept_command_override = true'.");
+  }
+
+  if (targets.length > 1) {
+    throw new Error(
+      `Worktree command override requires exactly one pane target, but found ${targets.length}: ${targets.join(', ')}`,
+    );
   }
 }
 

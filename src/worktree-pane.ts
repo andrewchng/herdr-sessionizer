@@ -15,8 +15,9 @@ function buildArgvFromEnv(): string[] {
   if (process.env.WORKTREE_BRANCH) {
     argv.push('--branch', process.env.WORKTREE_BRANCH);
   }
-  if (process.env.WORKTREE_CONTEXT) {
-    argv.push('--context', process.env.WORKTREE_CONTEXT);
+  const command = process.env.WORKTREE_COMMAND ?? process.env.WORKTREE_CONTEXT;
+  if (command) {
+    argv.push('--command', command);
   }
   return argv;
 }

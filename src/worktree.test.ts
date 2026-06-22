@@ -51,7 +51,7 @@ describe('runWorktree', () => {
     const log = mock(() => {});
     const error = mock(() => {});
 
-    await runWorktree(['--project', '/repo', '--branch', 'feature/test-flow', '--context', 'copilot'], {
+    await runWorktree(['--project', '/repo', '--branch', 'feature/test-flow', '--command', 'copilot chat "fix this"'], {
       worktrees: { open, create },
       workspaces: { list, get: mock(async () => existingWorkspace), focus },
       tabs: {},
@@ -148,7 +148,7 @@ describe('runWorktree', () => {
     const log = mock(() => {});
     const error = mock(() => {});
 
-    await runWorktree(['--project', '/repo', '--branch', 'feature/test-flow'], {
+    await runWorktree(['--project', '/repo', '--branch', 'feature/test-flow', '--command', 'kiro-cli chat "review this"'], {
       worktrees: { open, create },
       workspaces: {
         list: mock(async () => []),
@@ -198,7 +198,7 @@ describe('runWorktree', () => {
       {},
       {},
       {
-        commandContext: undefined,
+        commandOverride: 'kiro-cli chat "review this"',
         branch: 'feature/test-flow',
       },
     );
@@ -243,5 +243,53 @@ describe('runWorktree', () => {
         },
       }),
     ).rejects.toBe(createError);
+  });
+
+  it('surfaces attach fallback errors when the target path is stale', async () => {
+    const duplicateBranchError = new HerdrError(
+      ['worktree', 'create'],
+      1,
+      "fatal: a branch named 'feature/test-flow' already exists",
+    );
+    const stalePathError = new Error(
+      "target worktree path '/Users/mac/.herdr/worktrees/repo/feature-test-flow' already exists but is not a reusable checkout for branch 'feature/test-flow'; remove or relocate that directory and retry",
+    );
+
+    const open = mock(async () => {
+      throw duplicateBranchError;
+    });
+    const create = mock(async () => {
+      throw duplicateBranchError;
+    });
+    const resolveExisting = mock(async () => undefined);
+
+    await expect(
+      runWorktree(['--project', '/repo', '--branch', 'feature/test-flow'], {
+        worktrees: { open, create },
+        workspaces: {
+          list: mock(async () => []),
+          get: mock(async () => undefined),
+          focus: mock(async () => {}),
+        },
+        tabs: {},
+        panes: {},
+        config: {
+          projects: { roots: ['/repo'] },
+          layout: { placement: 'overlay', focus: 'terminal' },
+          tabs: [],
+        },
+        resolver: { resolveExisting },
+        createLayout: mock(async (workspace: Workspace) => workspace),
+        pickProject: mock(async () => []),
+        promptBranch: mock(async () => 'feature/test-flow'),
+        attachExistingBranch: mock(async () => {
+          throw stalePathError;
+        }),
+        logger: { log: mock(() => {}), error: mock(() => {}) },
+        exit: (code) => {
+          throw new Error(`unexpected exit ${code}`);
+        },
+      }),
+    ).rejects.toBe(stalePathError);
   });
 });

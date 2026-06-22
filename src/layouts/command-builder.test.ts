@@ -7,95 +7,75 @@ describe('buildPaneCommand', () => {
     expect(buildPaneCommand({ title: 'shell', command: '' }, '/tmp/my repo')).toBe("cd '/tmp/my repo'");
   });
 
-  it('runs command_context when both spec and context are present', () => {
+  it('runs the raw command override when the pane accepts it', () => {
     expect(
       buildPaneCommand(
-        { title: 'assistant', command: 'kiro-cli', command_context: 'kiro-cli chat {context}' },
+        { title: 'assistant', command: 'kiro-cli', accept_command_override: true },
         '/tmp/my repo',
-        { commandContext: 'review this change' },
+        { commandOverride: 'kiro-cli chat "review this change"' },
       ),
-    ).toBe("cd '/tmp/my repo' && kiro-cli chat 'review this change'");
+    ).toBe(`cd '/tmp/my repo' && kiro-cli chat "review this change"`);
   });
 
-  it('falls back to command when context is missing', () => {
+  it('falls back to command when no override is provided', () => {
     expect(
-      buildPaneCommand(
-        { title: 'assistant', command: 'kiro-cli', command_context: 'kiro-cli chat {context}' },
-        '/tmp/my repo',
-      ),
+      buildPaneCommand({ title: 'assistant', command: 'kiro-cli', accept_command_override: true }, '/tmp/my repo'),
     ).toBe("cd '/tmp/my repo' && kiro-cli");
   });
 
-  it('falls back to command when command_context is unset on the spec', () => {
+  it('falls back to command when the pane does not accept override', () => {
     expect(
-      buildPaneCommand({ title: 'editor', command: 'nvim' }, '/tmp/my repo', { commandContext: 'irrelevant' }),
+      buildPaneCommand({ title: 'editor', command: 'nvim' }, '/tmp/my repo', { commandOverride: 'echo hi' }),
     ).toBe("cd '/tmp/my repo' && nvim");
   });
 
-  it('interpolates both {branch} and {context} together', () => {
+  it('still interpolates {branch} in normal pane commands', () => {
     expect(
       buildPaneCommand(
         {
-          title: 'assistant',
-          command: 'kiro-cli',
-          command_context: 'kiro-cli chat --topic {branch} {context}',
+          title: 'server',
+          command: 'pnpm dev --branch {branch}',
         },
         '/tmp/my repo',
-        { commandContext: 'review this', branch: 'feat/test' },
+        { branch: 'feat/test' },
       ),
-    ).toBe("cd '/tmp/my repo' && kiro-cli chat --topic feat/test 'review this'");
+    ).toBe("cd '/tmp/my repo' && pnpm dev --branch feat/test");
   });
 
-  it('drops the context silently when the spec has no command_context', () => {
+  it('uses the raw override exactly as provided', () => {
     expect(
-      buildPaneCommand({ title: 'tool', command: 'pi' }, '/tmp/my repo', { commandContext: 'fix bug' }),
-    ).toBe("cd '/tmp/my repo' && pi");
+      buildPaneCommand(
+        { title: 'assistant', command: 'kiro-cli', accept_command_override: true },
+        '/tmp/my repo',
+        { commandOverride: 'kiro-cli chat "$PROMPT" && echo done' },
+      ),
+    ).toBe(`cd '/tmp/my repo' && kiro-cli chat "$PROMPT" && echo done`);
   });
 });
 
 describe('resolvePaneCommand', () => {
-  it('uses command_context when context is present', () => {
+  it('uses command override when the pane accepts it', () => {
     expect(
-      resolvePaneCommand(
-        { title: 'assistant', command: 'kiro-cli', command_context: 'kiro-cli chat {context}' },
-        { commandContext: 'fix bug' },
-      ),
-    ).toBe('kiro-cli chat {context}');
+      resolvePaneCommand({ title: 'assistant', command: 'kiro-cli', accept_command_override: true }, { commandOverride: 'echo hi' }),
+    ).toBe('echo hi');
   });
 
-  it('falls back to command when context is missing', () => {
-    expect(
-      resolvePaneCommand({
-        title: 'assistant',
-        command: 'kiro-cli',
-        command_context: 'kiro-cli chat {context}',
-      }),
-    ).toBe('kiro-cli');
+  it('falls back to command when override is missing', () => {
+    expect(resolvePaneCommand({ title: 'assistant', command: 'kiro-cli', accept_command_override: true })).toBe('kiro-cli');
   });
 
-  it('falls back to command when command_context is unset on the spec', () => {
-    expect(
-      resolvePaneCommand({ title: 'editor', command: 'nvim' }, { commandContext: 'fix bug' }),
-    ).toBe('nvim');
+  it('falls back to command when pane does not accept override', () => {
+    expect(resolvePaneCommand({ title: 'editor', command: 'nvim' }, { commandOverride: 'echo hi' })).toBe('nvim');
   });
 
-  it('falls back to command when context is an empty string', () => {
-    expect(
-      resolvePaneCommand(
-        { title: 'assistant', command: 'kiro-cli', command_context: 'kiro-cli chat {context}' },
-        { commandContext: '' },
-      ),
-    ).toBe('kiro-cli');
+  it('falls back to command when override is an empty string', () => {
+    expect(resolvePaneCommand({ title: 'assistant', command: 'kiro-cli', accept_command_override: true }, { commandOverride: '' })).toBe(
+      'kiro-cli',
+    );
   });
 });
 
 describe('interpolatePlaceholders', () => {
-  it('shell-quotes {context} values', () => {
-    expect(interpolatePlaceholders('kiro-cli chat {context}', { context: 'fix the bug & restart' })).toBe(
-      "kiro-cli chat 'fix the bug & restart'",
-    );
-  });
-
   it('leaves {branch} raw (no shell quoting)', () => {
     expect(interpolatePlaceholders('echo {branch}', { branch: 'feat/test' })).toBe('echo feat/test');
   });
@@ -111,11 +91,6 @@ describe('interpolatePlaceholders', () => {
   });
 
   it('interpolates multiple placeholders of different kinds', () => {
-    expect(
-      interpolatePlaceholders('kiro-cli chat --topic {branch} {context}', {
-        branch: 'feat/x',
-        context: 'review this',
-      }),
-    ).toBe("kiro-cli chat --topic feat/x 'review this'");
+    expect(interpolatePlaceholders('echo {branch} {missing}', { branch: 'feat/x' })).toBe('echo feat/x ');
   });
 });

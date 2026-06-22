@@ -18,7 +18,7 @@ import { WorktreeResolver } from './worktree-resolver.ts';
 interface CliArgs {
   project?: string;
   branch?: string;
-  context?: string;
+  command?: string;
 }
 
 type LayoutApplier = (
@@ -28,7 +28,7 @@ type LayoutApplier = (
   tabs: unknown,
   panes: unknown,
   options?: {
-    commandContext?: string;
+    commandOverride?: string;
     branch?: string;
   },
 ) => Promise<Workspace>;
@@ -68,7 +68,7 @@ export async function runWorktree(
 
   let project = args.project;
   let branch = args.branch;
-  const context = args.context;
+  const command = args.command;
 
   if ((project && !branch) || (!project && branch)) {
     throw new Error('Use both project and branch together, or use neither for interactive mode.');
@@ -153,7 +153,7 @@ export async function runWorktree(
 
     const layoutCwd = await resolveLayoutCwd(workspaces, reopenedWorkspace, reopened.worktreePath ?? path);
     await runtime.createLayout(reopenedWorkspace, layoutCwd, config, tabs, panes, {
-      commandContext: context,
+      commandOverride: command,
       branch,
     });
     await workspaces.focus(reopenedWorkspace.workspace_id);
@@ -163,7 +163,7 @@ export async function runWorktree(
 
   const layoutCwd = await resolveLayoutCwd(workspaces, workspace, project);
   await runtime.createLayout(workspace, layoutCwd, config, tabs, panes, {
-    commandContext: context,
+    commandOverride: command,
     branch,
   });
   await workspaces.focus(workspace.workspace_id);
@@ -174,7 +174,7 @@ export async function runWorktree(
 function parseArgs(argv: readonly string[]): CliArgs {
   let project: string | undefined;
   let branch: string | undefined;
-  let context: string | undefined;
+  let command: string | undefined;
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -188,13 +188,13 @@ function parseArgs(argv: readonly string[]): CliArgs {
       index += 1;
       continue;
     }
-    if (arg === '--context' || arg === '-c') {
-      context = argv[index + 1];
+    if (arg === '--command' || arg === '-c' || arg === '--context') {
+      command = argv[index + 1];
       index += 1;
     }
   }
 
-  return { project, branch, context };
+  return { project, branch, command };
 }
 
 async function promptBranchName(): Promise<string> {

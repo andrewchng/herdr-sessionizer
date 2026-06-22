@@ -15,7 +15,7 @@ function testConfig(overrides?: Partial<SessionizerConfig>): SessionizerConfig {
         label: 'Terminal',
         panes: [
           { id: 'root', title: 'terminal', command: '' },
-          { id: 'assistant', from: 'root', title: 'assistant', split: 'right', command: 'kiro-cli', command_context: 'kiro-cli chat {context}' },
+          { id: 'assistant', from: 'root', title: 'assistant', split: 'right', command: 'kiro-cli', accept_command_override: true },
         ],
       },
     ],
@@ -49,7 +49,7 @@ describe('createProjectLayout', () => {
 
     await expect(
       createProjectLayout(testWorkspace(), '/tmp/project', testConfig(), tabs, panes, {
-        commandContext: 'review change',
+        commandOverride: 'kiro-cli chat "review change"',
         branch: 'feat/test',
       }),
     ).resolves.toEqual(testWorkspace());
@@ -57,7 +57,7 @@ describe('createProjectLayout', () => {
     expect(panes.rename).toHaveBeenCalledWith('ws1-1', 'terminal');
     expect(panes.run).toHaveBeenCalledWith('ws1-1', "cd '/tmp/project'");
     expect(panes.rename).toHaveBeenCalledWith('ws1-2', 'assistant');
-    expect(panes.run).toHaveBeenCalledWith('ws1-2', "cd '/tmp/project' && kiro-cli chat 'review change'");
+    expect(panes.run).toHaveBeenCalledWith('ws1-2', `cd '/tmp/project' && kiro-cli chat "review change"`);
     expect(tabs.focus).toHaveBeenCalledWith('ws1:1');
   });
 
@@ -79,5 +79,81 @@ describe('createProjectLayout', () => {
 
     expect(panes.rename).toHaveBeenCalledWith('ws1-2', 'assistant');
     expect(panes.run).toHaveBeenCalledWith('ws1-2', "cd '/tmp/project' && kiro-cli");
+  });
+
+  it('throws when command override is provided but no pane accepts it', async () => {
+    await expect(
+      createProjectLayout(
+        testWorkspace(),
+        '/tmp/project',
+        testConfig({
+          tabs: [
+            {
+              id: 'terminal',
+              enabled: true,
+              label: 'Terminal',
+              panes: [
+                { id: 'root', title: 'terminal', command: '' },
+                { id: 'assistant', from: 'root', title: 'assistant', split: 'right', command: 'kiro-cli' },
+              ],
+            },
+          ],
+        }),
+        {
+          create: mock(async (_options): Promise<Tab> => ({ tab_id: 'ws1:t2', workspace_id: 'ws1' })),
+          rename: mock(async () => {}),
+          focus: mock(async () => {}),
+        },
+        {
+          split: mock(async (): Promise<Pane> => ({
+            pane_id: 'ws1-2',
+            terminal_id: 'term-2',
+            workspace_id: 'ws1',
+            tab_id: 'ws1:t1',
+          })),
+          run: mock(async () => {}),
+          rename: mock(async () => {}),
+        },
+        { commandOverride: 'echo hi' },
+      ),
+    ).rejects.toThrow("Worktree command override was provided, but no pane declares 'accept_command_override = true'.");
+  });
+
+  it('throws when multiple panes accept command override', async () => {
+    await expect(
+      createProjectLayout(
+        testWorkspace(),
+        '/tmp/project',
+        testConfig({
+          tabs: [
+            {
+              id: 'terminal',
+              enabled: true,
+              label: 'Terminal',
+              panes: [
+                { id: 'root', title: 'terminal', command: '', accept_command_override: true },
+                { id: 'assistant', from: 'root', title: 'assistant', split: 'right', command: 'kiro-cli', accept_command_override: true },
+              ],
+            },
+          ],
+        }),
+        {
+          create: mock(async (_options): Promise<Tab> => ({ tab_id: 'ws1:t2', workspace_id: 'ws1' })),
+          rename: mock(async () => {}),
+          focus: mock(async () => {}),
+        },
+        {
+          split: mock(async (): Promise<Pane> => ({
+            pane_id: 'ws1-2',
+            terminal_id: 'term-2',
+            workspace_id: 'ws1',
+            tab_id: 'ws1:t1',
+          })),
+          run: mock(async () => {}),
+          rename: mock(async () => {}),
+        },
+        { commandOverride: 'echo hi' },
+      ),
+    ).rejects.toThrow('Worktree command override requires exactly one pane target, but found 2: Terminal/root, Terminal/assistant');
   });
 });

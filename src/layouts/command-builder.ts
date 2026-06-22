@@ -3,7 +3,7 @@ import type { PaneConfig } from '../config.ts';
 import { shellQuote } from '../discovery.ts';
 
 export interface LayoutCommandOptions {
-  commandContext?: string;
+  commandOverride?: string;
   branch?: string;
 }
 
@@ -17,7 +17,6 @@ export function buildPaneCommand(
   if (resolved) {
     return `cd ${quotedCwd} && ${interpolatePlaceholders(resolved, {
       branch: options?.branch,
-      context: options?.commandContext,
     })}`;
   }
 
@@ -25,8 +24,8 @@ export function buildPaneCommand(
 }
 
 export function resolvePaneCommand(spec: PaneConfig, options?: LayoutCommandOptions): string {
-  if (options?.commandContext && spec.command_context) {
-    return spec.command_context;
+  if (options?.commandOverride && spec.accept_command_override) {
+    return options.commandOverride;
   }
   return spec.command;
 }
@@ -38,7 +37,6 @@ export function interpolatePlaceholders(
   return command.replaceAll(/\{(\w+)\}/g, (_match, key: string) => {
     const value = values[key];
     if (value === undefined) return '';
-    if (key === 'context') return shellQuote(value);
     return value;
   });
 }

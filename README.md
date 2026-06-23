@@ -29,7 +29,6 @@ Sessionizer does not install system tools for you.
 
 ```sh
 curl -fsSL https://bun.com/install | bash
-brew install oven-sh/bun/bun
 brew install fzf
 ```
 

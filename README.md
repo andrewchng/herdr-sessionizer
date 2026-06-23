@@ -5,9 +5,6 @@ Sessionizer is a [Herdr](https://herdr.dev/) plugin that uses fuzzy pickers to o
 - **Sessionizer** — focus an existing workspace or create a new project workspace
 - **Worktree** — create or reopen a Git worktree workspace
 
-> [!IMPORTANT]
-> The interactive plugin is the main product. The standalone `herdr-worktree` CLI is optional for scripted automation.
-
 ## Inspiration
 
 Inspired by [ThePrimeagen's tmux-sessionizer](https://github.com/ThePrimeagen/tmux-sessionizer): fuzzy-find a project, land in the right dev environment — but for Herdr workspaces instead of tmux sessions.
@@ -80,8 +77,6 @@ Existing workspaces are reopened as-is. Layout bootstrap runs only for newly cre
 
 ## Configuration
 
-Shared by the plugin and optional `herdr-worktree` CLI:
-
 ```text
 ~/.config/herdr/plugins/config/sessionizer/config.toml
 ```
@@ -120,20 +115,6 @@ command = "opencode"
 - `from` + `split` (`right` or `down`) anchor splits within a tab
 - worktree panes can interpolate `{branch}` in commands
 
-### Worktree command override (optional)
-
-One pane may set `accept_command_override = true` to receive a raw `herdr-worktree --command '...'` override. Without `--command`, it runs its normal `command`.
-
-```toml
-[[tabs.assistant.panes]]
-id = "assistant"
-title = "assistant"
-command = "kiro-cli"
-accept_command_override = true
-```
-
-`--command` is passed through as a raw shell command — not quoted or templated by the plugin.
-
 ## Example keybindings
 
 ```toml
@@ -150,24 +131,10 @@ command = "sessionizer.worktree-open"
 description = "create worktree workspace"
 ```
 
-## Optional `herdr-worktree` CLI
-
-For shell automation instead of the interactive picker:
-
-```sh
-cd /path/to/herdr-sessionizer && bun link
-herdr-worktree --project ~/Projects/my-repo --branch feat/new-flow
-herdr-worktree --project ~/Projects/my-repo --branch feat/new-flow \
-  --command 'kiro-cli chat "Fix the failing form validation"'
-```
-
-Without linking: `bun run worktree --project ... --branch ...`
-
 ## Development
 
 ```sh
 bun run typecheck
 bun run test
 bun run sessionizer
-bun run worktree --help
 ```

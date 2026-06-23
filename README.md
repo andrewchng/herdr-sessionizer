@@ -104,7 +104,6 @@ placement = "overlay"
 focus = "assistant"
 
 [tabs.terminal]
-enabled = true
 label = "terminal"
 
 [[tabs.terminal.panes]]
@@ -123,8 +122,7 @@ command = "opencode"
 - `[projects].roots` — parent folders scanned by both pickers
 - `[layout].placement` — how plugin panes open (`overlay` or `split`)
 - `[layout].focus` — which tab or pane to focus after layout bootstrap
-- `[tabs.<name>]` — one Herdr tab to create per enabled section
-- `enabled = false` — skip creating that tab
+- `[tabs.<name>]` — one Herdr tab to create per section
 - `[[tabs.<name>.panes]]` — panes inside the tab; `from` + `split` (`right` or `down`) define the split tree
 - `command` — exact command a pane runs (`nvim`, `pi`, `claude`, `opencode`, etc.)
 

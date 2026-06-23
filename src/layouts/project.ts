@@ -1,9 +1,15 @@
-import type { SessionizerConfig, PaneConfig, TabConfig } from '../config.ts';
-import type { Pane, Tab, Workspace } from '../client/types.ts';
-import type { SplitOptions } from '../ops/panes.ts';
-import type { TabCreateOptions } from '../ops/tabs.ts';
-import { buildPaneCommand, type LayoutCommandOptions } from './command-builder.ts';
-import { createLenientLayoutErrorPolicy, type LayoutErrorPolicy } from './error-policy.ts';
+import type { SessionizerConfig, PaneConfig, TabConfig } from "../config.ts";
+import type { Pane, Tab, Workspace } from "../client/types.ts";
+import type { SplitOptions } from "../ops/panes.ts";
+import type { TabCreateOptions } from "../ops/tabs.ts";
+import {
+  buildPaneCommand,
+  type LayoutCommandOptions,
+} from "./command-builder.ts";
+import {
+  createLenientLayoutErrorPolicy,
+  type LayoutErrorPolicy,
+} from "./error-policy.ts";
 
 interface TabRuntime {
   tabId: string;
@@ -30,17 +36,17 @@ export async function createProjectLayout(
   tabs: LayoutTabs,
   panes: LayoutPanes,
   options?: LayoutCommandOptions,
-  errorPolicy: LayoutErrorPolicy = createLenientLayoutErrorPolicy(),
+  errorPolicy: LayoutErrorPolicy = createLenientLayoutErrorPolicy()
 ): Promise<Workspace> {
   const id = workspace.workspace_id;
-  const enabledTabs = config.tabs.filter((tab) => tab.enabled);
-  validateCommandOverrideTargets(enabledTabs, options);
-  if (enabledTabs.length === 0) return workspace;
+  const tabsToCreate = config.tabs;
+  validateCommandOverrideTargets(tabsToCreate, options);
+  if (tabsToCreate.length === 0) return workspace;
 
   let nextPaneIndex = 1;
   let focusedTabId = `${id}:1`;
 
-  const [firstTab, ...remainingTabs] = enabledTabs;
+  const [firstTab, ...remainingTabs] = tabsToCreate;
   const initial = await configureExistingTab(
     `${id}:1`,
     `${id}-${nextPaneIndex}`,
@@ -50,7 +56,7 @@ export async function createProjectLayout(
     panes,
     config.layout.focus,
     options,
-    errorPolicy,
+    errorPolicy
   );
   nextPaneIndex = initial.nextPaneIndex;
   if (matchesFocus(config.layout.focus, firstTab!, initial.firstPaneId)) {
@@ -67,7 +73,7 @@ export async function createProjectLayout(
       panes,
       config.layout.focus,
       options,
-      errorPolicy,
+      errorPolicy
     );
     nextPaneIndex = created.nextPaneIndex;
     if (matchesFocus(config.layout.focus, tab, created.firstPaneId)) {
@@ -75,7 +81,9 @@ export async function createProjectLayout(
     }
   }
 
-  await errorPolicy.ignore(`focus tab '${focusedTabId}'`, () => tabs.focus(focusedTabId));
+  await errorPolicy.ignore(`focus tab '${focusedTabId}'`, () =>
+    tabs.focus(focusedTabId)
+  );
   return workspace;
 }
 
@@ -88,10 +96,22 @@ async function configureExistingTab(
   panes: LayoutPanes,
   focusTarget: string,
   options?: LayoutCommandOptions,
-  errorPolicy?: LayoutErrorPolicy,
+  errorPolicy?: LayoutErrorPolicy
 ): Promise<TabRuntime> {
-  await errorPolicy!.ignore(`rename tab '${tab.label}'`, () => tabs.rename(tabId, tab.label));
-  return configureTabPanes(tabId, firstPaneId, 2, tab, cwd, panes, focusTarget, options, errorPolicy!);
+  await errorPolicy!.ignore(`rename tab '${tab.label}'`, () =>
+    tabs.rename(tabId, tab.label)
+  );
+  return configureTabPanes(
+    tabId,
+    firstPaneId,
+    2,
+    tab,
+    cwd,
+    panes,
+    focusTarget,
+    options,
+    errorPolicy!
+  );
 }
 
 async function createAndConfigureTab(
@@ -103,15 +123,21 @@ async function createAndConfigureTab(
   panes: LayoutPanes,
   focusTarget: string,
   options?: LayoutCommandOptions,
-  errorPolicy?: LayoutErrorPolicy,
+  errorPolicy?: LayoutErrorPolicy
 ): Promise<TabRuntime> {
-  const tabResult = await errorPolicy!.optional(`create tab '${tab.label}'`, () =>
-    tabs.create({
-      workspace_id: workspaceId,
-      cwd,
-      label: tab.label,
-      focus: matchesFocus(focusTarget, tab, `${workspaceId}-${nextPaneIndex}`),
-    }),
+  const tabResult = await errorPolicy!.optional(
+    `create tab '${tab.label}'`,
+    () =>
+      tabs.create({
+        workspace_id: workspaceId,
+        cwd,
+        label: tab.label,
+        focus: matchesFocus(
+          focusTarget,
+          tab,
+          `${workspaceId}-${nextPaneIndex}`
+        ),
+      })
   );
 
   const tabId = tabResult?.tab_id ?? `${workspaceId}:unknown`;
@@ -124,7 +150,7 @@ async function createAndConfigureTab(
     panes,
     focusTarget,
     options,
-    errorPolicy!,
+    errorPolicy!
   );
 }
 
@@ -137,9 +163,10 @@ async function configureTabPanes(
   panes: LayoutPanes,
   focusTarget: string,
   options?: LayoutCommandOptions,
-  errorPolicy?: LayoutErrorPolicy,
+  errorPolicy?: LayoutErrorPolicy
 ): Promise<TabRuntime> {
-  const specs = tab.panes.length > 0 ? tab.panes : [{ id: 'root', title: '', command: '' }];
+  const specs =
+    tab.panes.length > 0 ? tab.panes : [{ id: "root", title: "", command: "" }];
   validatePaneSpecs(tab, specs);
 
   const paneIds = new Map<string, string>();
@@ -149,30 +176,36 @@ async function configureTabPanes(
   if (rootSpec.id) {
     paneIds.set(rootSpec.id, currentPaneId);
   }
-  await errorPolicy!.ignore(`configure root pane '${rootSpec.title || currentPaneId}'`, () =>
-    configurePane(currentPaneId, rootSpec, cwd, panes, options),
+  await errorPolicy!.ignore(
+    `configure root pane '${rootSpec.title || currentPaneId}'`,
+    () => configurePane(currentPaneId, rootSpec, cwd, panes, options)
   );
 
   for (let index = 1; index < specs.length; index += 1) {
     const spec = specs[index]!;
     const anchorPaneId = spec.from ? paneIds.get(spec.from) : currentPaneId;
     if (!anchorPaneId) {
-      throw new Error(`Tab '${tab.label}' references unknown pane '${spec.from ?? ''}'.`);
+      throw new Error(
+        `Tab '${tab.label}' references unknown pane '${spec.from ?? ""}'.`
+      );
     }
-    const splitPane = await errorPolicy!.optional(`split pane from '${anchorPaneId}'`, () =>
-      panes.split(anchorPaneId, {
-        direction: spec.split ?? 'right',
-        cwd,
-        focus: matchesFocusTarget(focusTarget, spec),
-      }),
+    const splitPane = await errorPolicy!.optional(
+      `split pane from '${anchorPaneId}'`,
+      () =>
+        panes.split(anchorPaneId, {
+          direction: spec.split ?? "right",
+          cwd,
+          focus: matchesFocusTarget(focusTarget, spec),
+        })
     );
-    const paneId = splitPane?.pane_id ?? workspacePaneId(firstPaneId, nextPaneIndex);
+    const paneId =
+      splitPane?.pane_id ?? workspacePaneId(firstPaneId, nextPaneIndex);
     nextPaneIndex += 1;
     if (spec.id) {
       paneIds.set(spec.id, paneId);
     }
     await errorPolicy!.ignore(`configure pane '${spec.title || paneId}'`, () =>
-      configurePane(paneId, spec, cwd, panes, options),
+      configurePane(paneId, spec, cwd, panes, options)
     );
     currentPaneId = paneId;
   }
@@ -185,7 +218,7 @@ async function configurePane(
   spec: PaneConfig,
   cwd: string,
   panes: LayoutPanes,
-  options?: LayoutCommandOptions,
+  options?: LayoutCommandOptions
 ): Promise<void> {
   if (spec.title) {
     await panes.rename(paneId, spec.title);
@@ -197,7 +230,11 @@ async function configurePane(
   }
 }
 
-function matchesFocus(focusTarget: string, tab: TabConfig, firstPaneId: string): boolean {
+function matchesFocus(
+  focusTarget: string,
+  tab: TabConfig,
+  firstPaneId: string
+): boolean {
   if (focusTarget === tab.label) return true;
   return tab.panes.some((pane) => matchesFocusTarget(focusTarget, pane));
 }
@@ -212,23 +249,30 @@ function validatePaneSpecs(tab: TabConfig, specs: readonly PaneConfig[]): void {
     const spec = specs[index]!;
     if (index === 0) {
       if (spec.from) {
-        throw new Error(`Tab '${tab.label}' cannot set 'from' on its first pane.`);
+        throw new Error(
+          `Tab '${tab.label}' cannot set 'from' on its first pane.`
+        );
       }
     } else if (spec.from && !seenIds.has(spec.from)) {
       throw new Error(
-        `Tab '${tab.label}' references pane '${spec.from}' before it is defined. List target panes earlier in the same tab.`,
+        `Tab '${tab.label}' references pane '${spec.from}' before it is defined. List target panes earlier in the same tab.`
       );
     }
     if (spec.id) {
       if (seenIds.has(spec.id)) {
-        throw new Error(`Tab '${tab.label}' has duplicate pane id '${spec.id}'.`);
+        throw new Error(
+          `Tab '${tab.label}' has duplicate pane id '${spec.id}'.`
+        );
       }
       seenIds.add(spec.id);
     }
   }
 }
 
-function validateCommandOverrideTargets(tabs: readonly TabConfig[], options?: LayoutCommandOptions): void {
+function validateCommandOverrideTargets(
+  tabs: readonly TabConfig[],
+  options?: LayoutCommandOptions
+): void {
   if (!options?.commandOverride) {
     return;
   }
@@ -236,16 +280,18 @@ function validateCommandOverrideTargets(tabs: readonly TabConfig[], options?: La
   const targets = tabs.flatMap((tab) =>
     tab.panes
       .filter((pane) => pane.accept_command_override)
-      .map((pane) => `${tab.label}/${pane.id ?? (pane.title || 'unnamed')}`),
+      .map((pane) => `${tab.label}/${pane.id ?? (pane.title || "unnamed")}`)
   );
 
   if (targets.length === 0) {
-    throw new Error("Worktree command override was provided, but no pane declares 'accept_command_override = true'.");
+    throw new Error(
+      "Worktree command override was provided, but no pane declares 'accept_command_override = true'."
+    );
   }
 
   if (targets.length > 1) {
     throw new Error(
-      `Worktree command override requires exactly one pane target, but found ${targets.length}: ${targets.join(', ')}`,
+      `Worktree command override requires exactly one pane target, but found ${targets.length}: ${targets.join(", ")}`
     );
   }
 }

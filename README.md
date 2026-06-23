@@ -29,13 +29,11 @@ Sessionizer does not install system tools for you.
 
 ```sh
 curl -fsSL https://bun.com/install | bash
-brew install oven-sh/bun/bun   # macOS alternative
-brew install fzf               # macOS / Linux (Homebrew)
-sudo apt install fzf           # Debian 9+ / Ubuntu 19.10+
-sudo dnf install fzf           # Fedora
+brew install oven-sh/bun/bun
+brew install fzf
 ```
 
-Optional: [bat](https://github.com/sharkdp/bat) for richer `README.md` previews (`brew install bat`, `sudo apt install bat`, `sudo dnf install bat`). On older Debian/Ubuntu the binary may be `batcat`; Sessionizer looks for `bat` on PATH.
+Optional: [bat](https://github.com/sharkdp/bat) for richer `README.md` previews (`brew install bat`).
 
 ## Setup
 

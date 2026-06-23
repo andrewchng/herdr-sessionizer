@@ -75,15 +75,24 @@ herdr plugin action invoke sessionizer.worktree-open
 
 Existing workspaces are reopened as-is. Layout bootstrap runs only for newly created workspaces.
 
-## Configuration
+## Layout configuration
+
+When you pick a project or worktree in the `fzf` picker and Sessionizer **creates** a new workspace, it opens that workspace with the tabs, pane splits, and commands defined here.
+
+`config.toml` controls two things: which repos appear in the pickers, and what layout a freshly created workspace starts with. Picking an existing workspace from `fzf` just focuses it — the layout config is not re-applied.
 
 ```text
 ~/.config/herdr/plugins/config/sessionizer/config.toml
 ```
 
-Created automatically on first run if missing. The plugin reads it literally — no extra tabs, panes, or commands are invented at runtime.
+Created automatically on first run if missing. Two parts:
 
-### Minimal example
+- **`[projects]`** — parent folders the `fzf` pickers scan for repos
+- **`[tabs.*]` + `[[tabs.*.panes]]`** — the workspace Sessionizer opens after an `fzf` pick creates a new one: tabs to add, pane splits, commands to run, and final focus via `[layout].focus`
+
+The plugin reads the config literally — it does not invent extra tabs, panes, or commands beyond what you define.
+
+### Example layout
 
 ```toml
 [projects]
@@ -110,10 +119,14 @@ split = "right"
 command = "opencode"
 ```
 
-- `command` is the exact pane command (`nvim`, `pi`, `claude`, `opencode`, etc.)
-- `enabled = false` skips a tab
-- `from` + `split` (`right` or `down`) anchor splits within a tab
-- worktree panes can interpolate `{branch}` in commands
+- `[projects].roots` — parent folders scanned by both pickers
+- `[layout].placement` — how plugin panes open (`overlay` or `split`)
+- `[layout].focus` — which tab or pane to focus after layout bootstrap
+- `[tabs.<name>]` — one Herdr tab to create per enabled section
+- `enabled = false` — skip creating that tab
+- `[[tabs.<name>.panes]]` — panes inside the tab; `from` + `split` (`right` or `down`) define the split tree
+- `command` — exact command a pane runs (`nvim`, `pi`, `claude`, `opencode`, etc.)
+- `{branch}` — worktree placeholder interpolated into pane commands at create time
 
 ## Example keybindings
 

@@ -126,7 +126,6 @@ command = "opencode"
 - `enabled = false` — skip creating that tab
 - `[[tabs.<name>.panes]]` — panes inside the tab; `from` + `split` (`right` or `down`) define the split tree
 - `command` — exact command a pane runs (`nvim`, `pi`, `claude`, `opencode`, etc.)
-- `{branch}` — worktree placeholder interpolated into pane commands at create time
 
 ## Example keybindings
 

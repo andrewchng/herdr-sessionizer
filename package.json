@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Herdr plugin inspired by ThePrimeagen's tmux-sessionizer for fuzzy project and worktree picking",
+  "license": "MIT",
   "bin": {
     "herdr-worktree": "./src/bin/herdr-worktree.ts"
   },

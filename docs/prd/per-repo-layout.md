@@ -144,17 +144,17 @@ id = "agent"
 from = "editor"
 title = "agent"
 split = "right"
-command = "opencode"
+command = "pi"
 ```
 
-This layout intentionally differs from the global default (no `lazygit`, tab label `wiki`, focus `wiki`) so manual verification is obvious.
+This layout intentionally differs from the global default (no `lazygit`, tab label `wiki`, focus `wiki`, agent runs `pi`) so manual verification is obvious.
 
 ### Manual test steps
 
 1. Ensure global `config.toml` still has the dev layout (nvim + agent + lazygit).
 2. Add `.sessionizer/config.toml` to `llm-wiki` as above.
 3. Pick **`llm-wiki`** via `sessionizer.open` as a **new** project (use a fresh workspace name/path, or remove any existing llm-wiki Sessionizer workspace first).
-4. **Expect:** one `wiki` tab, nvim + opencode split, **no** lazygit pane.
+4. **Expect:** one `wiki` tab, nvim + `pi` split, **no** lazygit pane.
 5. Pick a different project without `.sessionizer/` → **expect** global default layout.
 6. Reopen existing llm-wiki workspace from picker → **expect** no relayout (ADR-0001).
 

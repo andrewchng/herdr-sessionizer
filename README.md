@@ -145,6 +145,103 @@ First tab shape:
 - `[[tabs.<name>.panes]]` — panes inside the tab; `from` + `split` (`right` or `down`) define the split tree
 - `command` — exact command a pane runs (`nvim`, `pi`, `claude`, `opencode`, etc.)
 
+### Per-repo layout overrides
+
+A repository can declare its own layout for **new** workspace bootstrap. Put a layout-only config at:
+
+```text
+<project>/.sessionizer/config.toml
+```
+
+When Sessionizer or Worktree creates a new workspace at `cwd`, lookup order is:
+
+1. `<cwd>/.sessionizer/config.toml` — if present, use its `[layout].focus` and `[tabs.*]` (full replacement; no merge with global tabs)
+2. Global `config.toml` — default layout
+
+`[projects].roots` and `[layout].placement` always come from the global config. Repo-local files may include those sections, but they are ignored.
+
+Invalid repo-local config fails with an error that names the file path. Reopening an existing workspace never reapplies layout.
+
+| Event                                       | Layout source                                        |
+| ------------------------------------------- | ---------------------------------------------------- |
+| Sessionizer creates a new project workspace | Repo override at picked `cwd`, else global default   |
+| Worktree creates a new workspace            | Repo override at checkout `cwd`, else global default |
+| Focus or reopen an existing workspace       | No relayout                                          |
+
+#### Example: three layouts side by side
+
+With a global default like the [example layout](#example-layout) above, two repos can override it independently:
+
+| Repo                      | Config path                | Tab    | Panes                                 |
+| ------------------------- | -------------------------- | ------ | ------------------------------------- |
+| Any repo without override | global `config.toml`       | `dev`  | nvim + agent (right) + lazygit (down) |
+| `~/Projects/my-docs-repo` | `.sessionizer/config.toml` | `docs` | lazygit + pi (right) — no nvim        |
+| `~/Projects/my-app-repo`  | `.sessionizer/config.toml` | `dev`  | nvim + lazygit (right) — no agent     |
+
+**my-docs-repo** — docs/wiki repo, agent-first:
+
+```toml
+# ~/Projects/my-docs-repo/.sessionizer/config.toml
+[layout]
+focus = "docs"
+
+[tabs.docs]
+label = "docs"
+
+[[tabs.docs.panes]]
+id = "git"
+title = "lazygit"
+command = "lazygit"
+
+[[tabs.docs.panes]]
+id = "agent"
+from = "git"
+title = "agent"
+split = "right"
+command = "pi"
+```
+
+```text
+┌──────────┬─────────┐
+│          │         │
+│ lazygit  │   pi    │
+│          │         │
+└──────────┴─────────┘
+```
+
+**my-app-repo** — application repo, editor + git only:
+
+```toml
+# ~/Projects/my-app-repo/.sessionizer/config.toml
+[layout]
+focus = "dev"
+
+[tabs.dev]
+label = "dev"
+
+[[tabs.dev.panes]]
+id = "editor"
+title = "nvim"
+command = "nvim"
+
+[[tabs.dev.panes]]
+id = "git"
+from = "editor"
+title = "lazygit"
+split = "right"
+command = "lazygit"
+```
+
+```text
+┌──────────┬─────────┐
+│          │         │
+│   nvim   │ lazygit │
+│          │         │
+└──────────┴─────────┘
+```
+
+Check each `.sessionizer/config.toml` into the repo you want the layout to travel with. Only **new** workspaces pick it up — focusing an existing workspace does not relayout.
+
 ## Example keybindings
 
 ```toml

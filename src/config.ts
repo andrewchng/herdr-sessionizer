@@ -59,6 +59,44 @@ export interface SessionizerConfig {
   tabs: TabConfig[];
 }
 
+export const REPO_LAYOUT_CONFIG_RELATIVE = join(".sessionizer", "config.toml");
+
+export function resolveRepoLayoutPath(layoutCwd: string): string {
+  return join(layoutCwd, REPO_LAYOUT_CONFIG_RELATIVE);
+}
+
+export function resolveLayoutConfig(
+  layoutCwd: string,
+  global?: SessionizerConfig
+): SessionizerConfig {
+  const globalConfig = global ?? loadConfig();
+  const repoPath = resolveRepoLayoutPath(layoutCwd);
+
+  if (!existsSync(repoPath)) {
+    return globalConfig;
+  }
+
+  try {
+    const raw = loadRaw(repoPath);
+    const focus = raw?.layout?.focus?.trim();
+    if (!focus) {
+      throw new Error("Repo layout config must define [layout].focus.");
+    }
+
+    return {
+      projects: globalConfig.projects,
+      layout: {
+        placement: globalConfig.layout.placement,
+        focus,
+      },
+      tabs: buildTabs(raw),
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`${message} (${repoPath})`);
+  }
+}
+
 export function loadConfig(): SessionizerConfig {
   const pluginConfigDir = resolvePluginConfigDir();
   const pluginConfigPath = join(pluginConfigDir, "config.toml");

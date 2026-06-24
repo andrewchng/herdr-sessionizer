@@ -260,6 +260,8 @@ description = "create worktree workspace"
 
 ## Development
 
+See [CHANGELOG.md](CHANGELOG.md) for release history.
+
 ```sh
 bun run typecheck
 bun run test

@@ -2,6 +2,8 @@
 
 Sessionizer is a [Herdr](https://herdr.dev/) plugin that uses fuzzy pickers to open projects and Git worktrees into configured workspaces.
 
+![Sessionizer demo — fuzzy workspace picker with README preview](docs/assets/demo.gif)
+
 - **Sessionizer** — focus an existing workspace or create a new project workspace
 - **Worktree** — create or reopen a Git worktree workspace
 
@@ -100,22 +102,40 @@ roots = ["~/Projects", "~/Workspace"]
 
 [layout]
 placement = "overlay"
-focus = "assistant"
+focus = "editor"
 
-[tabs.terminal]
-label = "terminal"
+[tabs.dev]
+label = "dev"
 
-[[tabs.terminal.panes]]
-id = "shell"
-title = "shell"
-command = ""
+[[tabs.dev.panes]]
+id = "editor"
+title = "nvim"
+command = "nvim"
 
-[[tabs.terminal.panes]]
-id = "assistant"
-from = "shell"
-title = "assistant"
+[[tabs.dev.panes]]
+id = "agent"
+from = "editor"
+title = "agent"
 split = "right"
 command = "opencode"
+
+[[tabs.dev.panes]]
+id = "git"
+from = "editor"
+title = "lazygit"
+split = "down"
+command = "lazygit"
+```
+
+First tab shape:
+
+```text
+┌──────────┬─────────┐
+│          │  agent  │
+│   nvim   │         │
+├──────────┤         │
+│ lazygit  │         │
+└──────────┴─────────┘
 ```
 
 - `[projects].roots` — parent folders scanned by both pickers

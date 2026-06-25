@@ -168,20 +168,12 @@ Invalid repo-local config fails with an error that names the file path. Reopenin
 | Worktree creates a new workspace            | Repo override at checkout `cwd`, else global default |
 | Focus or reopen an existing workspace       | No relayout                                          |
 
-#### Example: three layouts side by side
+#### Example repo override
 
-With a global default like the [example layout](#example-layout) above, two repos can override it independently:
-
-| Repo                      | Config path                | Tab    | Panes                                 |
-| ------------------------- | -------------------------- | ------ | ------------------------------------- |
-| Any repo without override | global `config.toml`       | `dev`  | nvim + agent (right) + lazygit (down) |
-| `~/Projects/my-docs-repo` | `.sessionizer/config.toml` | `docs` | lazygit + pi (right) — no nvim        |
-| `~/Projects/my-app-repo`  | `.sessionizer/config.toml` | `dev`  | nvim + lazygit (right) — no agent     |
-
-**my-docs-repo** — docs/wiki repo, agent-first:
+A docs repo might skip the global `nvim + agent + lazygit` layout and open lazygit with an agent instead:
 
 ```toml
-# ~/Projects/my-docs-repo/.sessionizer/config.toml
+# my-docs-repo/.sessionizer/config.toml
 [layout]
 focus = "docs"
 
@@ -209,38 +201,7 @@ command = "pi"
 └──────────┴─────────┘
 ```
 
-**my-app-repo** — application repo, editor + git only:
-
-```toml
-# ~/Projects/my-app-repo/.sessionizer/config.toml
-[layout]
-focus = "dev"
-
-[tabs.dev]
-label = "dev"
-
-[[tabs.dev.panes]]
-id = "editor"
-title = "nvim"
-command = "nvim"
-
-[[tabs.dev.panes]]
-id = "git"
-from = "editor"
-title = "lazygit"
-split = "right"
-command = "lazygit"
-```
-
-```text
-┌──────────┬─────────┐
-│          │         │
-│   nvim   │ lazygit │
-│          │         │
-└──────────┴─────────┘
-```
-
-Check each `.sessionizer/config.toml` into the repo you want the layout to travel with. Only **new** workspaces pick it up — focusing an existing workspace does not relayout.
+Check `.sessionizer/config.toml` into the repo if you want the layout to travel with the project. Repos without it keep the global default. Only **new** workspaces pick up an override — focusing an existing workspace does not relayout.
 
 ## Example keybindings
 

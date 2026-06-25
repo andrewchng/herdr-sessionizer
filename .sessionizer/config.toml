@@ -1,0 +1,24 @@
+[layout]
+focus = "agent"
+
+[tabs.dev]
+label = "dev"
+
+[[tabs.dev.panes]]
+id = "editor"
+title = "nvim"
+command = "nvim"
+
+[[tabs.dev.panes]]
+id = "agent"
+from = "editor"
+title = "copilot"
+split = "right"
+command = "copilot"
+
+[[tabs.dev.panes]]
+id = "git"
+from = "editor"
+title = "lazygit"
+split = "down"
+command = "lazygit"

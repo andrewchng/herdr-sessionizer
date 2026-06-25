@@ -199,6 +199,28 @@ command = "pi"
 
 Check `.sessionizer/config.toml` into the repo if you want the layout to travel with the project. Repos without it keep the global default.
 
+## Agent skill
+
+This repo also ships a `sessionizer-layout-editor` skill for agents that support the `skills` ecosystem.
+
+Install it from this repo:
+
+```sh
+npx skills add andrewchng/herdr-sessionizer --skill sessionizer-layout-editor
+```
+
+List available skills in this repo:
+
+```sh
+npx skills add andrewchng/herdr-sessionizer --list
+```
+
+Use it once without installing:
+
+```sh
+npx skills use andrewchng/herdr-sessionizer --skill sessionizer-layout-editor --agent github-copilot
+```
+
 ## Example keybindings
 
 ```toml

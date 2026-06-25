@@ -208,7 +208,6 @@ function defaultConfigToml(): string {
     'title = "agent"',
     'split = "right"',
     'command = "opencode"',
-    "accept_command_override = true",
     "",
     "[[tabs.dev.panes]]",
     'id = "git"',

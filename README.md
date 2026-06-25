@@ -145,6 +145,66 @@ First tab shape:
 - `[[tabs.<name>.panes]]` — panes inside the tab; `from` + `split` (`right` or `down`) define the split tree
 - `command` — exact command a pane runs (`nvim`, `pi`, `claude`, `opencode`, etc.)
 
+If you launch a worktree with `--command`, exactly one pane in that layout must opt in with `accept_command_override = true`. The generated default config leaves this off until you choose which pane should receive the raw command.
+
+### Per-repo layout overrides
+
+A repository can declare its own layout for **new** workspace bootstrap. Put a layout-only config at:
+
+```text
+<project>/.sessionizer/config.toml
+```
+
+When Sessionizer or Worktree creates a new workspace at `cwd`, lookup order is:
+
+1. `<cwd>/.sessionizer/config.toml` — if present, use its `[layout].focus` and `[tabs.*]` (full replacement; no merge with global tabs)
+2. Global `config.toml` — default layout
+
+`[projects].roots` and `[layout].placement` always come from the global config. Repo-local files may include those sections, but they are ignored.
+
+Invalid repo-local config fails with an error that names the file path. Reopening an existing workspace never reapplies layout.
+
+| Event                                       | Layout source                                        |
+| ------------------------------------------- | ---------------------------------------------------- |
+| Sessionizer creates a new project workspace | Repo override at picked `cwd`, else global default   |
+| Worktree creates a new workspace            | Repo override at checkout `cwd`, else global default |
+| Focus or reopen an existing workspace       | No relayout                                          |
+
+#### Example repo override
+
+A docs repo might skip the global `nvim + agent + lazygit` layout and open lazygit with an agent instead:
+
+```toml
+# my-docs-repo/.sessionizer/config.toml
+[layout]
+focus = "docs"
+
+[tabs.docs]
+label = "docs"
+
+[[tabs.docs.panes]]
+id = "git"
+title = "lazygit"
+command = "lazygit"
+
+[[tabs.docs.panes]]
+id = "agent"
+from = "git"
+title = "agent"
+split = "right"
+command = "pi"
+```
+
+```text
+┌──────────┬─────────┐
+│          │         │
+│ lazygit  │   pi    │
+│          │         │
+└──────────┴─────────┘
+```
+
+Check `.sessionizer/config.toml` into the repo if you want the layout to travel with the project. Repos without it keep the global default. Only **new** workspaces pick up an override — focusing an existing workspace does not relayout.
+
 ## Example keybindings
 
 ```toml
@@ -163,8 +223,14 @@ description = "create worktree workspace"
 
 ## Development
 
+See [CHANGELOG.md](CHANGELOG.md) for release history.
+
 ```sh
 bun run typecheck
 bun run test
+bun run release -- 0.2.1 --dry-run
+bun run release:tag -- 0.2.1 --dry-run
 bun run sessionizer
 ```
+
+Use `bun run release -- <version>` on the release-prep branch to update version files, then run `bun run release:tag -- <version>` from merged `main` to create and push the annotated `v<version>` release tag.

@@ -226,5 +226,9 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 ```sh
 bun run typecheck
 bun run test
+bun run release -- 0.2.1 --dry-run
+bun run release:tag -- 0.2.1 --dry-run
 bun run sessionizer
 ```
+
+Use `bun run release -- <version>` on the release-prep branch to update version files, then run `bun run release:tag -- <version>` from merged `main` to create and push the annotated release tag.

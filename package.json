@@ -11,6 +11,8 @@
   "scripts": {
     "sessionizer": "bun run src/sessionizer.ts",
     "worktree": "bun run src/bin/herdr-worktree.ts",
+    "release": "bun run scripts/release.ts",
+    "release:tag": "bun run scripts/release-tag.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "prepare": "husky"

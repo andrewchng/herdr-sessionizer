@@ -90,6 +90,8 @@ Created automatically on first run if missing. It controls:
 - **`[projects]`** — parent folders the `fzf` pickers scan for repos
 - **`[layout]`, `[tabs.*]` + `[[tabs.*.panes]]`** — the tabs, splits, commands, and final focus for newly created workspaces
 
+If you want an agent to help edit either the global config or a repo-local override, see [Agent skill](#agent-skill).
+
 ### Example layout
 
 ```toml
@@ -201,7 +203,11 @@ Check `.sessionizer/config.toml` into the repo if you want the layout to travel 
 
 ## Agent skill
 
-This repo also ships a `sessionizer-layout-editor` skill for agents that support the `skills` ecosystem.
+This repo also ships a `sessionizer-layout-editor` skill for agents that support the `skills` ecosystem. It helps agents update:
+
+- global Sessionizer config
+- `projects.roots`
+- repo-local `.sessionizer/config.toml` overrides
 
 Install it from this repo:
 
@@ -215,11 +221,11 @@ List available skills in this repo:
 npx skills add andrewchng/herdr-sessionizer --list
 ```
 
-Use it once without installing:
+Example requests:
 
-```sh
-npx skills use andrewchng/herdr-sessionizer --skill sessionizer-layout-editor --agent github-copilot
-```
+- "Add `~/Work` to my Sessionizer project roots"
+- "Create a repo-local override for this repo with `lazygit` on the left and `copilot` on the right"
+- "Update my global Sessionizer layout to focus the git pane"
 
 ## Example keybindings
 

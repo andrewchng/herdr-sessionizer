@@ -8,6 +8,11 @@ export interface ReleaseTagState {
   tagExists: boolean;
 }
 
+export function releaseTagName(version: string): string {
+  assertValidVersion(version);
+  return `v${version}`;
+}
+
 export function readPackageVersion(packageJson: string): string {
   const parsed = JSON.parse(packageJson) as { version?: unknown };
   if (typeof parsed.version !== "string" || parsed.version.length === 0) {
@@ -30,7 +35,7 @@ export function assertReadyToTagRelease(
   version: string,
   state: ReleaseTagState
 ): void {
-  assertValidVersion(version);
+  const tagName = releaseTagName(version);
 
   if (state.currentBranch !== "main") {
     throw new Error(
@@ -55,6 +60,6 @@ export function assertReadyToTagRelease(
   }
 
   if (state.tagExists) {
-    throw new Error(`Git tag '${version}' already exists.`);
+    throw new Error(`Git tag '${tagName}' already exists.`);
   }
 }

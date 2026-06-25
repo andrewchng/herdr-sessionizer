@@ -145,6 +145,8 @@ First tab shape:
 - `[[tabs.<name>.panes]]` — panes inside the tab; `from` + `split` (`right` or `down`) define the split tree
 - `command` — exact command a pane runs (`nvim`, `pi`, `claude`, `opencode`, etc.)
 
+If you launch a worktree with `--command`, exactly one pane in that layout must opt in with `accept_command_override = true`. The generated default config leaves this off until you choose which pane should receive the raw command.
+
 ### Per-repo layout overrides
 
 A repository can declare its own layout for **new** workspace bootstrap. Put a layout-only config at:
@@ -231,4 +233,4 @@ bun run release:tag -- 0.2.1 --dry-run
 bun run sessionizer
 ```
 
-Use `bun run release -- <version>` on the release-prep branch to update version files, then run `bun run release:tag -- <version>` from merged `main` to create and push the annotated release tag.
+Use `bun run release -- <version>` on the release-prep branch to update version files, then run `bun run release:tag -- <version>` from merged `main` to create and push the annotated `v<version>` release tag.

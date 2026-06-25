@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import {
   assertReadyToTagRelease,
+  releaseTagName,
   readPackageVersion,
   readPluginManifestVersion,
 } from "../src/release-tag.ts";
@@ -24,6 +25,7 @@ if (!args.version) {
 
 const packagePath = join(cwd, "package.json");
 const manifestPath = join(cwd, "herdr-plugin.toml");
+const tagName = releaseTagName(args.version);
 const packageVersion = readPackageVersion(readFileSync(packagePath, "utf-8"));
 const manifestVersion = readPluginManifestVersion(
   readFileSync(manifestPath, "utf-8")
@@ -34,7 +36,7 @@ const tagExists = runGitAllowFailure([
   "rev-parse",
   "-q",
   "--verify",
-  `refs/tags/${args.version}`,
+  `refs/tags/${tagName}`,
 ]).ok;
 
 assertReadyToTagRelease(args.version, {
@@ -46,17 +48,15 @@ assertReadyToTagRelease(args.version, {
 });
 
 if (args.dryRun) {
-  console.log(
-    `Would create annotated tag ${args.version} from ${currentBranch}`
-  );
-  console.log(`Would push tag ${args.version} to origin`);
+  console.log(`Would create annotated tag ${tagName} from ${currentBranch}`);
+  console.log(`Would push tag ${tagName} to origin`);
   process.exit(0);
 }
 
-runGit(["tag", "-a", args.version, "-m", `Release ${args.version}`]);
-runGit(["push", "origin", args.version]);
+runGit(["tag", "-a", tagName, "-m", `Release ${args.version}`]);
+runGit(["push", "origin", tagName]);
 
-console.log(`Created and pushed annotated tag ${args.version}`);
+console.log(`Created and pushed annotated tag ${tagName}`);
 
 function parseArgs(argv: readonly string[]): CliArgs {
   let version: string | undefined;

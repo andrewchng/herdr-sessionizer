@@ -2,9 +2,16 @@ import { describe, expect, it } from "bun:test";
 
 import {
   assertReadyToTagRelease,
+  releaseTagName,
   readPackageVersion,
   readPluginManifestVersion,
 } from "./release-tag.ts";
+
+describe("releaseTagName", () => {
+  it("prefixes release tags with v", () => {
+    expect(releaseTagName("0.2.0")).toBe("v0.2.0");
+  });
+});
 
 describe("readPackageVersion", () => {
   it("reads the package version field", () => {
@@ -75,6 +82,6 @@ describe("assertReadyToTagRelease", () => {
   it("rejects existing tags", () => {
     expect(() =>
       assertReadyToTagRelease("0.2.0", { ...readyState, tagExists: true })
-    ).toThrow("Git tag '0.2.0' already exists.");
+    ).toThrow("Git tag 'v0.2.0' already exists.");
   });
 });

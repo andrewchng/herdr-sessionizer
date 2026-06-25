@@ -79,20 +79,16 @@ Existing workspaces are reopened as-is. Layout bootstrap runs only for newly cre
 
 ## Layout configuration
 
-When you pick a project or worktree in the `fzf` picker and Sessionizer **creates** a new workspace, it opens that workspace with the tabs, pane splits, and commands defined here.
-
-`config.toml` controls two things: which repos appear in the pickers, and what layout a freshly created workspace starts with. Picking an existing workspace from `fzf` just focuses it — the layout config is not re-applied.
+When Sessionizer **creates** a new project or worktree workspace, it applies the layout from `config.toml`. Existing workspaces are only focused — the layout is not reapplied.
 
 ```text
 ~/.config/herdr/plugins/config/sessionizer/config.toml
 ```
 
-Created automatically on first run if missing. Two parts:
+Created automatically on first run if missing. It controls:
 
 - **`[projects]`** — parent folders the `fzf` pickers scan for repos
-- **`[tabs.*]` + `[[tabs.*.panes]]`** — the workspace Sessionizer opens after an `fzf` pick creates a new one: tabs to add, pane splits, commands to run, and final focus via `[layout].focus`
-
-The plugin reads the config literally — it does not invent extra tabs, panes, or commands beyond what you define.
+- **`[layout]`, `[tabs.*]` + `[[tabs.*.panes]]`** — the tabs, splits, commands, and final focus for newly created workspaces
 
 ### Example layout
 
@@ -149,7 +145,7 @@ If you launch a worktree with `--command`, exactly one pane in that layout must 
 
 ### Per-repo layout overrides
 
-A repository can declare its own layout for **new** workspace bootstrap. Put a layout-only config at:
+A repository can override the layout for **new** workspace bootstrap. Put a layout-only config at:
 
 ```text
 <project>/.sessionizer/config.toml
@@ -160,9 +156,7 @@ When Sessionizer or Worktree creates a new workspace at `cwd`, lookup order is:
 1. `<cwd>/.sessionizer/config.toml` — if present, use its `[layout].focus` and `[tabs.*]` (full replacement; no merge with global tabs)
 2. Global `config.toml` — default layout
 
-`[projects].roots` and `[layout].placement` always come from the global config. Repo-local files may include those sections, but they are ignored.
-
-Invalid repo-local config fails with an error that names the file path. Reopening an existing workspace never reapplies layout.
+`[projects].roots` and `[layout].placement` always come from the global config. Repo-local files may include those sections, but they are ignored. Invalid repo-local config fails with an error that names the file path. Existing workspaces are never relaid out.
 
 | Event                                       | Layout source                                        |
 | ------------------------------------------- | ---------------------------------------------------- |
@@ -203,7 +197,7 @@ command = "pi"
 └──────────┴─────────┘
 ```
 
-Check `.sessionizer/config.toml` into the repo if you want the layout to travel with the project. Repos without it keep the global default. Only **new** workspaces pick up an override — focusing an existing workspace does not relayout.
+Check `.sessionizer/config.toml` into the repo if you want the layout to travel with the project. Repos without it keep the global default.
 
 ## Example keybindings
 

@@ -124,20 +124,40 @@ from = "editor"
 title = "lazygit"
 split = "down"
 command = "lazygit"
+
+[tabs.server]
+label = "server"
+
+[[tabs.server.panes]]
+id = "server"
+title = "server"
+command = "npm run dev"
 ```
 
 First tab shape:
 
 ```text
-┌──────────┬─────────┐
-│          │  agent  │
-│   nvim   │         │
-├──────────┤         │
-│ lazygit  │         │
-└──────────┴─────────┘
+              dev
+┌────────────────┬───────┐
+│                │ agent │
+│      nvim      │       │
+├────────────────┤       │
+│    lazygit     │       │
+└────────────────┴───────┘
 ```
 
 Here, `ratio = 0.3` gives the new right-side `agent` pane 30% of the tab width, leaving the `editor` side with the remaining 70%.
+
+Second tab shape:
+
+```text
+   server
+┌──────────────┐
+│              │
+│    server    │
+│              │
+└──────────────┘
+```
 
 - `[projects].roots` — parent folders scanned by both pickers
 - `[layout].placement` — how plugin panes open (`overlay` or `split`)

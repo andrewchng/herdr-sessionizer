@@ -14,6 +14,7 @@ id = "agent"
 from = "editor"
 title = "copilot"
 split = "right"
+ratio = 0.3
 command = "copilot"
 accept_command_override = true
 

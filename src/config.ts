@@ -14,6 +14,7 @@ interface RawPaneConfig {
   from?: string;
   title?: string;
   split?: string;
+  ratio?: unknown;
   command?: string;
   accept_command_override?: boolean;
 }
@@ -38,6 +39,7 @@ export interface PaneConfig {
   from?: string;
   title: string;
   split?: SplitDirection;
+  ratio?: number;
   command: string;
   accept_command_override?: boolean;
 }
@@ -169,17 +171,25 @@ function buildPanes(
       `Tab '${tabId}' must define at least one [[tabs.${tabId}.panes]] entry.`
     );
   }
-  return rawPanes.map((pane, index) => ({
-    id: pane.id?.trim() || undefined,
-    from: pane.from?.trim() || undefined,
-    title: pane.title?.trim() ?? "",
-    split:
-      index === 0 && !pane.from
-        ? undefined
-        : asOptionalSplitDirection(pane.split),
-    command: pane.command ?? "",
-    accept_command_override: pane.accept_command_override ?? false,
-  }));
+  return rawPanes.map((pane, index) => {
+    const ratio = asOptionalPaneRatio(pane.ratio, tabId, index);
+    if (index === 0 && ratio !== undefined) {
+      throw new Error(`Tab '${tabId}' cannot set 'ratio' on its first pane.`);
+    }
+
+    return {
+      id: pane.id?.trim() || undefined,
+      from: pane.from?.trim() || undefined,
+      title: pane.title?.trim() ?? "",
+      split:
+        index === 0 && !pane.from
+          ? undefined
+          : asOptionalSplitDirection(pane.split),
+      ratio,
+      command: pane.command ?? "",
+      accept_command_override: pane.accept_command_override ?? false,
+    };
+  });
 }
 
 function defaultConfigToml(): string {
@@ -207,6 +217,7 @@ function defaultConfigToml(): string {
     'from = "editor"',
     'title = "agent"',
     'split = "right"',
+    "ratio = 0.3",
     'command = "opencode"',
     "",
     "[[tabs.dev.panes]]",
@@ -235,4 +246,28 @@ function asOptionalSplitDirection(
 ): SplitDirection | undefined {
   if (!value) return undefined;
   return asSplitDirection(value);
+}
+
+function asOptionalPaneRatio(
+  value: unknown,
+  tabId: string,
+  paneIndex: number
+): number | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new Error(
+      `Tab '${tabId}' pane ${paneIndex + 1} ratio must be a finite number between 0 and 1.`
+    );
+  }
+
+  if (value <= 0 || value >= 1) {
+    throw new Error(
+      `Tab '${tabId}' pane ${paneIndex + 1} ratio must be greater than 0 and less than 1.`
+    );
+  }
+
+  return value;
 }

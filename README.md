@@ -88,7 +88,7 @@ When Sessionizer **creates** a new project or worktree workspace, it applies the
 Created automatically on first run if missing. It controls:
 
 - **`[projects]`** — parent folders the `fzf` pickers scan for repos
-- **`[layout]`, `[tabs.*]` + `[[tabs.*.panes]]`** — the tabs, splits, commands, and final focus for newly created workspaces
+- **`[layout]`, `[tabs.*]` + `[[tabs.*.panes]]`** — the tabs, splits, per-split ratios, commands, and final focus for newly created workspaces
 
 If you want an agent to help edit either the global config or a repo-local override, see [Agent skill](#agent-skill).
 
@@ -115,6 +115,7 @@ id = "agent"
 from = "editor"
 title = "agent"
 split = "right"
+ratio = 0.3
 command = "opencode"
 
 [[tabs.dev.panes]]
@@ -136,12 +137,22 @@ First tab shape:
 └──────────┴─────────┘
 ```
 
+Here, `ratio = 0.3` gives the new right-side `agent` pane 30% of the tab width, leaving the `editor` side with the remaining 70%.
+
 - `[projects].roots` — parent folders scanned by both pickers
 - `[layout].placement` — how plugin panes open (`overlay` or `split`)
 - `[layout].focus` — which tab or pane to focus after layout bootstrap
 - `[tabs.<name>]` — one Herdr tab to create per section
 - `[[tabs.<name>.panes]]` — panes inside the tab; `from` + `split` (`right` or `down`) define the split tree
+- `ratio` — optional share for the newly created pane on the split axis; `0.3` gives the new right pane 30% width or the new bottom pane 30% height
 - `command` — exact command a pane runs (`nvim`, `pi`, `claude`, `opencode`, etc.)
+
+Rules for `ratio`:
+
+- only split-created panes may set it; the first/root pane in a tab cannot
+- it must be a number greater than `0` and less than `1`
+- if omitted, Herdr's default split sizing is used
+- it applies only when the workspace is first bootstrapped, never when an existing workspace is reopened
 
 If you launch a worktree with `--command`, exactly one pane in that layout must opt in with `accept_command_override = true`. The generated default config leaves this off until you choose which pane should receive the raw command.
 
@@ -188,6 +199,7 @@ id = "agent"
 from = "git"
 title = "agent"
 split = "right"
+ratio = 0.3
 command = "pi"
 ```
 

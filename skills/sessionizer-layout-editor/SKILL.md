@@ -34,6 +34,7 @@ Use this skill when the user wants either a global Sessionizer layout change or 
    - define panes with `[[tabs.<name>.panes]]`
    - the first pane in a tab must not use `from`
    - later panes may split from an earlier pane with `from` and `split = "right"` or `split = "down"`
+   - split-created panes may optionally set `ratio = 0.3` style values; ratio must be greater than 0 and less than 1 and applies on the split axis
    - keep pane ids unique within the tab
    - set `focus` to a pane id or tab target that exists
 5. Prefer minimal edits:

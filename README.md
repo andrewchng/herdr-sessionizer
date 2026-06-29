@@ -71,11 +71,9 @@ herdr plugin action invoke sessionizer.open
 herdr plugin action invoke sessionizer.worktree-open
 ```
 
-**Sessionizer** lists existing workspaces plus repos under `projects.roots`. Pick a workspace to focus it; pick a project to create a workspace and apply your layout.
+**Sessionizer** lists existing workspaces plus repos under `projects.roots`. Pick a workspace to focus it, or pick a project to create a new workspace with your configured layout.
 
-**Worktree** lists base repos under `projects.roots`, prompts for a branch, then reopens an existing checkout or creates a new worktree workspace with your layout.
-
-Existing workspaces are reopened as-is. Layout bootstrap runs only for newly created workspaces.
+**Worktree** lists base repos under `projects.roots`, prompts for a branch, then reopens an existing checkout or creates a new worktree workspace with the same bootstrap behavior.
 
 ## Layout configuration
 
@@ -146,7 +144,7 @@ First tab shape:
 └────────────────┴───────┘
 ```
 
-Here, `ratio = 0.3` gives the new right-side `agent` pane 30% of the tab width, leaving the `editor` side with the remaining 70%.
+These diagrams show pane **titles**, not commands. Here, `ratio = 0.3` gives the new right-side `agent` pane 30% of the split width, leaving the `editor` side with the remaining 70%.
 
 Second tab shape:
 
@@ -164,7 +162,7 @@ Second tab shape:
 - `[layout].focus` — which tab or pane to focus after layout bootstrap
 - `[tabs.<name>]` — one Herdr tab to create per section
 - `[[tabs.<name>.panes]]` — panes inside the tab; `from` + `split` (`right` or `down`) define the split tree
-- `ratio` — optional share for the newly created pane on the split axis; `0.3` gives the new right pane 30% width or the new bottom pane 30% height
+- `ratio` — optional share for the newly created pane on the split axis
 - `command` — exact command a pane runs (`nvim`, `pi`, `claude`, `opencode`, etc.)
 
 Rules for `ratio`:
@@ -179,18 +177,18 @@ If you launch a worktree with `--command`, exactly one pane in that layout must 
 
 ### Per-repo layout overrides
 
-A repository can override the layout for **new** workspace bootstrap. Put a layout-only config at:
+A repository can override the layout for **new** workspace bootstrap. Put a repo-local layout config at:
 
 ```text
 <project>/.sessionizer/config.toml
 ```
 
-When Sessionizer or Worktree creates a new workspace at `cwd`, lookup order is:
+When Sessionizer or Worktree creates a new workspace at `cwd`, Sessionizer checks in this order:
 
 1. `<cwd>/.sessionizer/config.toml` — if present, use its `[layout].focus` and `[tabs.*]` (full replacement; no merge with global tabs)
 2. Global `config.toml` — default layout
 
-`[projects].roots` and `[layout].placement` always come from the global config. Repo-local files may include those sections, but they are ignored. Invalid repo-local config fails with an error that names the file path. Existing workspaces are never relaid out.
+`[projects].roots` and `[layout].placement` always come from the global config. Repo-local files may include those sections, but they are ignored. Invalid repo-local config fails with an error that names the file path.
 
 | Event                                       | Layout source                                        |
 | ------------------------------------------- | ---------------------------------------------------- |
@@ -227,8 +225,8 @@ command = "pi"
 ```text
              docs
 ┌────────────────┬───────┐
-│                │       │
-│    lazygit     │  pi   │
+│                │ agent │
+│    lazygit     │       │
 │                │       │
 └────────────────┴───────┘
 ```
@@ -268,13 +266,13 @@ Example requests:
 key = "prefix+f"
 type = "plugin_action"
 command = "sessionizer.open"
-description = "project sessionizer"
+description = "open project workspace"
 
 [[keys.command]]
 key = "prefix+up"
 type = "plugin_action"
 command = "sessionizer.worktree-open"
-description = "create worktree workspace"
+description = "open worktree workspace"
 ```
 
 ## Development

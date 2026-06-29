@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0] - 2026-06-29
+
+### Added
+
+- Optional per-split `ratio` support on layout pane definitions for `right` and `down` splits
+- Ratio validation during config loading, including clear failures for non-numeric, root-pane, and out-of-range values
+- Focused tests for ratio parsing, nested split behavior, split flag wiring, and ratio edge cases
+
+### Changed
+
+- README now documents per-split ratio behavior, bootstrap-only application, and local-to-each-split semantics
+- The generated default layout example and sample Sessionizer config now demonstrate ratio usage for a narrower assistant pane
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),

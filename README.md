@@ -71,6 +71,22 @@ herdr plugin action invoke sessionizer.open
 herdr plugin action invoke sessionizer.worktree-open
 ```
 
+### Example keybindings
+
+```toml
+[[keys.command]]
+key = "prefix+f"
+type = "plugin_action"
+command = "sessionizer.open"
+description = "open project workspace"
+
+[[keys.command]]
+key = "prefix+up"
+type = "plugin_action"
+command = "sessionizer.worktree-open"
+description = "open worktree workspace"
+```
+
 **Sessionizer** lists existing workspaces plus repos under `projects.roots`. Pick a workspace to focus it, or pick a project to create a new workspace with your configured layout.
 
 **Worktree** lists base repos under `projects.roots`, prompts for a branch, then reopens an existing checkout or creates a new worktree workspace with the same bootstrap behavior.
@@ -258,22 +274,6 @@ Example requests:
 - "Add `~/Work` to my Sessionizer project roots"
 - "Create a repo-local override for this repo with `lazygit` on the left and `copilot` on the right"
 - "Update my global Sessionizer layout to focus the git pane"
-
-## Example keybindings
-
-```toml
-[[keys.command]]
-key = "prefix+f"
-type = "plugin_action"
-command = "sessionizer.open"
-description = "open project workspace"
-
-[[keys.command]]
-key = "prefix+up"
-type = "plugin_action"
-command = "sessionizer.worktree-open"
-description = "open worktree workspace"
-```
 
 ## Development
 

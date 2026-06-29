@@ -11,16 +11,21 @@ command = "nvim"
 
 [[tabs.dev.panes]]
 id = "agent"
+# Split this pane from the earlier pane with id = "editor"
 from = "editor"
 title = "copilot"
+# Split direction for the new pane: right or down
 split = "right"
+# Optional: ratio controls the new pane's share of the split axis (0 < ratio < 1)
 ratio = 0.3
 command = "copilot"
 accept_command_override = true
 
 [[tabs.dev.panes]]
 id = "git"
+# Split this pane from the earlier pane with id = "editor"
 from = "editor"
 title = "lazygit"
+# Split direction for the new pane: right or down
 split = "down"
 command = "lazygit"

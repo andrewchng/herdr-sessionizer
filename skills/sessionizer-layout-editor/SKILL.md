@@ -1,6 +1,6 @@
 ---
 name: sessionizer-layout-editor
-description: Creates or updates Sessionizer configs in either the global plugin config or a repo-local `.sessionizer/config.toml`, depending on the user's request. Use when the user asks to add or change Sessionizer project roots, tabs, panes, focus, split direction, pane commands, or repo-local overrides.
+description: Creates or updates Sessionizer configs in either the global plugin config or a repo-local `.sessionizer/config.toml`, depending on the user's request. Use when the user asks to add or change Sessionizer project roots, tabs, panes, focus, split direction, split ratios, pane commands, or repo-local overrides.
 ---
 
 # Sessionizer Layout Editor
@@ -13,6 +13,7 @@ Use this skill when the user wants either a global Sessionizer layout change or 
 - "Update my global Sessionizer layout"
 - "Add `~/Work` to my Sessionizer project roots"
 - "Make the first pane run `lazygit` and split `copilot` on the right"
+- "Make the right pane 30% width with `ratio = 0.3`"
 - "Change this repo's layout without touching my global config"
 
 ## Workflow

@@ -73,6 +73,12 @@ herdr plugin action invoke sessionizer.worktree-open
 
 ### Example keybindings
 
+Add these to your Herdr config, for example:
+
+```text
+~/.config/herdr/config.toml
+```
+
 ```toml
 [[keys.command]]
 key = "prefix+f"

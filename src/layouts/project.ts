@@ -194,6 +194,7 @@ async function configureTabPanes(
       () =>
         panes.split(anchorPaneId, {
           direction: spec.split ?? "right",
+          ratio: spec.ratio,
           cwd,
           focus: matchesFocusTarget(focusTarget, spec),
         })

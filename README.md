@@ -88,7 +88,7 @@ When Sessionizer **creates** a new project or worktree workspace, it applies the
 Created automatically on first run if missing. It controls:
 
 - **`[projects]`** — parent folders the `fzf` pickers scan for repos
-- **`[layout]`, `[tabs.*]` + `[[tabs.*.panes]]`** — the tabs, splits, commands, and final focus for newly created workspaces
+- **`[layout]`, `[tabs.*]` + `[[tabs.*.panes]]`** — the tabs, splits, per-split ratios, commands, and final focus for newly created workspaces
 
 If you want an agent to help edit either the global config or a repo-local override, see [Agent skill](#agent-skill).
 
@@ -115,6 +115,7 @@ id = "agent"
 from = "editor"
 title = "agent"
 split = "right"
+ratio = 0.3
 command = "opencode"
 
 [[tabs.dev.panes]]
@@ -123,17 +124,39 @@ from = "editor"
 title = "lazygit"
 split = "down"
 command = "lazygit"
+
+[tabs.server]
+label = "server"
+
+[[tabs.server.panes]]
+id = "server"
+title = "server"
+command = "npm run dev"
 ```
 
 First tab shape:
 
 ```text
-┌──────────┬─────────┐
-│          │  agent  │
-│   nvim   │         │
-├──────────┤         │
-│ lazygit  │         │
-└──────────┴─────────┘
+              dev
+┌────────────────┬───────┐
+│                │ agent │
+│      nvim      │       │
+├────────────────┤       │
+│    lazygit     │       │
+└────────────────┴───────┘
+```
+
+Here, `ratio = 0.3` gives the new right-side `agent` pane 30% of the tab width, leaving the `editor` side with the remaining 70%.
+
+Second tab shape:
+
+```text
+   server
+┌──────────────┐
+│              │
+│    server    │
+│              │
+└──────────────┘
 ```
 
 - `[projects].roots` — parent folders scanned by both pickers
@@ -141,7 +164,16 @@ First tab shape:
 - `[layout].focus` — which tab or pane to focus after layout bootstrap
 - `[tabs.<name>]` — one Herdr tab to create per section
 - `[[tabs.<name>.panes]]` — panes inside the tab; `from` + `split` (`right` or `down`) define the split tree
+- `ratio` — optional share for the newly created pane on the split axis; `0.3` gives the new right pane 30% width or the new bottom pane 30% height
 - `command` — exact command a pane runs (`nvim`, `pi`, `claude`, `opencode`, etc.)
+
+Rules for `ratio`:
+
+- only split-created panes may set it; the first/root pane in a tab cannot
+- it must be a number greater than `0` and less than `1`
+- it is local to that split at creation time, not a percentage of the whole tab
+- if omitted, Herdr's default split sizing is used
+- it applies only when the workspace is first bootstrapped, never when an existing workspace is reopened
 
 If you launch a worktree with `--command`, exactly one pane in that layout must opt in with `accept_command_override = true`. The generated default config leaves this off until you choose which pane should receive the raw command.
 
@@ -188,15 +220,17 @@ id = "agent"
 from = "git"
 title = "agent"
 split = "right"
+ratio = 0.3
 command = "pi"
 ```
 
 ```text
-┌──────────┬─────────┐
-│          │         │
-│ lazygit  │   pi    │
-│          │         │
-└──────────┴─────────┘
+             docs
+┌────────────────┬───────┐
+│                │       │
+│    lazygit     │  pi   │
+│                │       │
+└────────────────┴───────┘
 ```
 
 Check `.sessionizer/config.toml` into the repo if you want the layout to travel with the project. Repos without it keep the global default.
@@ -237,7 +271,7 @@ command = "sessionizer.open"
 description = "project sessionizer"
 
 [[keys.command]]
-key = "prefix+shift+u"
+key = "prefix+up"
 type = "plugin_action"
 command = "sessionizer.worktree-open"
 description = "create worktree workspace"

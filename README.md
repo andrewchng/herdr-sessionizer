@@ -151,6 +151,7 @@ Rules for `ratio`:
 
 - only split-created panes may set it; the first/root pane in a tab cannot
 - it must be a number greater than `0` and less than `1`
+- it is local to that split at creation time, not a percentage of the whole tab
 - if omitted, Herdr's default split sizing is used
 - it applies only when the workspace is first bootstrapped, never when an existing workspace is reopened
 

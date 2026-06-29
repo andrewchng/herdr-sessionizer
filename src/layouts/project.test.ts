@@ -194,6 +194,78 @@ describe("createProjectLayout", () => {
     });
   });
 
+  it("uses each nested pane's own ratio for later splits", async () => {
+    const tabs: LayoutTabs = {
+      create: mock(
+        async (_options): Promise<Tab> => ({
+          tab_id: "ws1:t2",
+          workspace_id: "ws1",
+        })
+      ),
+      rename: mock(async () => {}),
+      focus: mock(async () => {}),
+    };
+    const panes: LayoutPanes = {
+      split: mock(
+        async (): Promise<Pane> => ({
+          pane_id: "ws1-2",
+          terminal_id: "term-2",
+          workspace_id: "ws1",
+          tab_id: "ws1:t1",
+        })
+      ),
+      run: mock(async () => {}),
+      rename: mock(async () => {}),
+    };
+
+    await createProjectLayout(
+      testWorkspace(),
+      "/tmp/project",
+      testConfig({
+        tabs: [
+          {
+            id: "terminal",
+            label: "Terminal",
+            panes: [
+              { id: "root", title: "terminal", command: "" },
+              {
+                id: "assistant",
+                from: "root",
+                title: "assistant",
+                split: "right",
+                ratio: 0.3,
+                command: "kiro-cli",
+              },
+              {
+                id: "scratch",
+                from: "assistant",
+                title: "scratch",
+                split: "down",
+                ratio: 0.4,
+                command: "bash",
+              },
+            ],
+          },
+        ],
+      }),
+      tabs,
+      panes
+    );
+
+    expect(panes.split).toHaveBeenNthCalledWith(1, "ws1-1", {
+      direction: "right",
+      ratio: 0.3,
+      cwd: "/tmp/project",
+      focus: true,
+    });
+    expect(panes.split).toHaveBeenNthCalledWith(2, "ws1-2", {
+      direction: "down",
+      ratio: 0.4,
+      cwd: "/tmp/project",
+      focus: false,
+    });
+  });
+
   it("leaves split ratio unset when a pane omits it", async () => {
     const tabs: LayoutTabs = {
       create: mock(

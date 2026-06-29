@@ -217,6 +217,70 @@ describe("resolveLayoutConfig", () => {
     );
   });
 
+  it("throws with the repo-local path when a ratio is exactly zero", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "sessionizer-repo-"));
+    const configPath = writeRepoLayout(
+      repoRoot,
+      [
+        "[layout]",
+        'focus = "wiki"',
+        "",
+        "[tabs.wiki]",
+        'label = "wiki"',
+        "",
+        "[[tabs.wiki.panes]]",
+        'id = "git"',
+        'title = "lazygit"',
+        'command = "lazygit"',
+        "",
+        "[[tabs.wiki.panes]]",
+        'id = "agent"',
+        'from = "git"',
+        'title = "agent"',
+        'split = "right"',
+        "ratio = 0",
+        'command = "pi"',
+        "",
+      ].join("\n")
+    );
+
+    expect(() => resolveLayoutConfig(repoRoot, globalConfig())).toThrow(
+      `Tab 'wiki' pane 2 ratio must be greater than 0 and less than 1. (${configPath})`
+    );
+  });
+
+  it("throws with the repo-local path when a ratio is exactly one", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "sessionizer-repo-"));
+    const configPath = writeRepoLayout(
+      repoRoot,
+      [
+        "[layout]",
+        'focus = "wiki"',
+        "",
+        "[tabs.wiki]",
+        'label = "wiki"',
+        "",
+        "[[tabs.wiki.panes]]",
+        'id = "git"',
+        'title = "lazygit"',
+        'command = "lazygit"',
+        "",
+        "[[tabs.wiki.panes]]",
+        'id = "agent"',
+        'from = "git"',
+        'title = "agent"',
+        'split = "right"',
+        "ratio = 1",
+        'command = "pi"',
+        "",
+      ].join("\n")
+    );
+
+    expect(() => resolveLayoutConfig(repoRoot, globalConfig())).toThrow(
+      `Tab 'wiki' pane 2 ratio must be greater than 0 and less than 1. (${configPath})`
+    );
+  });
+
   it("throws with the repo-local path when the first pane sets a ratio", () => {
     const repoRoot = mkdtempSync(join(tmpdir(), "sessionizer-repo-"));
     const configPath = writeRepoLayout(

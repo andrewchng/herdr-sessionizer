@@ -271,7 +271,7 @@ command = "sessionizer.open"
 description = "project sessionizer"
 
 [[keys.command]]
-key = "prefix+shift+u"
+key = "prefix+up"
 type = "plugin_action"
 command = "sessionizer.worktree-open"
 description = "create worktree workspace"

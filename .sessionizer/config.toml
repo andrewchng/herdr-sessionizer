@@ -15,6 +15,7 @@ from = "editor"
 title = "copilot"
 split = "right"
 command = "copilot"
+accept_command_override = true
 
 [[tabs.dev.panes]]
 id = "git"

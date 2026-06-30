@@ -71,6 +71,17 @@ herdr plugin action invoke sessionizer.open
 herdr plugin action invoke sessionizer.worktree-open
 ```
 
+UX flow:
+
+```text
+Sessionizer: existing workspace ──Enter──> focus
+             project            ──Enter──> create workspace + layout
+
+Worktree:    project ──Enter──> branch/worktree picker ──Enter──> open existing or create worktree + layout
+             project ──Enter──> branch/worktree picker ──Esc────> new branch prompt
+             project ──Enter──> no candidates          ─────────> new branch prompt
+```
+
 ### Example keybindings
 
 Add these to your Herdr config, for example:

@@ -1,537 +1,812 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Architecture Review — herdr-sessionizer</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-  <style>
-    :root {
-      --card-border: #e5e7eb;
-      --strong-bg: #15803d;
-      --worth-bg: #b45309;
-      --spec-bg: #6b7280;
-    }
-    body { background: #f8fafc; }
-    .badge-strong { background: var(--strong-bg); }
-    .badge-worth  { background: var(--worth-bg); }
-    .badge-spec   { background: var(--spec-bg); }
-    .diagram-box { border: 1px solid #e5e7eb; border-radius: 0.5rem; background: white; padding: 1rem; }
-    .before-after { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .callout { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 0.75rem 1rem; border-radius: 0.25rem; margin: 1rem 0; }
-    .callout-warn { background: #fee2e2; border-left: 4px solid #ef4444; }
-  </style>
-</head>
-<body class="p-6 max-w-6xl mx-auto">
-  <h1 class="text-3xl font-bold mb-2">Architecture Review — herdr-sessionizer</h1>
-  <p class="text-gray-500 mb-1">Generated <span id="date"></span></p>
-  <p class="text-gray-600 mb-6">Surface friction and deepening opportunities for the herdr-sessionizer plugin.</p>
-
-  <div class="bg-green-100 border border-green-300 text-green-800 rounded-xl p-4 mb-6">
-    <strong>✅ Candidate 1 completed:</strong> Extracted <code>src/discovery.ts</code> with 6 shared utility functions. 4 callers updated. 31 unit tests added. See <code>src/discovery.ts</code> and <code>src/discovery.test.ts</code>.
-  </div>
-
-  <div class="bg-green-100 border border-green-300 text-green-800 rounded-xl p-4 mb-6">
-    <strong>✅ Candidate 2 completed:</strong> Extracted <code>src/worktree-resolver.ts</code> to isolate existing-worktree resolution, simplified <code>src/worktree.ts</code>, and added focused recovery-flow tests in <code>src/worktree-resolver.test.ts</code> and <code>src/worktree.test.ts</code>.
-  </div>
-
-  <div class="bg-green-100 border border-green-300 text-green-800 rounded-xl p-4 mb-6">
-    <strong>✅ Candidate 3 completed:</strong> Extracted <code>src/layouts/command-builder.ts</code> and <code>src/layouts/error-policy.ts</code>, simplified <code>src/layouts/project.ts</code> into a clearer orchestration layer, and added targeted layout tests.
-  </div>
-
-  <div class="bg-green-100 border border-green-300 text-green-800 rounded-xl p-4 mb-6">
-    <strong>✅ Candidate 6 completed:</strong> Added <code>CONTEXT.md</code> to define the domain language and <code>docs/adr/ADR-0001-workspace-reopen-and-layout-bootstrap.md</code> to record the reopen-versus-bootstrap rule.
-  </div>
-
-  <!-- Summary -->
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
-    <h2 class="text-lg font-semibold mb-3">Codebase overview</h2>
-    <p class="text-gray-700 mb-2">A Herdr plugin with 18 source modules (~950 lines). Two primary workflows — <strong>Sessionizer</strong> (project picker → workspace) and <strong>Worktree</strong> (Git worktree picker → workspace) — share a config module, a layout builder, and several utility functions that are currently duplicated across files.</p>
-    <div class="flex flex-wrap gap-2 mt-3">
-      <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-1 rounded">631 lines in src/</span>
-      <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-1 rounded">18 modules</span>
-      <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-1 rounded">0 tests</span>
-      <span class="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-1 rounded">0 CONTEXT.md</span>
-      <span class="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-1 rounded">0 ADRs</span>
-    </div>
-  </div>
-
-  <!-- ===== CANDIDATE 1 ===== -->
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-xl font-bold">1. Shared project discovery module</h2>
-      <span class="badge-strong text-white text-xs font-bold px-2.5 py-1 rounded">✓ COMPLETED</span>
-    </div>
-
-    <div class="grid grid-cols-2 gap-4 mb-4">
-      <div>
-        <h3 class="font-semibold text-gray-700">Files involved</h3>
-        <ul class="text-sm text-gray-600 list-disc list-inside">
-          <li><code>src/sessionizer.ts</code> — lines 22-30, 34-36</li>
-          <li><code>src/worktree.ts</code> — lines 186-198 (duplicate)</li>
-          <li><code>src/config.ts</code> — <code>expandHome()</code> line 199</li>
-          <li><code>src/layouts/project.ts</code> — <code>shellQuote()</code> line 227</li>
-        </ul>
-      </div>
-      <div>
-        <h3 class="font-semibold text-gray-700">Recommendation strength</h3>
-        <p class="text-sm text-gray-600"><span class="font-bold text-green-700">Strong</span> — verbatim duplication, clear extraction point, immediate locality gain.</p>
-      </div>
-    </div>
-
-    <h3 class="font-semibold text-gray-700 mb-1">Problem</h3>
-    <p class="text-sm text-gray-700 mb-3">
-      <code>listProjects()</code> is defined identically in both <code>sessionizer.ts</code> and <code>worktree.ts</code> — 10 lines each, verbatim copies. <code>sanitizeName()</code> is also duplicated. <code>expandHome()</code> lives in <code>config.ts</code> but is conceptually a string utility. <code>shellQuote()</code> lives in <code>layouts/project.ts</code> but is a general-purpose shell quoting function. These are <strong>shallow</strong> modules: their interfaces are as complex as their implementations, and they're scattered across files with no <strong>locality</strong>. Any change (e.g., adding a new project root pattern) requires touching multiple files.
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Architecture Review — herdr-sessionizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+      :root {
+        --card-border: #e5e7eb;
+        --strong-bg: #15803d;
+        --worth-bg: #b45309;
+        --spec-bg: #6b7280;
+      }
+      body {
+        background: #f8fafc;
+      }
+      .badge-strong {
+        background: var(--strong-bg);
+      }
+      .badge-worth {
+        background: var(--worth-bg);
+      }
+      .badge-spec {
+        background: var(--spec-bg);
+      }
+      .diagram-box {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        background: white;
+        padding: 1rem;
+      }
+      .before-after {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+      }
+      .callout {
+        background: #fef3c7;
+        border-left: 4px solid #f59e0b;
+        padding: 0.75rem 1rem;
+        border-radius: 0.25rem;
+        margin: 1rem 0;
+      }
+      .callout-warn {
+        background: #fee2e2;
+        border-left: 4px solid #ef4444;
+      }
+    </style>
+  </head>
+  <body class="p-6 max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold mb-2">
+      Architecture Review — herdr-sessionizer
+    </h1>
+    <p class="text-gray-500 mb-1">Generated <span id="date"></span></p>
+    <p class="text-gray-600 mb-6">
+      Surface friction and deepening opportunities for the herdr-sessionizer
+      plugin.
     </p>
 
-    <h3 class="font-semibold text-gray-700 mb-1">Solution</h3>
-    <p class="text-sm text-gray-700 mb-3">
-      Extract a <code>src/discovery.ts</code> module with a small interface: <code>listProjects(roots): string[]</code>, <code>sanitizeName(name): string</code>, <code>expandHome(path): string</code>, <code>normalizePath(path): string</code>, <code>shellQuote(value): string</code>. Both sessionizer and worktree import from it. The interface hides filesystem enumeration details behind a single function call.
-    </p>
+    <div
+      class="bg-indigo-50 border border-indigo-200 text-indigo-950 rounded-xl p-5 mb-6"
+    >
+      <div class="flex items-center justify-between gap-4 mb-3">
+        <h2 class="text-xl font-bold">
+          Current recommendation: Deepen the Worktree flow coordinator
+        </h2>
+        <span
+          class="bg-indigo-700 text-white text-xs font-bold px-2.5 py-1 rounded"
+          >ISSUE #15</span
+        >
+      </div>
+      <p class="text-sm mb-4">
+        The next Worktree flow UX should include the branch/worktree picker
+        while deepening the coordinator. The coordinator should own scripted vs
+        interactive invocation, candidate selection, Enter/Esc semantics,
+        duplicate-branch recovery, Command context propagation, and the ADR-0001
+        rule that existing worktree workspaces reopen as-is while Bootstrap runs
+        only for newly created workspaces.
+      </p>
 
-    <h3 class="font-semibold text-gray-700 mb-1">Benefits</h3>
-    <ul class="text-sm text-gray-700 list-disc list-inside mb-3">
-      <li><strong>Locality</strong> — all project discovery logic in one place. Change once, fix both callers.</li>
-      <li><strong>Leverage</strong> — callers get a 5-line call instead of duplicating 10-line functions.</li>
-      <li><strong>Testability</strong> — <code>listProjects()</code> becomes testable without importing sessionizer or worktree.</li>
-      <li><strong>Deletion test</strong>: deleting the module would scatter the logic back across callers — it earns its keep.</li>
-    </ul>
-
-    <h3 class="font-semibold text-gray-700 mb-3">Before / After</h3>
-    <div class="before-after">
-      <div class="diagram-box">
-        <h4 class="text-sm font-semibold text-gray-500 mb-1">Current</h4>
-        <div class="mermaid">
-          graph TD
-            subgraph sessionizer.ts
-              A[listProjects] --> B[sanitizeName]
-            end
-            subgraph worktree.ts
-              A2[listProjects] --> B2[sanitizeName]
-            end
-            subgraph config.ts
-              C[expandHome]
-            end
-            subgraph layouts/project.ts
-              D[shellQuote]
-            end
-            subgraph sessionizer.ts [callers]
-              E[runSessionizer] --> A
-              E --> B
-            end
-            subgraph worktree.ts [callers]
-              F[runWorktree] --> A2
-              F --> B2
-            end
-            style A fill:#f9f,stroke:#333
-            style A2 fill:#f9f,stroke:#333
-            style B fill:#f9f,stroke:#333
-            style B2 fill:#f9f,stroke:#333
-            style C fill:#f9f,stroke:#333
-            style D fill:#f9f,stroke:#333
+      <div class="before-after mb-4">
+        <div class="diagram-box">
+          <h3 class="text-sm font-semibold text-gray-500 mb-1">
+            Current shallow Worktree flow
+          </h3>
+          <div class="mermaid">
+            graph TD Run[runWorktree] --> Args[parse args] Run -->
+            RepoPicker[pick base repo] Run --> Prompt[prompt branch text] Run
+            --> Open[try worktree open] Run --> Create[try worktree create] Run
+            --> Resolve[duplicate branch resolution] Run --> Attach[attach
+            existing branch] Run --> Bootstrap[Layout Bootstrap] Run -->
+            Focus[focus Workspace] Resolve -. policy leaks .-> Bootstrap Open -.
+            ADR-0001 leaks .-> Focus classDef leak
+            fill:#fee2e2,stroke:#dc2626,stroke-width:2px class
+            Resolve,Bootstrap,Open leak
+          </div>
+        </div>
+        <div class="diagram-box">
+          <h3 class="text-sm font-semibold text-gray-500 mb-1">
+            Proposed deep coordinator
+          </h3>
+          <div class="mermaid">
+            graph TD Caller[runWorktree / worktree pane] -->
+            Coordinator[WorktreeFlowCoordinator.run] Coordinator -->
+            Scripted{scripted project + branch?} Coordinator -->
+            Interactive[interactive repo + branch/worktree picker] Interactive
+            --> Candidates[discover Worktree candidates] Candidates -->
+            Existing[existing Workspace or Worktree] Candidates -->
+            Branch[existing branch] Candidates --> New[Esc or no candidates]
+            Existing --> Reopen[focus or reopen as-is] Branch --> Create[create
+            Worktree workspace] New --> PromptNew[prompt branch] --> Create
+            Create --> Bootstrap2[Bootstrap once] Bootstrap2 --> Focus2[focus
+            Workspace] Coordinator -. adapters .-> Herdr[Herdr
+            Workspace/Worktree adapter] Coordinator -. adapters .-> Git[Git
+            resolver adapter] Coordinator -. adapters .-> UI[picker/prompt
+            adapter] Coordinator -. adapters .-> Layout[Layout Bootstrap
+            adapter] classDef deep fill:#111827,color:#fff,stroke:#111827 class
+            Coordinator deep
+          </div>
         </div>
       </div>
-      <div class="diagram-box">
-        <h4 class="text-sm font-semibold text-gray-500 mb-1">Proposed</h4>
-        <div class="mermaid">
-          graph TD
-            subgraph discovery.ts [New Module]
-              L[listProjects]
-              S[sanitizeName]
-              E[expandHome]
-              Q[shellQuote]
-            end
-            subgraph sessionizer.ts
-              E1[runSessionizer] --> L
-              E1 --> S
-            end
-            subgraph worktree.ts
-              F1[runWorktree] --> L
-              F1 --> S
-            end
-            subgraph layouts/project.ts
-              P[createProjectLayout] --> Q
-            end
-            subgraph config.ts
-              C[loadConfig] --> E
-            end
-            style L fill:#6a9,stroke:#333
-            style S fill:#6a9,stroke:#333
-            style E fill:#6a9,stroke:#333
-            style Q fill:#6a9,stroke:#333
+
+      <ul class="text-sm text-indigo-950 list-disc list-inside">
+        <li>
+          <strong>Interface:</strong> one deep
+          <code>run(request): Promise&lt;WorktreeFlowResult&gt;</code> entry
+          point.
+        </li>
+        <li>
+          <strong>Locality:</strong> Worktree flow policy, picker meaning, and
+          Bootstrap timing live in one module.
+        </li>
+        <li>
+          <strong>Leverage:</strong> issue #15 can change UX without spreading
+          logic across UI, Git, Herdr, and Layout modules.
+        </li>
+        <li>
+          <strong>Seams:</strong> Herdr, Git, picker/prompt, project discovery,
+          Layout Bootstrap, and logging stay as adapters.
+        </li>
+      </ul>
+    </div>
+
+    <div
+      class="bg-green-100 border border-green-300 text-green-800 rounded-xl p-4 mb-6"
+    >
+      <strong>✅ Candidate 1 completed:</strong> Extracted
+      <code>src/discovery.ts</code> with 6 shared utility functions. 4 callers
+      updated. 31 unit tests added. See <code>src/discovery.ts</code> and
+      <code>src/discovery.test.ts</code>.
+    </div>
+
+    <div
+      class="bg-green-100 border border-green-300 text-green-800 rounded-xl p-4 mb-6"
+    >
+      <strong>✅ Candidate 2 completed:</strong> Extracted
+      <code>src/worktree-resolver.ts</code> to isolate existing-worktree
+      resolution, simplified <code>src/worktree.ts</code>, and added focused
+      recovery-flow tests in <code>src/worktree-resolver.test.ts</code> and
+      <code>src/worktree.test.ts</code>.
+    </div>
+
+    <div
+      class="bg-green-100 border border-green-300 text-green-800 rounded-xl p-4 mb-6"
+    >
+      <strong>✅ Candidate 3 completed:</strong> Extracted
+      <code>src/layouts/command-builder.ts</code> and
+      <code>src/layouts/error-policy.ts</code>, simplified
+      <code>src/layouts/project.ts</code> into a clearer orchestration layer,
+      and added targeted layout tests.
+    </div>
+
+    <div
+      class="bg-green-100 border border-green-300 text-green-800 rounded-xl p-4 mb-6"
+    >
+      <strong>✅ Candidate 6 completed:</strong> Added
+      <code>CONTEXT.md</code> to define the domain language and
+      <code>docs/adr/ADR-0001-workspace-reopen-and-layout-bootstrap.md</code> to
+      record the reopen-versus-bootstrap rule.
+    </div>
+
+    <!-- Summary -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+      <h2 class="text-lg font-semibold mb-3">Codebase overview</h2>
+      <p class="text-gray-700 mb-2">
+        A Herdr plugin with 18 source modules (~950 lines). Two primary
+        workflows — <strong>Sessionizer</strong> (project picker → workspace)
+        and <strong>Worktree</strong> (Git worktree picker → workspace) — share
+        a config module, a layout builder, and several utility functions that
+        are currently duplicated across files.
+      </p>
+      <div class="flex flex-wrap gap-2 mt-3">
+        <span
+          class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-1 rounded"
+          >631 lines in src/</span
+        >
+        <span
+          class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-1 rounded"
+          >18 modules</span
+        >
+        <span
+          class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-1 rounded"
+          >0 tests</span
+        >
+        <span
+          class="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-1 rounded"
+          >0 CONTEXT.md</span
+        >
+        <span
+          class="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-1 rounded"
+          >0 ADRs</span
+        >
+      </div>
+    </div>
+
+    <!-- ===== CANDIDATE 1 ===== -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold">1. Shared project discovery module</h2>
+        <span
+          class="badge-strong text-white text-xs font-bold px-2.5 py-1 rounded"
+          >✓ COMPLETED</span
+        >
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <h3 class="font-semibold text-gray-700">Files involved</h3>
+          <ul class="text-sm text-gray-600 list-disc list-inside">
+            <li><code>src/sessionizer.ts</code> — lines 22-30, 34-36</li>
+            <li><code>src/worktree.ts</code> — lines 186-198 (duplicate)</li>
+            <li>
+              <code>src/config.ts</code> — <code>expandHome()</code> line 199
+            </li>
+            <li>
+              <code>src/layouts/project.ts</code> —
+              <code>shellQuote()</code> line 227
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-700">Recommendation strength</h3>
+          <p class="text-sm text-gray-600">
+            <span class="font-bold text-green-700">Strong</span> — verbatim
+            duplication, clear extraction point, immediate locality gain.
+          </p>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- ===== CANDIDATE 2 ===== -->
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-xl font-bold">2. Consolidate worktree existence resolution</h2>
-      <span class="badge-strong text-white text-xs font-bold px-2.5 py-1 rounded">✓ COMPLETED</span>
-    </div>
+      <h3 class="font-semibold text-gray-700 mb-1">Problem</h3>
+      <p class="text-sm text-gray-700 mb-3">
+        <code>listProjects()</code> is defined identically in both
+        <code>sessionizer.ts</code> and <code>worktree.ts</code> — 10 lines
+        each, verbatim copies. <code>sanitizeName()</code> is also duplicated.
+        <code>expandHome()</code> lives in <code>config.ts</code> but is
+        conceptually a string utility. <code>shellQuote()</code> lives in
+        <code>layouts/project.ts</code> but is a general-purpose shell quoting
+        function. These are <strong>shallow</strong> modules: their interfaces
+        are as complex as their implementations, and they're scattered across
+        files with no <strong>locality</strong>. Any change (e.g., adding a new
+        project root pattern) requires touching multiple files.
+      </p>
 
-    <div class="grid grid-cols-2 gap-4 mb-4">
-      <div>
-        <h3 class="font-semibold text-gray-700">Files involved</h3>
-        <ul class="text-sm text-gray-600 list-disc list-inside">
-          <li><code>src/worktree.ts</code> — lines 70-144 (core logic)</li>
-          <li><code>src/ops/worktrees.ts</code> — thin CLI wrapper</li>
-          <li><code>src/client/errors.ts</code> — <code>HerdrError</code> used for parsing</li>
-        </ul>
-      </div>
-      <div>
-        <h3 class="font-semibold text-gray-700">Recommendation strength</h3>
-        <p class="text-sm text-gray-600"><span class="font-bold text-green-700">Completed</span> — the worktree recovery path now lives behind <code>WorktreeResolver</code> and has focused parser and flow coverage.</p>
-      </div>
-    </div>
+      <h3 class="font-semibold text-gray-700 mb-1">Solution</h3>
+      <p class="text-sm text-gray-700 mb-3">
+        Extract a <code>src/discovery.ts</code> module with a small interface:
+        <code>listProjects(roots): string[]</code>,
+        <code>sanitizeName(name): string</code>,
+        <code>expandHome(path): string</code>,
+        <code>normalizePath(path): string</code>,
+        <code>shellQuote(value): string</code>. Both sessionizer and worktree
+        import from it. The interface hides filesystem enumeration details
+        behind a single function call.
+      </p>
 
-    <h3 class="font-semibold text-gray-700 mb-1">Problem</h3>
-    <p class="text-sm text-gray-700 mb-3">
-      The worktree flow in <code>worktree.ts</code> has two parallel paths (open existing → bootstrap, or create → catch → recover) that share the same goal but are implemented as separate branches. The recovery from "already exists" errors involves parsing <code>stderr</code> strings, running <code>git worktree list --porcelain</code>, and matching by branch name or slug — all inline. This is <strong>untested</strong> and <strong>tightly coupled</strong> to the module's main flow. The <code>asHerdrError()</code> helper tries to coerce any error into a <code>HerdrError</code>, which is fragile.
-    </p>
+      <h3 class="font-semibold text-gray-700 mb-1">Benefits</h3>
+      <ul class="text-sm text-gray-700 list-disc list-inside mb-3">
+        <li>
+          <strong>Locality</strong> — all project discovery logic in one place.
+          Change once, fix both callers.
+        </li>
+        <li>
+          <strong>Leverage</strong> — callers get a 5-line call instead of
+          duplicating 10-line functions.
+        </li>
+        <li>
+          <strong>Testability</strong> — <code>listProjects()</code> becomes
+          testable without importing sessionizer or worktree.
+        </li>
+        <li>
+          <strong>Deletion test</strong>: deleting the module would scatter the
+          logic back across callers — it earns its keep.
+        </li>
+      </ul>
 
-    <div class="callout">
-      <strong>⚠ Contradicts ADR-0001 (implicit):</strong> The current design treats worktree existence as an error path. A cleaner design would separate "check existence" from "create or open" — making the happy path simpler and the error path explicit.
-    </div>
-
-    <h3 class="font-semibold text-gray-700 mb-1">Solution</h3>
-    <p class="text-sm text-gray-700 mb-3">
-      Extract a <code>WorktreeResolver</code> module with a single interface: <code>resolveExisting(project, branch): ExistingWorktree | null</code>. It encapsulates all 4 resolution strategies (stderr parsing, git porcelain by branch, git porcelain by slug, and future strategies). The worktree flow becomes:
-      <br><code>1. try resolveExisting → if found, open the existing workspace as-is</code>
-      <br><code>2. else try create → if HerdrError, resolveExisting again → open</code>
-      <br>No error-path-as-control-flow pattern.
-    </p>
-
-    <h3 class="font-semibold text-gray-700 mb-1">Benefits</h3>
-    <ul class="text-sm text-gray-700 list-disc list-inside mb-3">
-      <li><strong>Testability</strong> — resolution strategies become unit-testable in isolation.</li>
-      <li><strong>Locality</strong> — all "find an existing worktree" logic lives behind a single seam.</li>
-      <li><strong>Leverage</strong> — callers get a simple <code>resolveExisting → open or create</code> flow.</li>
-      <li><strong>Deletion test</strong>: deleting the module would scatter git-parsing and stderr-parsing back into worktree.ts.</li>
-    </ul>
-
-    <h3 class="font-semibold text-gray-700 mb-3">Before / After</h3>
-    <div class="before-after">
-      <div class="diagram-box">
-        <h4 class="text-sm font-semibold text-gray-500 mb-1">Current (simplified)</h4>
-        <div class="mermaid">
-          graph TD
-            subgraph worktree.ts
-              A[try worktrees.open] --> B{success?}
-              B -->|yes| C[bootstrap?]
-              B -->|no| D[parse stderr]
-              D --> E[existingWorktreePathFromGit]
-              E --> F[existingWorktreePathBySlug]
-              F --> G[worktrees.open with path]
-              G --> C
-              C --> H{should bootstrap?}
-              H -->|yes| I[createProjectLayout]
-              H -->|no| J[done]
-            end
-            style A fill:#f9f
-            style D fill:#f9f
-            style E fill:#f9f
-            style F fill:#f9f
+      <h3 class="font-semibold text-gray-700 mb-3">Before / After</h3>
+      <div class="before-after">
+        <div class="diagram-box">
+          <h4 class="text-sm font-semibold text-gray-500 mb-1">Current</h4>
+          <div class="mermaid">
+            graph TD subgraph sessionizer.ts A[listProjects] --> B[sanitizeName]
+            end subgraph worktree.ts A2[listProjects] --> B2[sanitizeName] end
+            subgraph config.ts C[expandHome] end subgraph layouts/project.ts
+            D[shellQuote] end subgraph sessionizer.ts [callers]
+            E[runSessionizer] --> A E --> B end subgraph worktree.ts [callers]
+            F[runWorktree] --> A2 F --> B2 end style A fill:#f9f,stroke:#333
+            style A2 fill:#f9f,stroke:#333 style B fill:#f9f,stroke:#333 style
+            B2 fill:#f9f,stroke:#333 style C fill:#f9f,stroke:#333 style D
+            fill:#f9f,stroke:#333
+          </div>
         </div>
-      </div>
-      <div class="diagram-box">
-        <h4 class="text-sm font-semibold text-gray-500 mb-1">Proposed</h4>
-        <div class="mermaid">
-          graph TD
-            subgraph WorktreeResolver [New Module]
-              R[resolveExisting<br/>project, branch]
-              R --> S1[stderr parser]
-              R --> S2[git porcelain<br/>by branch]
-              R --> S3[git porcelain<br/>by slug]
-            end
-            subgraph worktree.ts [caller]
-              W[runWorktree] --> R
-              W --> O[worktrees.open]
-              W --> C[worktrees.create]
-              W --> L[createProjectLayout]
-            end
-            style R fill:#6a9
-            style S1 fill:#6a9
-            style S2 fill:#6a9
-            style S3 fill:#6a9
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== CANDIDATE 3 ===== -->
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-xl font-bold">3. Deepen the layout builder seam</h2>
-      <span class="badge-strong text-white text-xs font-bold px-2.5 py-1 rounded">✓ COMPLETED</span>
-    </div>
-
-    <div class="grid grid-cols-2 gap-4 mb-4">
-      <div>
-        <h3 class="font-semibold text-gray-700">Files involved</h3>
-        <ul class="text-sm text-gray-600 list-disc list-inside">
-          <li><code>src/layouts/project.ts</code> — 274 lines (the largest module)</li>
-          <li><code>src/ops/panes.ts</code>, <code>src/ops/tabs.ts</code> — called extensively</li>
-          <li><code>src/config.ts</code> — tab/pane config types</li>
-        </ul>
-      </div>
-      <div>
-        <h3 class="font-semibold text-gray-700">Recommendation strength</h3>
-        <p class="text-sm text-gray-600"><span class="font-bold text-green-700">Completed</span> — command building and error policy now have dedicated seams, and the layout orchestrator has focused coverage.</p>
-      </div>
-    </div>
-
-    <h3 class="font-semibold text-gray-700 mb-1">Problem</h3>
-    <p class="text-sm text-gray-700 mb-3">
-      <code>layouts/project.ts</code> is the deepest module at 274 lines, but its <strong>interface is large</strong> (takes <code>workspace</code>, <code>cwd</code>, <code>config</code>, <code>tabs</code>, <code>panes</code> instances, plus optional context). It exposes 4 internal functions (<code>configureExistingTab</code>, <code>createAndConfigureTab</code>, <code>configureTabPanes</code>, <code>configurePane</code>) that are only used internally but aren't private (they're exported at module level). <strong>Implicit state</strong>: <code>nextPaneIndex</code> is threaded through as a mutable counter. <strong>Silent error swallowing</strong>: <code>.catch(noop)</code> appears 6 times — every herdr call can fail silently. <strong>Pane ID generation</strong>: <code>workspacePaneId()</code> parses/reconstructs IDs via string manipulation.
-    </p>
-
-    <h3 class="font-semibold text-gray-700 mb-1">Solution</h3>
-    <p class="text-sm text-gray-700 mb-3">
-      Split into two modules behind a single seam:
-      <br><strong>a)</strong> <code>LayoutOrchestrator</code> — public interface: <code>createProjectLayout(workspace, cwd, config, options?)</code>. Hides the tabs/panes ops instances and the iteration machinery.
-      <br><strong>b)</strong> <code>LayoutErrorPolicy</code> — explicit error handling strategy: retry, skip, or abort per operation. The current <code>.catch(noop)</code> becomes one strategy.
-      <br><strong>c)</strong> Move <code>buildPaneCommand</code>, <code>interpolateCommand</code>, <code>applyCommandContext</code> into a <code>CommandBuilder</code> module — they're pure functions with no herdr dependency.
-    </p>
-
-    <h3 class="font-semibold text-gray-700 mb-1">Benefits</h3>
-    <ul class="text-sm text-gray-700 list-disc list-inside mb-3">
-      <li><strong>Leverage</strong> — callers get <code>createProjectLayout(ws, cwd, cfg, opts?)</code> and nothing else.</li>
-      <li><strong>Locality</strong> — pane ID generation, command building, and error policy each get one place.</li>
-      <li><strong>Testability</strong> — <code>CommandBuilder</code> and <code>LayoutErrorPolicy</code> are testable without herdr.</li>
-      <li><strong>Deletion test</strong>: deleting <code>LayoutErrorPolicy</code> would scatter error handling; deleting <code>CommandBuilder</code> would inline command construction.</li>
-    </ul>
-
-    <h3 class="font-semibold text-gray-700 mb-3">Before / After</h3>
-    <div class="before-after">
-      <div class="diagram-box">
-        <h4 class="text-sm font-semibold text-gray-500 mb-1">Current</h4>
-        <div class="mermaid">
-          graph TD
-            subgraph layouts/project.ts
-              CP[createProjectLayout] --> CET[configureExistingTab]
-              CP --> CAT[createAndConfigureTab]
-              CET --> CTP[configureTabPanes]
-              CAT --> CTP
-              CTP --> CP[configurePane]
-              CP --> BC[buildPaneCommand]
-              BC --> SQ[shellQuote]
-              BC --> AC[applyCommandContext]
-              BC --> IC[interpolateCommand]
-              CTP --> VP[validatePaneSpecs]
-              CTP --> MF[matchesFocus]
-              CTP --> MF2[matchesFocusTarget]
-              CTP --> WPI[workspacePaneId]
-            end
-            style CP fill:#f9f
-        </div>
-      </div>
-      <div class="diagram-box">
-        <h4 class="text-sm font-semibold text-gray-500 mb-1">Proposed</h4>
-        <div class="mermaid">
-          graph TD
-            subgraph LayoutOrchestrator
-              CP[createProjectLayout]
-            end
-            subgraph CommandBuilder
-              BC[buildPaneCommand]
-              AC[applyCommandContext]
-              IC[interpolateCommand]
-            end
-            subgraph LayoutErrorPolicy
-              EP[error policy]
-            end
-            CP --> BC
-            CP --> EP
+        <div class="diagram-box">
+          <h4 class="text-sm font-semibold text-gray-500 mb-1">Proposed</h4>
+          <div class="mermaid">
+            graph TD subgraph discovery.ts [New Module] L[listProjects]
+            S[sanitizeName] E[expandHome] Q[shellQuote] end subgraph
+            sessionizer.ts E1[runSessionizer] --> L E1 --> S end subgraph
+            worktree.ts F1[runWorktree] --> L F1 --> S end subgraph
+            layouts/project.ts P[createProjectLayout] --> Q end subgraph
+            config.ts C[loadConfig] --> E end style L fill:#6a9,stroke:#333
+            style S fill:#6a9,stroke:#333 style E fill:#6a9,stroke:#333 style Q
+            fill:#6a9,stroke:#333
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- ===== CANDIDATE 4 ===== -->
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-xl font-bold">4. Unify sessionizer and worktree workflows</h2>
-      <span class="badge-spec text-white text-xs font-bold px-2.5 py-1 rounded">SPECULATIVE</span>
-    </div>
-
-    <div class="grid grid-cols-2 gap-4 mb-4">
-      <div>
-        <h3 class="font-semibold text-gray-700">Files involved</h3>
-        <ul class="text-sm text-gray-600 list-disc list-inside">
-          <li><code>src/sessionizer.ts</code> — 53 lines</li>
-          <li><code>src/worktree.ts</code> — ~200 lines</li>
-          <li><code>src/layouts/project.ts</code> — shared</li>
-        </ul>
+    <!-- ===== CANDIDATE 2 ===== -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold">
+          2. Consolidate worktree existence resolution
+        </h2>
+        <span
+          class="badge-strong text-white text-xs font-bold px-2.5 py-1 rounded"
+          >✓ COMPLETED</span
+        >
       </div>
-      <div>
-        <h3 class="font-semibold text-gray-700">Recommendation strength</h3>
-        <p class="text-sm text-gray-600"><span class="font-bold text-gray-500">Speculative</span> — the workflows share <code>listProjects</code> + layout application, but are genuinely different in branching logic. Extracting a common base risks a leaky abstraction.</p>
-      </div>
-    </div>
 
-    <h3 class="font-semibold text-gray-700 mb-1">Problem</h3>
-    <p class="text-sm text-gray-700 mb-3">
-      Both <code>sessionizer.ts</code> and <code>worktree.ts</code> follow the same high-level pattern: load config → list projects → pick → create/open workspace → apply layout → focus. But <code>worktree.ts</code> has 4× the complexity due to branch handling and error recovery. Extracting a common base <code>WorkspaceWorkflow</code> would abstract the shared steps but would need hooks for the divergent parts (branch prompt, worktree resolution). This is speculative because the abstraction boundary may not be worth the indirection.
-    </p>
-
-    <h3 class="font-semibold text-gray-700 mb-1">Solution</h3>
-    <p class="text-sm text-gray-700 mb-3">
-      Only extract if candidates 1 and 2 are done and duplication remains. The pattern would be a <code>WorkspaceWorkflow</code> base class or function with strategy hooks for the divergent steps. However, candidate 1 already eliminates the main duplication (<code>listProjects</code>). The remaining divergence is genuine business logic, not accidental duplication.
-    </p>
-
-    <h3 class="font-semibold text-gray-700 mb-1">Benefits</h3>
-    <ul class="text-sm text-gray-700 list-disc list-inside mb-3">
-      <li>Would reduce boilerplate in both flows.</li>
-      <li>But risks a leaky abstraction — the "pick → create/open → layout" pattern is simple enough that two copies are clearer than one parameterized abstraction.</li>
-    </ul>
-
-    <h3 class="font-semibold text-gray-700 mb-3">Before / After</h3>
-    <div class="before-after">
-      <div class="diagram-box">
-        <h4 class="text-sm font-semibold text-gray-500 mb-1">Current</h4>
-        <div class="mermaid">
-          graph TD
-            subgraph sessionizer.ts
-              S[runSessionizer]
-              S --> LP[listProjects]
-              S --> P[pick]
-              S --> WC[workspaces.create]
-              S --> L[createProjectLayout]
-              S --> WF[workspaces.focus]
-            end
-            subgraph worktree.ts
-              W[runWorktree]
-              W --> LP2[listProjects]
-              W --> P2[pick]
-              W --> BP[branch prompt]
-              W --> WT[worktrees.open/create]
-              W --> L2[createProjectLayout]
-              W --> WF2[workspaces.focus]
-            end
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <h3 class="font-semibold text-gray-700">Files involved</h3>
+          <ul class="text-sm text-gray-600 list-disc list-inside">
+            <li><code>src/worktree.ts</code> — lines 70-144 (core logic)</li>
+            <li><code>src/ops/worktrees.ts</code> — thin CLI wrapper</li>
+            <li>
+              <code>src/client/errors.ts</code> — <code>HerdrError</code> used
+              for parsing
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-700">Recommendation strength</h3>
+          <p class="text-sm text-gray-600">
+            <span class="font-bold text-green-700">Completed</span> — the
+            worktree recovery path now lives behind
+            <code>WorktreeResolver</code> and has focused parser and flow
+            coverage.
+          </p>
         </div>
       </div>
-      <div class="diagram-box">
-        <h4 class="text-sm font-semibold text-gray-500 mb-1">Speculative</h4>
-        <div class="mermaid">
-          graph TD
-            subgraph WorkspaceWorkflow
-              WW[run] --> LP[listProjects]
-              WW --> P[pick]
-              WW --> A[abstract: create/open]
-              WW --> L[createProjectLayout]
-              WW --> F[focus]
-            end
-            subgraph sessionizer
-              S[SessionizerWorkflow] -->|implements| A
-            end
-            subgraph worktree
-              WT[WorktreeWorkflow] -->|implements| A
-              WT --> BP[branch prompt]
-            end
+
+      <h3 class="font-semibold text-gray-700 mb-1">Problem</h3>
+      <p class="text-sm text-gray-700 mb-3">
+        The worktree flow in <code>worktree.ts</code> has two parallel paths
+        (open existing → bootstrap, or create → catch → recover) that share the
+        same goal but are implemented as separate branches. The recovery from
+        "already exists" errors involves parsing <code>stderr</code> strings,
+        running <code>git worktree list --porcelain</code>, and matching by
+        branch name or slug — all inline. This is <strong>untested</strong> and
+        <strong>tightly coupled</strong> to the module's main flow. The
+        <code>asHerdrError()</code> helper tries to coerce any error into a
+        <code>HerdrError</code>, which is fragile.
+      </p>
+
+      <div class="callout">
+        <strong>⚠ Contradicts ADR-0001 (implicit):</strong> The current design
+        treats worktree existence as an error path. A cleaner design would
+        separate "check existence" from "create or open" — making the happy path
+        simpler and the error path explicit.
+      </div>
+
+      <h3 class="font-semibold text-gray-700 mb-1">Solution</h3>
+      <p class="text-sm text-gray-700 mb-3">
+        Extract a <code>WorktreeResolver</code> module with a single interface:
+        <code>resolveExisting(project, branch): ExistingWorktree | null</code>.
+        It encapsulates all 4 resolution strategies (stderr parsing, git
+        porcelain by branch, git porcelain by slug, and future strategies). The
+        worktree flow becomes: <br /><code
+          >1. try resolveExisting → if found, open the existing workspace
+          as-is</code
+        >
+        <br /><code
+          >2. else try create → if HerdrError, resolveExisting again →
+          open</code
+        >
+        <br />No error-path-as-control-flow pattern.
+      </p>
+
+      <h3 class="font-semibold text-gray-700 mb-1">Benefits</h3>
+      <ul class="text-sm text-gray-700 list-disc list-inside mb-3">
+        <li>
+          <strong>Testability</strong> — resolution strategies become
+          unit-testable in isolation.
+        </li>
+        <li>
+          <strong>Locality</strong> — all "find an existing worktree" logic
+          lives behind a single seam.
+        </li>
+        <li>
+          <strong>Leverage</strong> — callers get a simple
+          <code>resolveExisting → open or create</code> flow.
+        </li>
+        <li>
+          <strong>Deletion test</strong>: deleting the module would scatter
+          git-parsing and stderr-parsing back into worktree.ts.
+        </li>
+      </ul>
+
+      <h3 class="font-semibold text-gray-700 mb-3">Before / After</h3>
+      <div class="before-after">
+        <div class="diagram-box">
+          <h4 class="text-sm font-semibold text-gray-500 mb-1">
+            Current (simplified)
+          </h4>
+          <div class="mermaid">
+            graph TD subgraph worktree.ts A[try worktrees.open] --> B{success?}
+            B -->|yes| C[bootstrap?] B -->|no| D[parse stderr] D -->
+            E[existingWorktreePathFromGit] E --> F[existingWorktreePathBySlug] F
+            --> G[worktrees.open with path] G --> C C --> H{should bootstrap?} H
+            -->|yes| I[createProjectLayout] H -->|no| J[done] end style A
+            fill:#f9f style D fill:#f9f style E fill:#f9f style F fill:#f9f
+          </div>
+        </div>
+        <div class="diagram-box">
+          <h4 class="text-sm font-semibold text-gray-500 mb-1">Proposed</h4>
+          <div class="mermaid">
+            graph TD subgraph WorktreeResolver [New Module] R[resolveExisting<br />project,
+            branch] R --> S1[stderr parser] R --> S2[git porcelain<br />by
+            branch] R --> S3[git porcelain<br />by slug] end subgraph
+            worktree.ts [caller] W[runWorktree] --> R W --> O[worktrees.open] W
+            --> C[worktrees.create] W --> L[createProjectLayout] end style R
+            fill:#6a9 style S1 fill:#6a9 style S2 fill:#6a9 style S3 fill:#6a9
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- ===== CANDIDATE 5 ===== -->
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-xl font-bold">5. Ops wrappers — keep or deepen?</h2>
-      <span class="badge-spec text-white text-xs font-bold px-2.5 py-1 rounded">SPECULATIVE</span>
-    </div>
-
-    <div class="grid grid-cols-2 gap-4 mb-4">
-      <div>
-        <h3 class="font-semibold text-gray-700">Files involved</h3>
-        <ul class="text-sm text-gray-600 list-disc list-inside">
-          <li><code>src/ops/panes.ts</code> — 30 lines</li>
-          <li><code>src/ops/tabs.ts</code> — 32 lines</li>
-          <li><code>src/ops/workspaces.ts</code> — 39 lines</li>
-          <li><code>src/ops/worktrees.ts</code> — 82 lines</li>
-          <li><code>src/client/herdr.ts</code> — 37 lines</li>
-        </ul>
+    <!-- ===== CANDIDATE 3 ===== -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold">3. Deepen the layout builder seam</h2>
+        <span
+          class="badge-strong text-white text-xs font-bold px-2.5 py-1 rounded"
+          >✓ COMPLETED</span
+        >
       </div>
-      <div>
-        <h3 class="font-semibold text-gray-700">Recommendation strength</h3>
-        <p class="text-sm text-gray-600"><span class="font-bold text-gray-500">Speculative</span> — these modules are shallow by nature (CLI wrappers) but pass the deletion test. Only <code>Worktrees</code> has enough logic to warrant deepening.</p>
+
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <h3 class="font-semibold text-gray-700">Files involved</h3>
+          <ul class="text-sm text-gray-600 list-disc list-inside">
+            <li>
+              <code>src/layouts/project.ts</code> — 274 lines (the largest
+              module)
+            </li>
+            <li>
+              <code>src/ops/panes.ts</code>, <code>src/ops/tabs.ts</code> —
+              called extensively
+            </li>
+            <li><code>src/config.ts</code> — tab/pane config types</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-700">Recommendation strength</h3>
+          <p class="text-sm text-gray-600">
+            <span class="font-bold text-green-700">Completed</span> — command
+            building and error policy now have dedicated seams, and the layout
+            orchestrator has focused coverage.
+          </p>
+        </div>
+      </div>
+
+      <h3 class="font-semibold text-gray-700 mb-1">Problem</h3>
+      <p class="text-sm text-gray-700 mb-3">
+        <code>layouts/project.ts</code> is the deepest module at 274 lines, but
+        its <strong>interface is large</strong> (takes <code>workspace</code>,
+        <code>cwd</code>, <code>config</code>, <code>tabs</code>,
+        <code>panes</code> instances, plus optional context). It exposes 4
+        internal functions (<code>configureExistingTab</code>,
+        <code>createAndConfigureTab</code>, <code>configureTabPanes</code>,
+        <code>configurePane</code>) that are only used internally but aren't
+        private (they're exported at module level).
+        <strong>Implicit state</strong>: <code>nextPaneIndex</code> is threaded
+        through as a mutable counter. <strong>Silent error swallowing</strong>:
+        <code>.catch(noop)</code> appears 6 times — every herdr call can fail
+        silently. <strong>Pane ID generation</strong>:
+        <code>workspacePaneId()</code> parses/reconstructs IDs via string
+        manipulation.
+      </p>
+
+      <h3 class="font-semibold text-gray-700 mb-1">Solution</h3>
+      <p class="text-sm text-gray-700 mb-3">
+        Split into two modules behind a single seam:
+        <br /><strong>a)</strong> <code>LayoutOrchestrator</code> — public
+        interface:
+        <code>createProjectLayout(workspace, cwd, config, options?)</code>.
+        Hides the tabs/panes ops instances and the iteration machinery.
+        <br /><strong>b)</strong> <code>LayoutErrorPolicy</code> — explicit
+        error handling strategy: retry, skip, or abort per operation. The
+        current <code>.catch(noop)</code> becomes one strategy. <br /><strong
+          >c)</strong
+        >
+        Move <code>buildPaneCommand</code>, <code>interpolateCommand</code>,
+        <code>applyCommandContext</code> into a
+        <code>CommandBuilder</code> module — they're pure functions with no
+        herdr dependency.
+      </p>
+
+      <h3 class="font-semibold text-gray-700 mb-1">Benefits</h3>
+      <ul class="text-sm text-gray-700 list-disc list-inside mb-3">
+        <li>
+          <strong>Leverage</strong> — callers get
+          <code>createProjectLayout(ws, cwd, cfg, opts?)</code> and nothing
+          else.
+        </li>
+        <li>
+          <strong>Locality</strong> — pane ID generation, command building, and
+          error policy each get one place.
+        </li>
+        <li>
+          <strong>Testability</strong> — <code>CommandBuilder</code> and
+          <code>LayoutErrorPolicy</code> are testable without herdr.
+        </li>
+        <li>
+          <strong>Deletion test</strong>: deleting
+          <code>LayoutErrorPolicy</code> would scatter error handling; deleting
+          <code>CommandBuilder</code> would inline command construction.
+        </li>
+      </ul>
+
+      <h3 class="font-semibold text-gray-700 mb-3">Before / After</h3>
+      <div class="before-after">
+        <div class="diagram-box">
+          <h4 class="text-sm font-semibold text-gray-500 mb-1">Current</h4>
+          <div class="mermaid">
+            graph TD subgraph layouts/project.ts CP[createProjectLayout] -->
+            CET[configureExistingTab] CP --> CAT[createAndConfigureTab] CET -->
+            CTP[configureTabPanes] CAT --> CTP CTP --> CP[configurePane] CP -->
+            BC[buildPaneCommand] BC --> SQ[shellQuote] BC -->
+            AC[applyCommandContext] BC --> IC[interpolateCommand] CTP -->
+            VP[validatePaneSpecs] CTP --> MF[matchesFocus] CTP -->
+            MF2[matchesFocusTarget] CTP --> WPI[workspacePaneId] end style CP
+            fill:#f9f
+          </div>
+        </div>
+        <div class="diagram-box">
+          <h4 class="text-sm font-semibold text-gray-500 mb-1">Proposed</h4>
+          <div class="mermaid">
+            graph TD subgraph LayoutOrchestrator CP[createProjectLayout] end
+            subgraph CommandBuilder BC[buildPaneCommand] AC[applyCommandContext]
+            IC[interpolateCommand] end subgraph LayoutErrorPolicy EP[error
+            policy] end CP --> BC CP --> EP
+          </div>
+        </div>
       </div>
     </div>
 
-    <h3 class="font-semibold text-gray-700 mb-1">Problem</h3>
-    <p class="text-sm text-gray-700 mb-3">
-      The four ops modules are essentially one-to-one translations from TypeScript method calls to herdr CLI arguments. They're <strong>shallow</strong> — the interface is nearly as complex as the implementation. However, they do provide type safety and JSON response parsing. The <strong>deletion test</strong> is interesting: deleting them would scatter CLI argument construction and JSON response parsing across callers, so they do earn their keep.
-    </p>
-
-    <h3 class="semibold text-gray-700 mb-1">Observation</h3>
-    <p class="text-sm text-gray-700 mb-3">
-      <code>src/ops/worktrees.ts</code> is the thickest at 82 lines. Its <code>create()</code> and <code>open()</code> methods have complex argument building with multiple optional parameters. This is the one ops module that could benefit from a builder pattern or option-object refinement.
-    </p>
-
-    <h3 class="font-semibold text-gray-700 mb-1">Recommendation</h3>
-    <p class="text-sm text-gray-700 mb-3">
-      <strong>Keep the ops wrappers as-is</strong> — they're shallow by necessity and pass the deletion test. Only consider deepening <code>Worktrees</code> if candidate 2 (WorktreeResolver) is implemented and reveals further complexity in the ops wrapper.
-    </p>
-  </div>
-
-  <!-- ===== CANDIDATE 6 ===== -->
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-xl font-bold">6. Create CONTEXT.md and ADR-0001</h2>
-      <span class="badge-strong text-white text-xs font-bold px-2.5 py-1 rounded">✓ COMPLETED</span>
-    </div>
-
-    <div class="grid grid-cols-2 gap-4 mb-4">
-      <div>
-        <h3 class="font-semibold text-gray-700">Files to create</h3>
-        <ul class="text-sm text-gray-600 list-disc list-inside">
-          <li><code>CONTEXT.md</code> — domain glossary</li>
-          <li><code>docs/adr/ADR-0001-worktree-existence-resolution.md</code> — record decision about error-path approach</li>
-        </ul>
+    <!-- ===== CANDIDATE 4 ===== -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold">
+          4. Unify sessionizer and worktree workflows
+        </h2>
+        <span
+          class="badge-spec text-white text-xs font-bold px-2.5 py-1 rounded"
+          >SPECULATIVE</span
+        >
       </div>
-      <div>
-        <h3 class="font-semibold text-gray-700">Recommendation strength</h3>
-        <p class="text-sm text-gray-600"><span class="font-bold text-green-700">Completed</span> — the domain language and the reopen-versus-bootstrap rule are now explicit reference documents.</p>
+
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <h3 class="font-semibold text-gray-700">Files involved</h3>
+          <ul class="text-sm text-gray-600 list-disc list-inside">
+            <li><code>src/sessionizer.ts</code> — 53 lines</li>
+            <li><code>src/worktree.ts</code> — ~200 lines</li>
+            <li><code>src/layouts/project.ts</code> — shared</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-700">Recommendation strength</h3>
+          <p class="text-sm text-gray-600">
+            <span class="font-bold text-gray-500">Speculative</span> — the
+            workflows share <code>listProjects</code> + layout application, but
+            are genuinely different in branching logic. Extracting a common base
+            risks a leaky abstraction.
+          </p>
+        </div>
+      </div>
+
+      <h3 class="font-semibold text-gray-700 mb-1">Problem</h3>
+      <p class="text-sm text-gray-700 mb-3">
+        Both <code>sessionizer.ts</code> and <code>worktree.ts</code> follow the
+        same high-level pattern: load config → list projects → pick →
+        create/open workspace → apply layout → focus. But
+        <code>worktree.ts</code> has 4× the complexity due to branch handling
+        and error recovery. Extracting a common base
+        <code>WorkspaceWorkflow</code> would abstract the shared steps but would
+        need hooks for the divergent parts (branch prompt, worktree resolution).
+        This is speculative because the abstraction boundary may not be worth
+        the indirection.
+      </p>
+
+      <h3 class="font-semibold text-gray-700 mb-1">Solution</h3>
+      <p class="text-sm text-gray-700 mb-3">
+        Only extract if candidates 1 and 2 are done and duplication remains. The
+        pattern would be a <code>WorkspaceWorkflow</code> base class or function
+        with strategy hooks for the divergent steps. However, candidate 1
+        already eliminates the main duplication (<code>listProjects</code>). The
+        remaining divergence is genuine business logic, not accidental
+        duplication.
+      </p>
+
+      <h3 class="font-semibold text-gray-700 mb-1">Benefits</h3>
+      <ul class="text-sm text-gray-700 list-disc list-inside mb-3">
+        <li>Would reduce boilerplate in both flows.</li>
+        <li>
+          But risks a leaky abstraction — the "pick → create/open → layout"
+          pattern is simple enough that two copies are clearer than one
+          parameterized abstraction.
+        </li>
+      </ul>
+
+      <h3 class="font-semibold text-gray-700 mb-3">Before / After</h3>
+      <div class="before-after">
+        <div class="diagram-box">
+          <h4 class="text-sm font-semibold text-gray-500 mb-1">Current</h4>
+          <div class="mermaid">
+            graph TD subgraph sessionizer.ts S[runSessionizer] S -->
+            LP[listProjects] S --> P[pick] S --> WC[workspaces.create] S -->
+            L[createProjectLayout] S --> WF[workspaces.focus] end subgraph
+            worktree.ts W[runWorktree] W --> LP2[listProjects] W --> P2[pick] W
+            --> BP[branch prompt] W --> WT[worktrees.open/create] W -->
+            L2[createProjectLayout] W --> WF2[workspaces.focus] end
+          </div>
+        </div>
+        <div class="diagram-box">
+          <h4 class="text-sm font-semibold text-gray-500 mb-1">Speculative</h4>
+          <div class="mermaid">
+            graph TD subgraph WorkspaceWorkflow WW[run] --> LP[listProjects] WW
+            --> P[pick] WW --> A[abstract: create/open] WW -->
+            L[createProjectLayout] WW --> F[focus] end subgraph sessionizer
+            S[SessionizerWorkflow] -->|implements| A end subgraph worktree
+            WT[WorktreeWorkflow] -->|implements| A WT --> BP[branch prompt] end
+          </div>
+        </div>
       </div>
     </div>
 
-    <h3 class="font-semibold text-gray-700 mb-1">Problem</h3>
-    <p class="text-sm text-gray-700 mb-3">
-      There is no <code>CONTEXT.md</code> capturing domain terms like "workspace", "worktree", "session", "layout", "pane", "tab". These terms are used throughout the codebase but their precise meaning (especially the distinction between a Herdr "workspace" and a Git "worktree") is only implicit. Without a glossary, future architecture reviews have no shared vocabulary.
-    </p>
+    <!-- ===== CANDIDATE 5 ===== -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold">5. Ops wrappers — keep or deepen?</h2>
+        <span
+          class="badge-spec text-white text-xs font-bold px-2.5 py-1 rounded"
+          >SPECULATIVE</span
+        >
+      </div>
 
-    <h3 class="font-semibold text-gray-700 mb-1">Solution</h3>
-    <p class="text-sm text-gray-700 mb-3">
-      Create a <code>CONTEXT.md</code> with the domain language. Also create <code>ADR-0001</code> recording the current decision to reopen existing workspaces as-is and reserve layout bootstrap for newly created workspaces.
-    </p>
-  </div>
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <h3 class="font-semibold text-gray-700">Files involved</h3>
+          <ul class="text-sm text-gray-600 list-disc list-inside">
+            <li><code>src/ops/panes.ts</code> — 30 lines</li>
+            <li><code>src/ops/tabs.ts</code> — 32 lines</li>
+            <li><code>src/ops/workspaces.ts</code> — 39 lines</li>
+            <li><code>src/ops/worktrees.ts</code> — 82 lines</li>
+            <li><code>src/client/herdr.ts</code> — 37 lines</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-700">Recommendation strength</h3>
+          <p class="text-sm text-gray-600">
+            <span class="font-bold text-gray-500">Speculative</span> — these
+            modules are shallow by nature (CLI wrappers) but pass the deletion
+            test. Only <code>Worktrees</code> has enough logic to warrant
+            deepening.
+          </p>
+        </div>
+      </div>
 
-  <!-- Top Recommendation -->
-  <div class="bg-white rounded-xl shadow-sm border-2 border-blue-400 p-5 mb-6">
-    <div class="flex items-center gap-2 mb-3">
-      <span class="text-2xl">🎯</span>
-      <h2 class="text-xl font-bold">Top recommendation</h2>
+      <h3 class="font-semibold text-gray-700 mb-1">Problem</h3>
+      <p class="text-sm text-gray-700 mb-3">
+        The four ops modules are essentially one-to-one translations from
+        TypeScript method calls to herdr CLI arguments. They're
+        <strong>shallow</strong> — the interface is nearly as complex as the
+        implementation. However, they do provide type safety and JSON response
+        parsing. The <strong>deletion test</strong> is interesting: deleting
+        them would scatter CLI argument construction and JSON response parsing
+        across callers, so they do earn their keep.
+      </p>
+
+      <h3 class="semibold text-gray-700 mb-1">Observation</h3>
+      <p class="text-sm text-gray-700 mb-3">
+        <code>src/ops/worktrees.ts</code> is the thickest at 82 lines. Its
+        <code>create()</code> and <code>open()</code> methods have complex
+        argument building with multiple optional parameters. This is the one ops
+        module that could benefit from a builder pattern or option-object
+        refinement.
+      </p>
+
+      <h3 class="font-semibold text-gray-700 mb-1">Recommendation</h3>
+      <p class="text-sm text-gray-700 mb-3">
+        <strong>Keep the ops wrappers as-is</strong> — they're shallow by
+        necessity and pass the deletion test. Only consider deepening
+        <code>Worktrees</code> if candidate 2 (WorktreeResolver) is implemented
+        and reveals further complexity in the ops wrapper.
+      </p>
     </div>
-    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
-      <strong>✅ Candidate 1 completed</strong> — <code>discovery.ts</code> extracted, 4 callers updated, 31 tests added.
+
+    <!-- ===== CANDIDATE 6 ===== -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold">6. Create CONTEXT.md and ADR-0001</h2>
+        <span
+          class="badge-strong text-white text-xs font-bold px-2.5 py-1 rounded"
+          >✓ COMPLETED</span
+        >
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <h3 class="font-semibold text-gray-700">Files to create</h3>
+          <ul class="text-sm text-gray-600 list-disc list-inside">
+            <li><code>CONTEXT.md</code> — domain glossary</li>
+            <li>
+              <code>docs/adr/ADR-0001-worktree-existence-resolution.md</code> —
+              record decision about error-path approach
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-700">Recommendation strength</h3>
+          <p class="text-sm text-gray-600">
+            <span class="font-bold text-green-700">Completed</span> — the domain
+            language and the reopen-versus-bootstrap rule are now explicit
+            reference documents.
+          </p>
+        </div>
+      </div>
+
+      <h3 class="font-semibold text-gray-700 mb-1">Problem</h3>
+      <p class="text-sm text-gray-700 mb-3">
+        There is no <code>CONTEXT.md</code> capturing domain terms like
+        "workspace", "worktree", "session", "layout", "pane", "tab". These terms
+        are used throughout the codebase but their precise meaning (especially
+        the distinction between a Herdr "workspace" and a Git "worktree") is
+        only implicit. Without a glossary, future architecture reviews have no
+        shared vocabulary.
+      </p>
+
+      <h3 class="font-semibold text-gray-700 mb-1">Solution</h3>
+      <p class="text-sm text-gray-700 mb-3">
+        Create a <code>CONTEXT.md</code> with the domain language. Also create
+        <code>ADR-0001</code> recording the current decision to reopen existing
+        workspaces as-is and reserve layout bootstrap for newly created
+        workspaces.
+      </p>
     </div>
-    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
-      <strong>✅ Candidate 2 completed</strong> — <code>worktree-resolver.ts</code> extracted, the duplicate-branch recovery path was simplified, and targeted worktree tests were added.
+
+    <!-- Top Recommendation -->
+    <div
+      class="bg-white rounded-xl shadow-sm border-2 border-blue-400 p-5 mb-6"
+    >
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-2xl">🎯</span>
+        <h2 class="text-xl font-bold">Top recommendation</h2>
+      </div>
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
+        <strong>✅ Candidate 1 completed</strong> —
+        <code>discovery.ts</code> extracted, 4 callers updated, 31 tests added.
+      </div>
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
+        <strong>✅ Candidate 2 completed</strong> —
+        <code>worktree-resolver.ts</code> extracted, the duplicate-branch
+        recovery path was simplified, and targeted worktree tests were added.
+      </div>
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
+        <strong>✅ Candidate 3 completed</strong> — command building and lenient
+        layout error handling were extracted, and
+        <code>createProjectLayout()</code> now sits on a clearer orchestration
+        seam with dedicated tests.
+      </div>
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
+        <strong>✅ Candidate 6 completed</strong> — domain language and the
+        reopen/bootstrap rule now live in <code>CONTEXT.md</code> and
+        <code>docs/adr/ADR-0001-workspace-reopen-and-layout-bootstrap.md</code>.
+      </div>
+      <p class="text-gray-700 mb-3">
+        Next: <strong>No strong cleanup candidate remains</strong> — the
+        remaining opportunities are more speculative than urgent, so the
+        codebase is in a good place for feature work.
+      </p>
+      <p class="text-gray-700">
+        Candidates 3 and 4 are worth exploring but need the context gained from
+        simpler refactors first.
+      </p>
     </div>
-    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
-      <strong>✅ Candidate 3 completed</strong> — command building and lenient layout error handling were extracted, and <code>createProjectLayout()</code> now sits on a clearer orchestration seam with dedicated tests.
-    </div>
-    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
-      <strong>✅ Candidate 6 completed</strong> — domain language and the reopen/bootstrap rule now live in <code>CONTEXT.md</code> and <code>docs/adr/ADR-0001-workspace-reopen-and-layout-bootstrap.md</code>.
-    </div>
-    <p class="text-gray-700 mb-3">
-      Next: <strong>No strong cleanup candidate remains</strong> — the remaining opportunities are more speculative than urgent, so the codebase is in a good place for feature work.
-    </p>
-    <p class="text-gray-700">
-      Candidates 3 and 4 are worth exploring but need the context gained from simpler refactors first.
-    </p>
-  </div>
-</body>
+  </body>
 </html>

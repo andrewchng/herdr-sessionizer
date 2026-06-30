@@ -1,6 +1,6 @@
 {
   "name": "herdr-plugin-sessionizer",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "Herdr plugin inspired by ThePrimeagen's tmux-sessionizer for fuzzy project and worktree picking",

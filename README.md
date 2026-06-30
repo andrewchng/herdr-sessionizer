@@ -74,12 +74,12 @@ herdr plugin action invoke sessionizer.worktree-open
 UX flow:
 
 ```text
-Sessionizer: existing workspace ──Enter──> focus
-             project            ──Enter──> create workspace + layout
+Sessionizer: existing workspace picker ──Enter──> focus
+             existing workspace picker ──Esc────> project picker ──Enter──> create workspace + layout
 
-Worktree:    project ──Enter──> branch/worktree picker ──Enter──> open existing or create worktree + layout
-             project ──Enter──> branch/worktree picker ──Esc────> new branch prompt
-             project ──Enter──> no candidates          ─────────> new branch prompt
+Worktree:    project picker ──Enter──> branch/worktree picker ──Enter──> open existing or create worktree + layout
+             project picker ──Enter──> branch/worktree picker ──Esc────> new branch prompt
+             project picker ──Enter──> no candidates          ─────────> new branch prompt
 ```
 
 ### Example keybindings
@@ -106,12 +106,14 @@ description = "open worktree workspace"
 
 **Sessionizer** lists existing workspaces plus repos under `projects.roots`. Pick a workspace to focus it, or pick a project to create a new workspace with your configured layout.
 
-**Worktree** lists base repos under `projects.roots`, then shows a branch/worktree picker when there are existing choices:
+**Worktree** lists base repos under `projects.roots`, then shows a branch/worktree picker with previews when there are existing choices:
 
-- Select an existing worktree workspace or checkout to reopen it as-is.
-- Select an existing local branch to create a new worktree workspace for that branch.
-- Select an existing remote branch to create a local worktree from that remote branch.
-- Press <kbd>Esc</kbd>, or start from a repo with no choices, to enter a new branch name.
+| Selection                   | Result                                            |
+| --------------------------- | ------------------------------------------------- |
+| Existing workspace/checkout | Reopen as-is                                      |
+| Local branch                | Create a worktree workspace for that branch       |
+| Remote branch               | Create a local worktree from that remote branch   |
+| <kbd>Esc</kbd> / no choices | Prompt for a new branch, then create the worktree |
 
 ## Layout configuration
 

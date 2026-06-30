@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0] - 2026-06-30
+
+### Added
+
+- Worktree branch/worktree picker that can reopen existing worktree workspaces, reopen existing checkouts, create worktrees from local branches, or create local worktrees from remote branches
+- Worktree picker previews with branch type, hidden checkout path details, and README/directory previews where available
+- Worktree flow coordinator and candidate discovery tests covering Enter, Esc, no-candidate, local branch, remote branch, and reopen-as-is paths
+
+### Changed
+
+- Worktree flow now uses <kbd>Esc</kbd> from the branch/worktree picker to enter a new branch name
+- README documents the Sessionizer and Worktree UX flows
+
 ## [0.3.0] - 2026-06-29
 
 ### Added

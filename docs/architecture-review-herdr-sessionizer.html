@@ -339,7 +339,7 @@
         </h2>
         <span
           class="badge-strong text-white text-xs font-bold px-2.5 py-1 rounded"
-          >✓ COMPLETED</span
+          >✓ DONE</span
         >
       </div>
 
@@ -386,13 +386,14 @@
         simpler and the error path explicit.
       </div>
 
-      <h3 class="font-semibold text-gray-700 mb-1">Solution</h3>
+      <h3 class="font-semibold text-gray-700 mb-1">Completed implementation</h3>
       <p class="text-sm text-gray-700 mb-3">
-        Extract a <code>WorktreeResolver</code> module with a single interface:
+        Extracted a <code>WorktreeResolver</code> module with a single
+        interface:
         <code>resolveExisting(project, branch): ExistingWorktree | null</code>.
-        It encapsulates all 4 resolution strategies (stderr parsing, git
-        porcelain by branch, git porcelain by slug, and future strategies). The
-        worktree flow becomes: <br /><code
+        It encapsulates the current resolution strategies: stderr parsing, git
+        porcelain by branch, and git porcelain by slug. The worktree flow
+        becomes: <br /><code
           >1. try resolveExisting → if found, open the existing workspace
           as-is</code
         >
@@ -439,7 +440,7 @@
           </div>
         </div>
         <div class="diagram-box">
-          <h4 class="text-sm font-semibold text-gray-500 mb-1">Proposed</h4>
+          <h4 class="text-sm font-semibold text-gray-500 mb-1">Implemented</h4>
           <div class="mermaid">
             graph TD subgraph WorktreeResolver [New Module] R[resolveExisting<br />project,
             branch] R --> S1[stderr parser] R --> S2[git porcelain<br />by

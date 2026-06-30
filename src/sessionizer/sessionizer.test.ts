@@ -3,9 +3,9 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-import type { SessionizerConfig } from "./config.ts";
-import type { Workspace } from "./client/types.ts";
-import type { LayoutPanes, LayoutTabs } from "./layouts/project.ts";
+import type { SessionizerConfig } from "../config/config.ts";
+import type { Workspace } from "../client/types.ts";
+import type { LayoutPanes, LayoutTabs } from "../layouts/project.ts";
 import { runSessionizer } from "./sessionizer.ts";
 
 function testConfig(): SessionizerConfig {

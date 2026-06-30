@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { describe, expect, it, mock } from "bun:test";
 
-import { attachExistingBranchWorktree } from "./worktree-branch-fallback.ts";
+import { attachExistingBranchWorktree } from "./branch-fallback.ts";
 
 const worktreePath = join(
   homedir(),

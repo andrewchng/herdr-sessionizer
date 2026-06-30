@@ -1,14 +1,14 @@
 import { describe, expect, it, mock } from "bun:test";
 
-import { HerdrError } from "./client/errors.ts";
-import type { Workspace } from "./client/types.ts";
-import type { WorktreeFlowRuntime } from "./worktree-flow.ts";
-import { WORKTREE_CANDIDATE_PREVIEW } from "./ui/previews.ts";
+import { HerdrError } from "../client/errors.ts";
+import type { Workspace } from "../client/types.ts";
+import type { WorktreeFlowRuntime } from "./flow.ts";
+import { WORKTREE_CANDIDATE_PREVIEW } from "../ui/previews.ts";
 import {
   type WorktreeCandidate,
   WORKTREE_CANDIDATE_ROW_DELIMITER,
   worktreeCandidateRow,
-} from "./worktree-candidates.ts";
+} from "./candidates.ts";
 import { runWorktree } from "./worktree.ts";
 
 function testWorkspace(overrides?: Partial<Workspace>): Workspace {

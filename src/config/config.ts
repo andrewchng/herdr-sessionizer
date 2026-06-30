@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
-import { expandHome } from "./discovery.ts";
+import { expandHome } from "../discovery/discovery.ts";
 
 import { parse } from "smol-toml";
 

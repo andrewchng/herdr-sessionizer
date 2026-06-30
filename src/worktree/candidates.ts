@@ -1,5 +1,5 @@
-import type { Workspace } from "./client/types.ts";
-import { normalizePath } from "./discovery.ts";
+import type { Workspace } from "../client/types.ts";
+import { normalizePath } from "../discovery/discovery.ts";
 
 export const WORKTREE_CANDIDATE_ROW_DELIMITER = "\t";
 

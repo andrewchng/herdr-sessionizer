@@ -1,6 +1,6 @@
 import { describe, expect, it, mock } from "bun:test";
 
-import type { Workspace } from "./client/types.ts";
+import type { Workspace } from "../client/types.ts";
 import {
   buildWorktreeCandidates,
   discoverWorktreeCandidates,
@@ -10,7 +10,7 @@ import {
   worktreeCandidatePreviewPath,
   worktreeCandidateRow,
   worktreeCandidateVisibleRow,
-} from "./worktree-candidates.ts";
+} from "./candidates.ts";
 
 function worktreeWorkspace(overrides?: Partial<Workspace>): Workspace {
   return {

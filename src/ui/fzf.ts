@@ -1,4 +1,4 @@
-import { resolveFzfBin } from "../prerequisites.ts";
+import { resolveFzfBin } from "../prerequisites/prerequisites.ts";
 
 export interface PickOptions {
   prompt?: string;

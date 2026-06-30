@@ -1,21 +1,21 @@
-import { listProjects } from "./discovery.ts";
+import { listProjects } from "../discovery/discovery.ts";
 
-import { Herdr } from "./client/herdr.ts";
-import { loadConfig } from "./config.ts";
-import { createProjectLayout } from "./layouts/project.ts";
-import { Panes } from "./ops/panes.ts";
-import { Tabs } from "./ops/tabs.ts";
-import { Workspaces } from "./ops/workspaces.ts";
-import { Worktrees } from "./ops/worktrees.ts";
-import { pick } from "./ui/fzf.ts";
-import { promptText } from "./ui/prompt.ts";
-import { attachExistingBranchWorktree } from "./worktree-branch-fallback.ts";
+import { Herdr } from "../client/herdr.ts";
+import { loadConfig } from "../config/config.ts";
+import { createProjectLayout } from "../layouts/project.ts";
+import { Panes } from "../ops/panes.ts";
+import { Tabs } from "../ops/tabs.ts";
+import { Workspaces } from "../ops/workspaces.ts";
+import { Worktrees } from "../ops/worktrees.ts";
+import { pick } from "../ui/fzf.ts";
+import { promptText } from "../ui/prompt.ts";
+import { attachExistingBranchWorktree } from "./branch-fallback.ts";
 import {
   defaultDiscoverWorktreeCandidates,
   runWorktreeFlow,
   type WorktreeFlowRuntime,
-} from "./worktree-flow.ts";
-import { WorktreeResolver } from "./worktree-resolver.ts";
+} from "./flow.ts";
+import { WorktreeResolver } from "./resolver.ts";
 
 export async function runWorktree(
   argv: readonly string[] = process.argv.slice(2),

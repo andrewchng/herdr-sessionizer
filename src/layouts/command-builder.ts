@@ -1,6 +1,6 @@
-import type { PaneConfig } from '../config.ts';
+import type { PaneConfig } from "../config/config.ts";
 
-import { shellQuote } from '../discovery.ts';
+import { shellQuote } from "../discovery/discovery.ts";
 
 export interface LayoutCommandOptions {
   commandOverride?: string;
@@ -10,7 +10,7 @@ export interface LayoutCommandOptions {
 export function buildPaneCommand(
   spec: PaneConfig,
   cwd: string,
-  options?: LayoutCommandOptions,
+  options?: LayoutCommandOptions
 ): string {
   const quotedCwd = shellQuote(cwd);
   const resolved = resolvePaneCommand(spec, options);
@@ -23,7 +23,10 @@ export function buildPaneCommand(
   return `cd ${quotedCwd}`;
 }
 
-export function resolvePaneCommand(spec: PaneConfig, options?: LayoutCommandOptions): string {
+export function resolvePaneCommand(
+  spec: PaneConfig,
+  options?: LayoutCommandOptions
+): string {
   if (options?.commandOverride && spec.accept_command_override) {
     return options.commandOverride;
   }
@@ -32,11 +35,11 @@ export function resolvePaneCommand(spec: PaneConfig, options?: LayoutCommandOpti
 
 export function interpolatePlaceholders(
   command: string,
-  values: Record<string, string | undefined>,
+  values: Record<string, string | undefined>
 ): string {
   return command.replaceAll(/\{(\w+)\}/g, (_match, key: string) => {
     const value = values[key];
-    if (value === undefined) return '';
+    if (value === undefined) return "";
     return value;
   });
 }

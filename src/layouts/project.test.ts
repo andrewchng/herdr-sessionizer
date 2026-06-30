@@ -1,6 +1,6 @@
 import { describe, expect, it, mock } from "bun:test";
 
-import type { SessionizerConfig } from "../config.ts";
+import type { SessionizerConfig } from "../config/config.ts";
 import type { Pane, Tab, Workspace } from "../client/types.ts";
 import {
   createProjectLayout,

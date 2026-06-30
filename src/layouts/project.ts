@@ -1,4 +1,8 @@
-import type { SessionizerConfig, PaneConfig, TabConfig } from "../config.ts";
+import type {
+  SessionizerConfig,
+  PaneConfig,
+  TabConfig,
+} from "../config/config.ts";
 import type { Pane, Tab, Workspace } from "../client/types.ts";
 import type { SplitOptions } from "../ops/panes.ts";
 import type { TabCreateOptions } from "../ops/tabs.ts";

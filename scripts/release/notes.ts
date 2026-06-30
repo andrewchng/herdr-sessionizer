@@ -3,7 +3,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { extractReleaseNotes } from "../../src/release-notes.ts";
+import { extractReleaseNotes } from "../../src/release/release-notes.ts";
 
 interface CliArgs {
   version?: string;

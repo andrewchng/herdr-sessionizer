@@ -1,21 +1,21 @@
 import { basename } from "node:path";
 
-import { listProjects, sanitizeName } from "./discovery.ts";
+import { listProjects, sanitizeName } from "../discovery/discovery.ts";
 
-import type { Workspace } from "./client/types.ts";
-import { Herdr } from "./client/herdr.ts";
-import type { SessionizerConfig } from "./config.ts";
-import { loadConfig, resolveLayoutConfig } from "./config.ts";
+import type { Workspace } from "../client/types.ts";
+import { Herdr } from "../client/herdr.ts";
+import type { SessionizerConfig } from "../config/config.ts";
+import { loadConfig, resolveLayoutConfig } from "../config/config.ts";
 import {
   createProjectLayout,
   type LayoutPanes,
   type LayoutTabs,
-} from "./layouts/project.ts";
-import { Panes } from "./ops/panes.ts";
-import { Tabs } from "./ops/tabs.ts";
-import { Workspaces } from "./ops/workspaces.ts";
-import { pick, type PickOptions } from "./ui/fzf.ts";
-import { PROJECT_PREVIEW, WORKSPACE_PREVIEW } from "./ui/previews.ts";
+} from "../layouts/project.ts";
+import { Panes } from "../ops/panes.ts";
+import { Tabs } from "../ops/tabs.ts";
+import { Workspaces } from "../ops/workspaces.ts";
+import { pick, type PickOptions } from "../ui/fzf.ts";
+import { PROJECT_PREVIEW, WORKSPACE_PREVIEW } from "../ui/previews.ts";
 
 const WORKSPACE_ROW_DELIMITER = "\t";
 

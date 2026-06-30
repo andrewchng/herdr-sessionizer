@@ -9,7 +9,7 @@
     "herdr-worktree": "./src/bin/herdr-worktree.ts"
   },
   "scripts": {
-    "sessionizer": "bun run src/sessionizer.ts",
+    "sessionizer": "bun run src/sessionizer/sessionizer.ts",
     "worktree": "bun run src/bin/herdr-worktree.ts",
     "release": "bun run scripts/release/prep.ts",
     "release:tag": "bun run scripts/release/tag.ts",

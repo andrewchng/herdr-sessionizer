@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 
-import { runWorktree } from '../worktree.ts';
+import { runWorktree } from "../worktree/worktree.ts";
 
 const argv = process.argv.slice(2);
 
-if (argv.includes('--help') || argv.includes('-h')) {
+if (argv.includes("--help") || argv.includes("-h")) {
   console.log(`Usage:
   herdr-worktree
   herdr-worktree --project <path> --branch <name> [--command <raw-shell-command>]

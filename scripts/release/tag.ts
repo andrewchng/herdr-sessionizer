@@ -8,7 +8,7 @@ import {
   releaseTagName,
   readPackageVersion,
   readPluginManifestVersion,
-} from "../../src/release-tag.ts";
+} from "../../src/release/release-tag.ts";
 
 interface CliArgs {
   version?: string;

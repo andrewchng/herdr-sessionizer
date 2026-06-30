@@ -1,23 +1,23 @@
-import { normalizePath, sanitizeName } from "./discovery.ts";
+import { normalizePath, sanitizeName } from "../discovery/discovery.ts";
 
-import { HerdrError } from "./client/errors.ts";
-import type { Workspace } from "./client/types.ts";
-import type { SessionizerConfig } from "./config.ts";
-import { resolveLayoutConfig } from "./config.ts";
-import type { PickOptions } from "./ui/fzf.ts";
-import { PROJECT_PREVIEW, WORKTREE_CANDIDATE_PREVIEW } from "./ui/previews.ts";
-import type { WorktreeResolver } from "./worktree-resolver.ts";
-import type { Worktrees } from "./ops/worktrees.ts";
+import { HerdrError } from "../client/errors.ts";
+import type { Workspace } from "../client/types.ts";
+import type { SessionizerConfig } from "../config/config.ts";
+import { resolveLayoutConfig } from "../config/config.ts";
+import type { PickOptions } from "../ui/fzf.ts";
+import { PROJECT_PREVIEW, WORKTREE_CANDIDATE_PREVIEW } from "../ui/previews.ts";
+import type { WorktreeResolver } from "./resolver.ts";
+import type { Worktrees } from "../ops/worktrees.ts";
 import type {
   DiscoverWorktreeCandidateOptions,
   WorktreeCandidate,
-} from "./worktree-candidates.ts";
+} from "./candidates.ts";
 import {
   WORKTREE_CANDIDATE_ROW_DELIMITER,
   discoverWorktreeCandidates,
   worktreeCandidateFromRow,
   worktreeCandidateRow,
-} from "./worktree-candidates.ts";
+} from "./candidates.ts";
 
 interface CliArgs {
   project?: string;

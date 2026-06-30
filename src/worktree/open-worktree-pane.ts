@@ -1,31 +1,33 @@
 export {};
 
-import { Herdr } from './client/herdr.ts';
-import { loadConfig } from './config.ts';
+import { Herdr } from "../client/herdr.ts";
+import { loadConfig } from "../config/config.ts";
 
-export async function openWorktreePane(extraEnv: Record<string, string> = {}): Promise<void> {
+export async function openWorktreePane(
+  extraEnv: Record<string, string> = {}
+): Promise<void> {
   const pluginId = process.env.HERDR_PLUGIN_ID;
   if (!pluginId) {
-    throw new Error('HERDR_PLUGIN_ID is required to open the worktree pane.');
+    throw new Error("HERDR_PLUGIN_ID is required to open the worktree pane.");
   }
 
   const herdr = new Herdr();
   const config = loadConfig();
   const args = [
-    'plugin',
-    'pane',
-    'open',
-    '--plugin',
+    "plugin",
+    "pane",
+    "open",
+    "--plugin",
     pluginId,
-    '--entrypoint',
-    'worktree',
-    '--placement',
+    "--entrypoint",
+    "worktree",
+    "--placement",
     config.layout.placement,
-    '--focus',
+    "--focus",
   ];
 
   for (const [key, value] of Object.entries(extraEnv)) {
-    args.push('--env', `${key}=${value}`);
+    args.push("--env", `${key}=${value}`);
   }
 
   await herdr.run(args);

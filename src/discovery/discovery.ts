@@ -1,6 +1,6 @@
-import { existsSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
-import { homedir } from 'node:os';
+import { existsSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import { homedir } from "node:os";
 
 /**
  * Enumerate project directories from a set of base root paths.
@@ -21,22 +21,22 @@ export function listProjects(bases: readonly string[]): string[] {
  * Replace characters that are invalid in Herdr workspace labels.
  */
 export function sanitizeName(name: string): string {
-  return name.replace(/[^a-zA-Z0-9_-]/g, '_');
+  return name.replace(/[^a-zA-Z0-9_-]/g, "_");
 }
 
 /**
  * Normalize a filesystem path: strip trailing slashes, handle undefined.
  */
 export function normalizePath(path: string | undefined): string {
-  if (!path) return '';
-  return path.replace(/\/+$/, '');
+  if (!path) return "";
+  return path.replace(/\/+$/, "");
 }
 
 /**
  * Expand a leading `~` to the user's home directory.
  */
 export function expandHome(value: string): string {
-  return value.startsWith('~/') ? value.replace('~', homedir()) : value;
+  return value.startsWith("~/") ? value.replace("~", homedir()) : value;
 }
 
 /**
@@ -51,5 +51,8 @@ export function shellQuote(value: string): string {
  * Convert a branch name to a filesystem-safe slug.
  */
 export function worktreeSlug(branch: string): string {
-  return branch.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase();
+  return branch
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase();
 }

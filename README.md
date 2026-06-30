@@ -71,6 +71,17 @@ herdr plugin action invoke sessionizer.open
 herdr plugin action invoke sessionizer.worktree-open
 ```
 
+UX flow:
+
+```text
+Sessionizer: existing workspace picker ──Enter──> focus
+             existing workspace picker ──Esc────> project picker ──Enter──> create workspace + layout
+
+Worktree:    project picker ──Enter──> branch/worktree picker ──Enter──> open existing or create worktree + layout
+             project picker ──Enter──> branch/worktree picker ──Esc────> new branch prompt
+             project picker ──Enter──> no candidates          ─────────> new branch prompt
+```
+
 ### Example keybindings
 
 Add these to your Herdr config, for example:
@@ -95,7 +106,14 @@ description = "open worktree workspace"
 
 **Sessionizer** lists existing workspaces plus repos under `projects.roots`. Pick a workspace to focus it, or pick a project to create a new workspace with your configured layout.
 
-**Worktree** lists base repos under `projects.roots`, prompts for a branch, then reopens an existing checkout or creates a new worktree workspace with the same bootstrap behavior.
+**Worktree** lists base repos under `projects.roots`, then shows a branch/worktree picker with previews when there are existing choices:
+
+| Selection                   | Result                                            |
+| --------------------------- | ------------------------------------------------- |
+| Existing workspace/checkout | Reopen as-is                                      |
+| Local branch                | Create a worktree workspace for that branch       |
+| Remote branch               | Create a local worktree from that remote branch   |
+| <kbd>Esc</kbd> / no choices | Prompt for a new branch, then create the worktree |
 
 ## Layout configuration
 

@@ -221,7 +221,7 @@
         <h2 class="text-xl font-bold">1. Shared project discovery module</h2>
         <span
           class="badge-strong text-white text-xs font-bold px-2.5 py-1 rounded"
-          >✓ COMPLETED</span
+          >✓ DONE</span
         >
       </div>
 
@@ -263,16 +263,17 @@
         project root pattern) requires touching multiple files.
       </p>
 
-      <h3 class="font-semibold text-gray-700 mb-1">Solution</h3>
+      <h3 class="font-semibold text-gray-700 mb-1">Completed implementation</h3>
       <p class="text-sm text-gray-700 mb-3">
-        Extract a <code>src/discovery.ts</code> module with a small interface:
+        Extracted a <code>src/discovery.ts</code> module with a small interface:
         <code>listProjects(roots): string[]</code>,
         <code>sanitizeName(name): string</code>,
         <code>expandHome(path): string</code>,
         <code>normalizePath(path): string</code>,
-        <code>shellQuote(value): string</code>. Both sessionizer and worktree
-        import from it. The interface hides filesystem enumeration details
-        behind a single function call.
+        <code>worktreeSlug(branch): string</code>, and
+        <code>shellQuote(value): string</code>. Sessionizer, Worktree, config,
+        branch fallback, and layout code import from it. The interface hides
+        filesystem enumeration details behind a single function call.
       </p>
 
       <h3 class="font-semibold text-gray-700 mb-1">Benefits</h3>
@@ -312,16 +313,19 @@
           </div>
         </div>
         <div class="diagram-box">
-          <h4 class="text-sm font-semibold text-gray-500 mb-1">Proposed</h4>
+          <h4 class="text-sm font-semibold text-gray-500 mb-1">Implemented</h4>
           <div class="mermaid">
-            graph TD subgraph discovery.ts [New Module] L[listProjects]
-            S[sanitizeName] E[expandHome] Q[shellQuote] end subgraph
-            sessionizer.ts E1[runSessionizer] --> L E1 --> S end subgraph
-            worktree.ts F1[runWorktree] --> L F1 --> S end subgraph
+            graph TD subgraph discovery.ts [Shared Module] L[listProjects]
+            S[sanitizeName] E[expandHome] N[normalizePath] W[worktreeSlug]
+            Q[shellQuote] end subgraph sessionizer.ts E1[runSessionizer] --> L
+            E1 --> S end subgraph worktree.ts F1[runWorktree] --> L F1 --> S F1
+            --> E end subgraph worktree-branch-fallback.ts
+            B[attachExistingBranchWorktree] --> W end subgraph
             layouts/project.ts P[createProjectLayout] --> Q end subgraph
-            config.ts C[loadConfig] --> E end style L fill:#6a9,stroke:#333
-            style S fill:#6a9,stroke:#333 style E fill:#6a9,stroke:#333 style Q
-            fill:#6a9,stroke:#333
+            config.ts C[loadConfig] --> E C --> N end style L
+            fill:#6a9,stroke:#333 style S fill:#6a9,stroke:#333 style E
+            fill:#6a9,stroke:#333 style N fill:#6a9,stroke:#333 style W
+            fill:#6a9,stroke:#333 style Q fill:#6a9,stroke:#333
           </div>
         </div>
       </div>
@@ -335,7 +339,7 @@
         </h2>
         <span
           class="badge-strong text-white text-xs font-bold px-2.5 py-1 rounded"
-          >✓ COMPLETED</span
+          >✓ DONE</span
         >
       </div>
 
@@ -382,13 +386,14 @@
         simpler and the error path explicit.
       </div>
 
-      <h3 class="font-semibold text-gray-700 mb-1">Solution</h3>
+      <h3 class="font-semibold text-gray-700 mb-1">Completed implementation</h3>
       <p class="text-sm text-gray-700 mb-3">
-        Extract a <code>WorktreeResolver</code> module with a single interface:
+        Extracted a <code>WorktreeResolver</code> module with a single
+        interface:
         <code>resolveExisting(project, branch): ExistingWorktree | null</code>.
-        It encapsulates all 4 resolution strategies (stderr parsing, git
-        porcelain by branch, git porcelain by slug, and future strategies). The
-        worktree flow becomes: <br /><code
+        It encapsulates the current resolution strategies: stderr parsing, git
+        porcelain by branch, and git porcelain by slug. The worktree flow
+        becomes: <br /><code
           >1. try resolveExisting → if found, open the existing workspace
           as-is</code
         >
@@ -435,7 +440,7 @@
           </div>
         </div>
         <div class="diagram-box">
-          <h4 class="text-sm font-semibold text-gray-500 mb-1">Proposed</h4>
+          <h4 class="text-sm font-semibold text-gray-500 mb-1">Implemented</h4>
           <div class="mermaid">
             graph TD subgraph WorktreeResolver [New Module] R[resolveExisting<br />project,
             branch] R --> S1[stderr parser] R --> S2[git porcelain<br />by

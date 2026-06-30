@@ -1,6 +1,6 @@
 id = "sessionizer"
 name = "Sessionizer"
-version = "0.3.0"
+version = "0.4.0"
 min_herdr_version = "0.7.0"
 description = "Inspired by ThePrimeagen's tmux-sessionizer: fuzzy pickers to open projects and Git worktrees into Herdr workspaces."
 platforms = ["macos"]

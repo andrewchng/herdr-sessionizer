@@ -95,7 +95,12 @@ description = "open worktree workspace"
 
 **Sessionizer** lists existing workspaces plus repos under `projects.roots`. Pick a workspace to focus it, or pick a project to create a new workspace with your configured layout.
 
-**Worktree** lists base repos under `projects.roots`, prompts for a branch, then reopens an existing checkout or creates a new worktree workspace with the same bootstrap behavior.
+**Worktree** lists base repos under `projects.roots`, then shows a branch/worktree picker when there are existing choices:
+
+- Select an existing worktree workspace or checkout to reopen it as-is.
+- Select an existing local branch to create a new worktree workspace for that branch.
+- Select an existing remote branch to create a local worktree from that remote branch.
+- Press <kbd>Esc</kbd>, or start from a repo with no choices, to enter a new branch name.
 
 ## Layout configuration
 

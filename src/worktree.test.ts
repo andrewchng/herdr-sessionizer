@@ -3,8 +3,10 @@ import { describe, expect, it, mock } from "bun:test";
 import { HerdrError } from "./client/errors.ts";
 import type { Workspace } from "./client/types.ts";
 import type { WorktreeFlowRuntime } from "./worktree-flow.ts";
+import { WORKTREE_CANDIDATE_PREVIEW } from "./ui/previews.ts";
 import {
   type WorktreeCandidate,
+  WORKTREE_CANDIDATE_ROW_DELIMITER,
   worktreeCandidateRow,
 } from "./worktree-candidates.ts";
 import { runWorktree } from "./worktree.ts";
@@ -408,6 +410,45 @@ describe("runWorktree", () => {
       }
     );
     expect(focus).toHaveBeenCalledWith("ws-created");
+  });
+
+  it("shows a preview for branch picker candidates", async () => {
+    const candidate: WorktreeCandidate = {
+      id: "local:feature/test-flow",
+      kind: "local-branch",
+      label: "local branch        feature/test-flow",
+      branch: "feature/test-flow",
+      previewPath: "/repo",
+    };
+    const pickWorktreeCandidate = mock(async () => null);
+
+    await runWorktree(
+      [],
+      testRuntime({
+        discoverCandidates: mock(async () => [candidate]),
+        pickWorktreeCandidate,
+        promptBranch: mock(async () => "feature/new"),
+        worktrees: {
+          open: mock(async () => {
+            throw new HerdrError(["worktree", "open"], 1, "not found");
+          }),
+          create: mock(async () => testWorkspace()),
+        },
+      })
+    );
+
+    expect(pickWorktreeCandidate).toHaveBeenCalledWith(
+      [worktreeCandidateRow(candidate)],
+      {
+        prompt: "Worktree branch (Esc for new): ",
+        header:
+          "Enter opens existing or creates from branch; Esc creates a new branch",
+        delimiter: WORKTREE_CANDIDATE_ROW_DELIMITER,
+        withNth: "2,3",
+        preview: WORKTREE_CANDIDATE_PREVIEW,
+        previewWindow: "right:50%",
+      }
+    );
   });
 
   it("creates a local worktree from a selected remote branch base", async () => {

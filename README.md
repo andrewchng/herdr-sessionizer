@@ -308,6 +308,7 @@ bun run typecheck
 bun run test
 bun run release -- 0.2.1 --dry-run
 bun run release:tag -- 0.2.1 --dry-run
+bun run release:notes -- 0.2.1
 bun run sessionizer
 ```
 

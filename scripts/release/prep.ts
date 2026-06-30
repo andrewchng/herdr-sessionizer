@@ -8,7 +8,7 @@ import {
   ensureChangelogRelease,
   updatePackageVersion,
   updatePluginManifestVersion,
-} from "../src/release.ts";
+} from "../../src/release.ts";
 
 interface CliArgs {
   version?: string;

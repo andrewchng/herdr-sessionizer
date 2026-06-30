@@ -158,11 +158,7 @@ export function buildWorktreeCandidates({
 
 export function worktreeCandidateRow(candidate: WorktreeCandidate): string {
   const detail =
-    candidate.kind === "workspace" || candidate.kind === "worktree"
-      ? (candidate.path ?? "")
-      : candidate.kind === "remote-branch"
-        ? `base: ${candidate.base}`
-        : "";
+    candidate.kind === "remote-branch" ? `base: ${candidate.base}` : "";
   return [candidate.id, candidate.label, detail].join(
     WORKTREE_CANDIDATE_ROW_DELIMITER
   );

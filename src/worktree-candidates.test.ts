@@ -127,3 +127,23 @@ describe("discoverWorktreeCandidates", () => {
     expect(worktreeCandidateFromRow(row, candidates)).toEqual(candidates[0]);
   });
 });
+
+describe("worktreeCandidateRow", () => {
+  it("does not show existing checkout paths in picker rows", () => {
+    const row = worktreeCandidateRow({
+      id: "worktree:feature/test:/worktrees/repo/feature-test",
+      kind: "worktree",
+      label: "existing checkout   feature/test",
+      branch: "feature/test",
+      path: "/worktrees/repo/feature-test",
+    });
+
+    expect(row).toBe(
+      [
+        "worktree:feature/test:/worktrees/repo/feature-test",
+        "existing checkout   feature/test",
+        "",
+      ].join("\t")
+    );
+  });
+});

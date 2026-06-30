@@ -24,6 +24,7 @@ export type WorktreeCandidate =
       kind: "local-branch";
       label: string;
       branch: string;
+      previewPath: string;
     }
   | {
       id: string;
@@ -31,6 +32,7 @@ export type WorktreeCandidate =
       label: string;
       branch: string;
       base: string;
+      previewPath: string;
     };
 
 export interface GitWorktreeCandidate {
@@ -136,6 +138,7 @@ export function buildWorktreeCandidates({
       kind: "local-branch",
       label: `local branch        ${branch}`,
       branch,
+      previewPath: project,
     });
     seenBranches.add(branch);
   }
@@ -149,6 +152,7 @@ export function buildWorktreeCandidates({
       label: `remote branch       ${remote}`,
       branch,
       base: remote,
+      previewPath: project,
     });
     seenBranches.add(branch);
   }
@@ -159,9 +163,34 @@ export function buildWorktreeCandidates({
 export function worktreeCandidateRow(candidate: WorktreeCandidate): string {
   const detail =
     candidate.kind === "remote-branch" ? `base: ${candidate.base}` : "";
-  return [candidate.id, candidate.label, detail].join(
-    WORKTREE_CANDIDATE_ROW_DELIMITER
-  );
+  return [
+    candidate.id,
+    candidate.label,
+    detail,
+    candidate.kind,
+    candidate.branch,
+    candidatePreviewPath(candidate),
+  ].join(WORKTREE_CANDIDATE_ROW_DELIMITER);
+}
+
+function candidatePreviewPath(candidate: WorktreeCandidate): string {
+  if (candidate.kind === "workspace" || candidate.kind === "worktree") {
+    return candidate.path ?? "";
+  }
+  return candidate.previewPath;
+}
+
+export function worktreeCandidatePreviewPath(row: string): string | undefined {
+  const path = row.split(WORKTREE_CANDIDATE_ROW_DELIMITER)[5];
+  return path && path.length > 0 ? path : undefined;
+}
+
+export function worktreeCandidateVisibleRow(row: string): string {
+  return row
+    .split(WORKTREE_CANDIDATE_ROW_DELIMITER)
+    .slice(1, 3)
+    .filter((value) => value.length > 0)
+    .join(WORKTREE_CANDIDATE_ROW_DELIMITER);
 }
 
 export function worktreeCandidateFromRow(

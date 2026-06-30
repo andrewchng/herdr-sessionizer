@@ -345,6 +345,7 @@ describe("runWorktree", () => {
       kind: "local-branch",
       label: "local branch        feature/test-flow",
       branch: "feature/test-flow",
+      previewPath: "/repo",
     };
     const openError = new HerdrError(
       ["worktree", "open"],
@@ -416,6 +417,7 @@ describe("runWorktree", () => {
       label: "remote branch       origin/feature/remote",
       branch: "feature/remote",
       base: "origin/feature/remote",
+      previewPath: "/repo",
     };
     const workspace = testWorkspace({
       workspace_id: "ws-remote",
@@ -462,6 +464,7 @@ describe("runWorktree", () => {
       kind: "local-branch",
       label: "local branch        feature/existing",
       branch: "feature/existing",
+      previewPath: "/repo",
     };
     const promptBranch = mock(async () => "feature/new");
     const create = mock(async () => testWorkspace());

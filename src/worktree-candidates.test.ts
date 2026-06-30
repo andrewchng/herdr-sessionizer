@@ -7,7 +7,9 @@ import {
   parseGitBranchLines,
   parseGitWorktreePorcelain,
   worktreeCandidateFromRow,
+  worktreeCandidatePreviewPath,
   worktreeCandidateRow,
+  worktreeCandidateVisibleRow,
 } from "./worktree-candidates.ts";
 
 function worktreeWorkspace(overrides?: Partial<Workspace>): Workspace {
@@ -129,7 +131,7 @@ describe("discoverWorktreeCandidates", () => {
 });
 
 describe("worktreeCandidateRow", () => {
-  it("does not show existing checkout paths in picker rows", () => {
+  it("keeps existing checkout paths in preview data, not visible row text", () => {
     const row = worktreeCandidateRow({
       id: "worktree:feature/test:/worktrees/repo/feature-test",
       kind: "worktree",
@@ -138,12 +140,26 @@ describe("worktreeCandidateRow", () => {
       path: "/worktrees/repo/feature-test",
     });
 
-    expect(row).toBe(
-      [
-        "worktree:feature/test:/worktrees/repo/feature-test",
-        "existing checkout   feature/test",
-        "",
-      ].join("\t")
+    expect(worktreeCandidateVisibleRow(row)).toBe(
+      "existing checkout   feature/test"
     );
+    expect(worktreeCandidatePreviewPath(row)).toBe(
+      "/worktrees/repo/feature-test"
+    );
+  });
+
+  it("uses the base repo path as preview data for branch rows", () => {
+    const candidates = buildWorktreeCandidates({
+      project: "/repo",
+      workspaces: [],
+      gitWorktrees: [],
+      gitBranches: { local: ["feature/test"], remote: [] },
+    });
+    const row = worktreeCandidateRow(candidates[0]!);
+
+    expect(worktreeCandidateVisibleRow(row)).toBe(
+      "local branch        feature/test"
+    );
+    expect(worktreeCandidatePreviewPath(row)).toBe("/repo");
   });
 });

@@ -5,7 +5,7 @@ import type { Workspace } from "./client/types.ts";
 import type { SessionizerConfig } from "./config.ts";
 import { resolveLayoutConfig } from "./config.ts";
 import type { PickOptions } from "./ui/fzf.ts";
-import { PROJECT_PREVIEW } from "./ui/previews.ts";
+import { PROJECT_PREVIEW, WORKTREE_CANDIDATE_PREVIEW } from "./ui/previews.ts";
 import type { WorktreeResolver } from "./worktree-resolver.ts";
 import type { Worktrees } from "./ops/worktrees.ts";
 import type {
@@ -186,7 +186,9 @@ async function resolveInteractiveIntent(
       header:
         "Enter opens existing or creates from branch; Esc creates a new branch",
       delimiter: WORKTREE_CANDIDATE_ROW_DELIMITER,
-      withNth: "2..",
+      withNth: "2,3",
+      preview: WORKTREE_CANDIDATE_PREVIEW,
+      previewWindow: "right:50%",
     });
 
     if (picked && picked.length > 0) {

@@ -39,7 +39,7 @@ Optional: [bat](https://github.com/sharkdp/bat) for richer `README.md` previews 
 ## Setup
 
 ```sh
-herdr plugin install MMSs/herdr-sessionizer --yes
+herdr plugin install andrewchng/herdr-sessionizer --yes
 herdr plugin config-dir sessionizer
 ```
 
@@ -104,9 +104,9 @@ command = "sessionizer.worktree-open"
 description = "open worktree workspace"
 ```
 
-**Sessionizer** lists existing workspaces plus projects under `projects.roots`. Pick a workspace to focus it, or pick a project to create a new workspace with your configured layout.
+**Sessionizer** lists existing workspaces plus repos under `projects.roots`. Pick a workspace to focus it, or pick a project to create a new workspace with your configured layout.
 
-**Worktree** lists base projects under `projects.roots`, then shows a branch/worktree picker with previews when there are existing choices:
+**Worktree** lists base repos under `projects.roots`, then shows a branch/worktree picker with previews when there are existing choices:
 
 | Selection                   | Result                                            |
 | --------------------------- | ------------------------------------------------- |

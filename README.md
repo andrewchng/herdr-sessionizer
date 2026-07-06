@@ -135,6 +135,8 @@ If you want an agent to help edit either the global config or a repo-local overr
 ```toml
 [projects]
 roots = ["~/Projects", "~/Workspace"]
+git_only = false
+depth = 1
 
 [layout]
 placement = "overlay"
@@ -198,6 +200,8 @@ Second tab shape:
 ```
 
 - `[projects].roots` — parent folders scanned by both pickers
+- `[projects].git_only` — `false` lists immediate child folders; `true` recursively returns only directories with `.git` metadata
+- `[projects].depth` — maximum levels below each root to scan when `git_only = true`; `1` means immediate children
 - `[layout].placement` — how plugin panes open (`overlay` or `split`)
 - `[layout].focus` — which tab or pane to focus after layout bootstrap
 - `[tabs.<name>]` — one Herdr tab to create per section

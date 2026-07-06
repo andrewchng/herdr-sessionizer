@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 import {
+  loadConfig,
   REPO_LAYOUT_CONFIG_RELATIVE,
   resolveLayoutConfig,
   resolveRepoLayoutPath,
@@ -12,7 +13,7 @@ import {
 
 function globalConfig(): SessionizerConfig {
   return {
-    projects: { roots: ["/projects"] },
+    projects: { roots: ["/projects"], git_only: false, depth: 1 },
     layout: { placement: "overlay", focus: "editor" },
     tabs: [
       {
@@ -40,6 +41,78 @@ function writeRepoLayout(repoRoot: string, contents: string): string {
   writeFileSync(configPath, contents, "utf-8");
   return configPath;
 }
+
+function minimalGlobalConfig(projects: string[]): string {
+  return [
+    "[projects]",
+    ...projects,
+    "",
+    "[layout]",
+    'placement = "overlay"',
+    'focus = "editor"',
+    "",
+    "[tabs.dev]",
+    'label = "dev"',
+    "",
+    "[[tabs.dev.panes]]",
+    'id = "editor"',
+    'title = "nvim"',
+    'command = "nvim"',
+    "",
+  ].join("\n");
+}
+
+function withPluginConfigDir<T>(callback: (dir: string) => T): T {
+  const previous = process.env.HERDR_PLUGIN_CONFIG_DIR;
+  const dir = mkdtempSync(join(tmpdir(), "sessionizer-config-"));
+  process.env.HERDR_PLUGIN_CONFIG_DIR = dir;
+
+  try {
+    return callback(dir);
+  } finally {
+    if (previous === undefined) {
+      delete process.env.HERDR_PLUGIN_CONFIG_DIR;
+    } else {
+      process.env.HERDR_PLUGIN_CONFIG_DIR = previous;
+    }
+  }
+}
+
+describe("loadConfig", () => {
+  it("defaults project discovery to non-git immediate folders", () => {
+    withPluginConfigDir((dir) => {
+      writeFileSync(
+        join(dir, "config.toml"),
+        minimalGlobalConfig(['roots = ["~/Projects"]']),
+        "utf-8"
+      );
+
+      const config = loadConfig();
+
+      expect(config.projects.git_only).toBe(false);
+      expect(config.projects.depth).toBe(1);
+    });
+  });
+
+  it("loads git_only before depth from project config", () => {
+    withPluginConfigDir((dir) => {
+      writeFileSync(
+        join(dir, "config.toml"),
+        minimalGlobalConfig([
+          'roots = ["~/Projects"]',
+          "git_only = true",
+          "depth = 3",
+        ]),
+        "utf-8"
+      );
+
+      const config = loadConfig();
+
+      expect(config.projects.git_only).toBe(true);
+      expect(config.projects.depth).toBe(3);
+    });
+  });
+});
 
 describe("resolveLayoutConfig", () => {
   it("uses repo-local focus and tabs when override exists", () => {

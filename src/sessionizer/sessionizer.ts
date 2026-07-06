@@ -1,6 +1,10 @@
 import { basename } from "node:path";
 
-import { listProjects, sanitizeName } from "../discovery/discovery.ts";
+import {
+  listProjects,
+  sanitizeName,
+  type ProjectDiscoveryOptions,
+} from "../discovery/discovery.ts";
 
 import type { Workspace } from "../client/types.ts";
 import { Herdr } from "../client/herdr.ts";
@@ -46,7 +50,10 @@ interface SessionizerRuntime {
     rows: readonly string[],
     options?: PickOptions
   ) => Promise<string[] | null>;
-  listProjects: (roots: string[]) => string[];
+  listProjects: (
+    roots: string[],
+    options?: ProjectDiscoveryOptions
+  ) => string[];
   createLayout: LayoutApplier;
   logger: Pick<typeof console, "log" | "error">;
   exit: (code: number) => never;
@@ -97,7 +104,7 @@ export async function runSessionizer(
     return;
   }
 
-  const projects = runtime.listProjects(config.projects.roots);
+  const projects = runtime.listProjects(config.projects.roots, config.projects);
   if (projects.length === 0) {
     runtime.logger.error("No projects found in configured directories.");
     runtime.exit(1);

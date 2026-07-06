@@ -10,7 +10,7 @@ import { runSessionizer } from "./sessionizer.ts";
 
 function testConfig(): SessionizerConfig {
   return {
-    projects: { roots: ["/projects"] },
+    projects: { roots: ["/projects"], git_only: false, depth: 1 },
     layout: { placement: "overlay", focus: "assistant" },
     tabs: [],
   };

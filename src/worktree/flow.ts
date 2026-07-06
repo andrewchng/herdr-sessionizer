@@ -61,7 +61,10 @@ export interface WorktreeFlowRuntime {
   config: SessionizerConfig;
   resolver: Pick<WorktreeResolver, "resolveExisting">;
   createLayout: LayoutApplier;
-  listProjects: (roots: string[]) => string[];
+  listProjects: (
+    roots: string[],
+    options?: SessionizerConfig["projects"]
+  ) => string[];
   pickProject: PickRows;
   pickWorktreeCandidate: PickRows;
   promptBranch: () => Promise<string>;
@@ -157,7 +160,10 @@ async function resolveInteractiveIntent(
   runtime: WorktreeFlowRuntime,
   workspaces: readonly Workspace[]
 ): Promise<WorktreeIntent> {
-  const projects = runtime.listProjects(runtime.config.projects.roots);
+  const projects = runtime.listProjects(
+    runtime.config.projects.roots,
+    runtime.config.projects
+  );
   if (projects.length === 0) {
     runtime.logger.error("No projects found in configured directories.");
     runtime.exit(1);

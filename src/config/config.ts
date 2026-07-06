@@ -26,7 +26,11 @@ interface RawTabConfig {
 }
 
 interface RawConfig {
-  projects?: { roots?: string[] };
+  projects?: {
+    roots?: string[];
+    git_only?: boolean;
+    depth?: unknown;
+  };
   layout?: {
     placement?: string;
     focus?: string;
@@ -53,6 +57,8 @@ export interface TabConfig {
 export interface SessionizerConfig {
   projects: {
     roots: string[];
+    git_only: boolean;
+    depth: number;
   };
   layout: {
     placement: PanePlacement;
@@ -116,6 +122,8 @@ export function loadConfig(): SessionizerConfig {
   if (roots.length === 0) {
     throw new Error("Config must define at least one [projects].roots entry.");
   }
+  const gitOnly = pluginConfig?.projects?.git_only ?? false;
+  const depth = asProjectDepth(pluginConfig?.projects?.depth);
 
   const focus = pluginConfig?.layout?.focus?.trim();
   if (!focus) {
@@ -125,6 +133,8 @@ export function loadConfig(): SessionizerConfig {
   return {
     projects: {
       roots,
+      git_only: gitOnly,
+      depth,
     },
     layout: {
       placement: asPlacement(pluginConfig?.layout?.placement),
@@ -197,6 +207,10 @@ function defaultConfigToml(): string {
     "[projects]",
     "# Parent folders searched by the interactive pickers",
     `roots = ["~/Projects", "~/Workspace"]`,
+    "# false: immediate child folders; true: recurse for Git repositories",
+    "git_only = false",
+    "# Only used when git_only = true; 1 means immediate children",
+    "depth = 1",
     "",
     "[layout]",
     "# How the plugin pane itself opens: overlay | split",
@@ -240,6 +254,23 @@ function asPlacement(value: string | undefined): PanePlacement {
   throw new Error(
     "Config must define [layout].placement as 'overlay' or 'split'."
   );
+}
+
+function asProjectDepth(value: unknown): number {
+  if (value === undefined) {
+    return 1;
+  }
+
+  if (
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    !Number.isFinite(value) ||
+    value < 1
+  ) {
+    throw new Error("Config [projects].depth must be an integer >= 1.");
+  }
+
+  return value;
 }
 
 function asSplitDirection(value: string | undefined): SplitDirection {

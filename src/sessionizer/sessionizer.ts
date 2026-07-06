@@ -1,6 +1,10 @@
 import { basename } from "node:path";
 
-import { listProjects, sanitizeName } from "../discovery/discovery.ts";
+import {
+  listProjects,
+  sanitizeName,
+  type ProjectDiscoveryOptions,
+} from "../discovery/discovery.ts";
 
 import type { Workspace } from "../client/types.ts";
 import { Herdr } from "../client/herdr.ts";
@@ -48,7 +52,7 @@ interface SessionizerRuntime {
   ) => Promise<string[] | null>;
   listProjects: (
     roots: string[],
-    options?: SessionizerConfig["projects"]
+    options?: ProjectDiscoveryOptions
   ) => string[];
   createLayout: LayoutApplier;
   logger: Pick<typeof console, "log" | "error">;

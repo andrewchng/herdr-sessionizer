@@ -125,7 +125,7 @@ When Sessionizer **creates** a new project or worktree workspace, it applies the
 
 Created automatically on first run if missing. It controls:
 
-- **`[projects]`** — parent folders and discovery mode used by the `fzf` pickers
+- **`[projects]`** — parent folders the `fzf` pickers scan for repos
 - **`[layout]`, `[tabs.*]` + `[[tabs.*.panes]]`** — the tabs, splits, per-split ratios, commands, and final focus for newly created workspaces
 
 If you want an agent to help edit either the global config or a repo-local override, see [Agent skill](#agent-skill).

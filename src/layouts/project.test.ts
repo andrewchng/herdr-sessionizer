@@ -10,7 +10,7 @@ import {
 
 function testConfig(overrides?: Partial<SessionizerConfig>): SessionizerConfig {
   return {
-    projects: { roots: ["/tmp"] },
+    projects: { roots: ["/tmp"], git_only: false, depth: 1 },
     layout: { placement: "overlay", focus: "assistant" },
     tabs: [
       {

@@ -39,7 +39,7 @@ Optional: [bat](https://github.com/sharkdp/bat) for richer `README.md` previews 
 ## Setup
 
 ```sh
-herdr plugin install andrewchng/herdr-sessionizer --yes
+herdr plugin install MMSs/herdr-sessionizer --yes
 herdr plugin config-dir sessionizer
 ```
 
@@ -104,9 +104,9 @@ command = "sessionizer.worktree-open"
 description = "open worktree workspace"
 ```
 
-**Sessionizer** lists existing workspaces plus repos under `projects.roots`. Pick a workspace to focus it, or pick a project to create a new workspace with your configured layout.
+**Sessionizer** lists existing workspaces plus projects under `projects.roots`. Pick a workspace to focus it, or pick a project to create a new workspace with your configured layout.
 
-**Worktree** lists base repos under `projects.roots`, then shows a branch/worktree picker with previews when there are existing choices:
+**Worktree** lists base projects under `projects.roots`, then shows a branch/worktree picker with previews when there are existing choices:
 
 | Selection                   | Result                                            |
 | --------------------------- | ------------------------------------------------- |
@@ -125,7 +125,7 @@ When Sessionizer **creates** a new project or worktree workspace, it applies the
 
 Created automatically on first run if missing. It controls:
 
-- **`[projects]`** — parent folders the `fzf` pickers scan for repos
+- **`[projects]`** — parent folders and discovery mode used by the `fzf` pickers
 - **`[layout]`, `[tabs.*]` + `[[tabs.*.panes]]`** — the tabs, splits, per-split ratios, commands, and final focus for newly created workspaces
 
 If you want an agent to help edit either the global config or a repo-local override, see [Agent skill](#agent-skill).
@@ -135,6 +135,8 @@ If you want an agent to help edit either the global config or a repo-local overr
 ```toml
 [projects]
 roots = ["~/Projects", "~/Workspace"]
+git_only = false
+depth = 1
 
 [layout]
 placement = "overlay"
@@ -198,6 +200,8 @@ Second tab shape:
 ```
 
 - `[projects].roots` — parent folders scanned by both pickers
+- `[projects].git_only` — `false` lists immediate child folders; `true` recursively returns only directories with `.git` metadata
+- `[projects].depth` — maximum levels below each root to scan when `git_only = true`; `1` means immediate children
 - `[layout].placement` — how plugin panes open (`overlay` or `split`)
 - `[layout].focus` — which tab or pane to focus after layout bootstrap
 - `[tabs.<name>]` — one Herdr tab to create per section

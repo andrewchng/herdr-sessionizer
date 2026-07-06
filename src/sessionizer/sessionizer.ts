@@ -46,7 +46,10 @@ interface SessionizerRuntime {
     rows: readonly string[],
     options?: PickOptions
   ) => Promise<string[] | null>;
-  listProjects: (roots: string[]) => string[];
+  listProjects: (
+    roots: string[],
+    options?: SessionizerConfig["projects"]
+  ) => string[];
   createLayout: LayoutApplier;
   logger: Pick<typeof console, "log" | "error">;
   exit: (code: number) => never;
@@ -97,7 +100,7 @@ export async function runSessionizer(
     return;
   }
 
-  const projects = runtime.listProjects(config.projects.roots);
+  const projects = runtime.listProjects(config.projects.roots, config.projects);
   if (projects.length === 0) {
     runtime.logger.error("No projects found in configured directories.");
     runtime.exit(1);

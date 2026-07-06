@@ -1,4 +1,10 @@
-import { mkdirSync, rmSync, rmdirSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  rmSync,
+  rmdirSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, expect, it } from "bun:test";
@@ -201,6 +207,45 @@ describe("listProjects", () => {
     } finally {
       rmSync(join(extraRoot, "project-d"), { recursive: true, force: true });
       rmSync(extraRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("filters to immediate git repos when git_only is enabled with default depth", () => {
+    const repoRoot = join(sandbox, "repo-root");
+    const nestedRepo = join(sandbox, "group", "nested-repo");
+    mkdirSync(join(repoRoot, ".git"), { recursive: true });
+    mkdirSync(join(nestedRepo, ".git"), { recursive: true });
+
+    const projects = listProjects([sandbox], { git_only: true });
+
+    expect(projects).toEqual([repoRoot]);
+  });
+
+  it("uses depth when git_only is enabled", () => {
+    const nestedRepo = join(sandbox, "org", "team", "service");
+    mkdirSync(join(nestedRepo, ".git"), { recursive: true });
+
+    expect(listProjects([sandbox], { git_only: true, depth: 2 })).not.toContain(
+      nestedRepo
+    );
+    expect(listProjects([sandbox], { git_only: true, depth: 3 })).toContain(
+      nestedRepo
+    );
+  });
+
+  it("includes symlinked git repos when git_only is enabled", () => {
+    const external = join(tmpdir(), "herdr-sessionizer-external-repo");
+    const link = join(sandbox, "linked-repo");
+    rmSync(external, { recursive: true, force: true });
+    rmSync(link, { recursive: true, force: true });
+    mkdirSync(join(external, ".git"), { recursive: true });
+    symlinkSync(external, link, "dir");
+
+    try {
+      expect(listProjects([sandbox], { git_only: true })).toContain(link);
+    } finally {
+      rmSync(link, { recursive: true, force: true });
+      rmSync(external, { recursive: true, force: true });
     }
   });
 });

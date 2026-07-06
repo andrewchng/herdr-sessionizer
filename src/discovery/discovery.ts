@@ -1,20 +1,94 @@
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
+export interface ProjectDiscoveryOptions {
+  git_only?: boolean;
+  depth?: number;
+}
+
 /**
  * Enumerate project directories from a set of base root paths.
- * Scans each base for immediate child directories.
+ * Scans each base for immediate child directories by default.
  */
-export function listProjects(bases: readonly string[]): string[] {
+export function listProjects(
+  bases: readonly string[],
+  options: ProjectDiscoveryOptions = {}
+): string[] {
   const seen = new Set<string>();
+  const gitOnly = options.git_only ?? false;
+
   for (const base of bases) {
     if (!existsSync(base)) continue;
-    for (const entry of readdirSync(base, { withFileTypes: true })) {
-      if (entry.isDirectory()) seen.add(join(base, entry.name));
+
+    if (gitOnly) {
+      discoverGitProjects(base, options.depth ?? 1, seen);
+      continue;
+    }
+
+    for (const path of listChildDirectories(base)) {
+      seen.add(path);
     }
   }
+
   return [...seen].sort();
+}
+
+function discoverGitProjects(base: string, depth: number, seen: Set<string>) {
+  const visited = new Set<string>();
+
+  function visit(path: string, currentDepth: number) {
+    if (currentDepth > depth || !isDirectory(path)) return;
+
+    if (hasGitMetadata(path)) {
+      seen.add(path);
+      return;
+    }
+
+    const realPath = safeRealpath(path);
+    if (realPath) {
+      if (visited.has(realPath)) return;
+      visited.add(realPath);
+    }
+
+    for (const child of listChildDirectories(path)) {
+      visit(child, currentDepth + 1);
+    }
+  }
+
+  for (const child of listChildDirectories(base)) {
+    visit(child, 1);
+  }
+}
+
+function listChildDirectories(path: string): string[] {
+  try {
+    return readdirSync(path, { withFileTypes: true })
+      .map((entry) => join(path, entry.name))
+      .filter(isDirectory);
+  } catch {
+    return [];
+  }
+}
+
+function hasGitMetadata(path: string): boolean {
+  return existsSync(join(path, ".git"));
+}
+
+function isDirectory(path: string): boolean {
+  try {
+    return statSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function safeRealpath(path: string): string | undefined {
+  try {
+    return realpathSync(path);
+  } catch {
+    return undefined;
+  }
 }
 
 /**

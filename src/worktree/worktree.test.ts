@@ -37,7 +37,7 @@ function testRuntime(
     tabs: {},
     panes: {},
     config: {
-      projects: { roots: ["/repo"] },
+      projects: { roots: ["/repo"], git_only: false, depth: 1 },
       layout: { placement: "overlay", focus: "terminal" },
       tabs: [],
     },
@@ -233,7 +233,7 @@ describe("runWorktree", () => {
       createdWorkspace,
       "/Users/mac/.herdr/worktrees/repo/feature-test-flow",
       {
-        projects: { roots: ["/repo"] },
+        projects: { roots: ["/repo"], git_only: false, depth: 1 },
         layout: { placement: "overlay", focus: "terminal" },
         tabs: [],
       },
@@ -398,7 +398,7 @@ describe("runWorktree", () => {
       workspace,
       "/worktrees/repo/feature-test-flow",
       {
-        projects: { roots: ["/repo"] },
+        projects: { roots: ["/repo"], git_only: false, depth: 1 },
         layout: { placement: "overlay", focus: "terminal" },
         tabs: [],
       },

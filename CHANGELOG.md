@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0] - 2026-07-04
+
+### Added
+
+- Optional `[projects].git_only` and `[projects].depth` config for git-aware project discovery under `projects.roots`
+- Symlink-safe git discovery with cycle detection when `git_only = true`
+
+### Changed
+
+- README documents `git_only` and `depth` project discovery options
+- Generated default `config.toml` includes commented `git_only` and `depth` fields
+
 ## [0.4.0] - 2026-06-30
 
 ### Added

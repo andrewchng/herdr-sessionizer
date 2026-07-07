@@ -217,8 +217,6 @@ Rules for `ratio`:
 - if omitted, Herdr's default split sizing is used
 - it applies only when the workspace is first bootstrapped, never when an existing workspace is reopened
 
-If you launch a worktree with `--command`, exactly one pane in that layout must opt in with `accept_command_override = true`. The generated default config leaves this off until you choose which pane should receive the raw command.
-
 ### Per-repo layout overrides
 
 A repository can override the layout for **new** workspace bootstrap. Put a repo-local layout config at:

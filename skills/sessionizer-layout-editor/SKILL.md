@@ -28,7 +28,7 @@ Use this skill when the user wants either a global Sessionizer layout change or 
    - repo-local overrides should not add `[projects].roots` or `[layout].placement`
    - repo-local tabs fully replace the global tabs for that repo; there is no merge
    - global config may define `[projects]`, `[layout].placement`, `[layout].focus`, and tabs/panes
-   - only the global config may add or edit `[projects].roots`
+   - only the global config may add or edit `[projects].roots`, `[projects].git_only`, and `[projects].depth`
 4. Build or edit the layout with valid Sessionizer structure:
    - include `[layout]` with `focus`
    - define one or more `[tabs.<name>]` sections with `label`
@@ -48,7 +48,7 @@ Use this skill when the user wants either a global Sessionizer layout change or 
 ## Scope reminders
 
 - **Global config** affects the default layout for new workspaces across repos.
-- **Global config** is where `projects.roots` lives.
+- **Global config** is where `projects.roots`, `projects.git_only`, and `projects.depth` live.
 - **Repo-local override** affects only that repo and only for newly created workspaces.
 
 ## Output shape
@@ -78,3 +78,24 @@ command = "copilot"
 For a simple global layout edit, preserve any existing `[projects]` section and update only the requested layout sections.
 
 If the user asks to add a project path, edit the global config and update `[projects].roots` instead of creating a repo-local override.
+
+## Project discovery (`[projects]`)
+
+Only edit these in the **global** config, not repo-local overrides.
+
+```toml
+[projects]
+roots = ["~/Projects"]
+git_only = true   # default for new installs; false lists every child folder
+depth = 1         # only applies when git_only = true
+```
+
+- `git_only = true` — list only directories with `.git` under each root (default for newly generated configs).
+- `git_only = false` — list every immediate child folder (tmux-sessionizer style).
+- `depth` — how many levels below each root to scan **when `git_only = true`**. Ignored when `git_only = false`. Default `1`.
+
+When editing discovery settings:
+
+- preserve existing `roots` unless the user asks to add or remove paths
+- preserve `git_only` and `depth` unless the user asks to change discovery behavior
+- do not add `git_only` or `depth` to repo-local `.sessionizer/config.toml` files

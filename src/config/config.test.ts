@@ -79,7 +79,7 @@ function withPluginConfigDir<T>(callback: (dir: string) => T): T {
 }
 
 describe("loadConfig", () => {
-  it("defaults project discovery to non-git immediate folders", () => {
+  it("defaults git_only to false when omitted from an existing config", () => {
     withPluginConfigDir((dir) => {
       writeFileSync(
         join(dir, "config.toml"),
@@ -90,6 +90,15 @@ describe("loadConfig", () => {
       const config = loadConfig();
 
       expect(config.projects.git_only).toBe(false);
+      expect(config.projects.depth).toBe(1);
+    });
+  });
+
+  it("defaults git_only to true for a newly generated global config", () => {
+    withPluginConfigDir(() => {
+      const config = loadConfig();
+
+      expect(config.projects.git_only).toBe(true);
       expect(config.projects.depth).toBe(1);
     });
   });

@@ -200,7 +200,7 @@ Second tab shape:
 ```
 
 - `[projects].roots` — parent folders scanned by both pickers
-- `[projects].git_only` — `true` (default for new installs) returns only directories with `.git` metadata; `false` lists all immediate child folders
+- `[projects].git_only` — `true` returns only directories with `.git` metadata; `false` lists all immediate child folders
 - `[projects].depth` — maximum levels below each root to scan when `git_only = true`; `1` means immediate children
 - `[layout].placement` — how plugin panes open (`overlay` or `split`)
 - `[layout].focus` — which tab or pane to focus after layout bootstrap

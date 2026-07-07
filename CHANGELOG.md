@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1] - 2026-07-07
+
+### Changed
+
+- New installs default `git_only` to `true` in generated `config.toml`; existing configs without `git_only` still default to `false`
+- README documents `git_only` and `depth`; `sessionizer-layout-editor` skill refactored with discovery reference
+
 ## [0.5.0] - 2026-07-04
 
 ### Added

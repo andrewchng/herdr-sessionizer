@@ -1,59 +1,42 @@
 ---
 name: sessionizer-layout-editor
-description: Creates or updates Sessionizer configs in either the global plugin config or a repo-local `.sessionizer/config.toml`, depending on the user's request. Use when the user asks to add or change Sessionizer project roots, tabs, panes, focus, split direction, split ratios, pane commands, or repo-local overrides.
+description: Sessionizer config edits. Use when the user wants project roots, git_only, or depth; global tabs, panes, focus, or split ratios; or a repo-local .sessionizer override.
 ---
 
 # Sessionizer Layout Editor
 
-## Quick start
+**Scope** — pick the target before editing:
 
-Use this skill when the user wants either a global Sessionizer layout change or a repo-specific override, for example:
+| Target     | Path                                                     |
+| ---------- | -------------------------------------------------------- |
+| global     | `~/.config/herdr/plugins/config/sessionizer/config.toml` |
+| repo-local | `<repo>/.sessionizer/config.toml`                        |
 
-- "Add a `.sessionizer` override for this repo"
-- "Update my global Sessionizer layout"
-- "Add `~/Work` to my Sessionizer project roots"
-- "Make the first pane run `lazygit` and split `copilot` on the right"
-- "Make the right pane 30% width with `ratio = 0.3`"
-- "Change this repo's layout without touching my global config"
+**Bootstrap** — layout changes apply only when Sessionizer or Worktree creates a **new** workspace, not on reopen.
 
 ## Workflow
 
-1. Identify the target scope before editing anything:
-   - global config: `~/.config/herdr/plugins/config/sessionizer/config.toml`
-   - repo-local override: `<repo>/.sessionizer/config.toml`
-2. Read the existing target file if present.
-3. Apply the correct rules for that scope:
-   - repo-local overrides only define layout data for new workspaces
-   - repo-local overrides live at `<repo>/.sessionizer/config.toml`
-   - repo-local overrides should not add `[projects].roots` or `[layout].placement`
-   - repo-local tabs fully replace the global tabs for that repo; there is no merge
-   - global config may define `[projects]`, `[layout].placement`, `[layout].focus`, and tabs/panes
-   - only the global config may add or edit `[projects].roots`
-4. Build or edit the layout with valid Sessionizer structure:
-   - include `[layout]` with `focus`
-   - define one or more `[tabs.<name>]` sections with `label`
-   - define panes with `[[tabs.<name>.panes]]`
-   - the first pane in a tab must not use `from`
-   - later panes may split from an earlier pane with `from` and `split = "right"` or `split = "down"`
-   - split-created panes may optionally set `ratio = 0.3` style values; ratio must be greater than 0 and less than 1 and applies on the split axis
-   - keep pane ids unique within the tab
-   - set `focus` to a pane id or tab target that exists
-5. Prefer minimal edits:
-   - create the target file only when needed
-   - update only the requested scope
-   - do not switch between global and repo-local files unless the user explicitly asks
-   - when editing `[projects].roots`, preserve existing roots and add or remove only the requested paths
-6. After editing, summarize the resulting layout in plain language and remind that only newly created workspaces use the override.
+1. Read the existing target file if present.
+2. Enforce **scope**:
+   - **repo-local**: `[layout].focus` and `[tabs.*]` only — no `[projects]`, no `[layout].placement`; tabs fully replace global (no merge)
+   - **global**: `[projects]`, `[layout]`, and tabs/panes
+3. Build or edit layout:
+   - `[layout].focus` required
+   - `[tabs.<name>]` with `label` and `[[tabs.<name>.panes]]`
+   - first pane: no `from`; later panes: `from` + `split` (`right` or `down`); optional `ratio` in `(0, 1)` on the split axis
+   - pane ids unique per tab; `focus` must name an existing tab or pane
+4. **Discovery** edits (global only): follow [references/discovery.md](references/discovery.md)
+5. Minimal diff — change only what the user asked for; stay in the chosen **scope**
+6. Done when: TOML is valid, scope rules hold, and you summarized the layout plus the **bootstrap** reminder
 
-## Scope reminders
+## Examples
 
-- **Global config** affects the default layout for new workspaces across repos.
-- **Global config** is where `projects.roots` lives.
-- **Repo-local override** affects only that repo and only for newly created workspaces.
+- "Add `~/Work` to my project roots" → global `[projects].roots`
+- "Set `git_only = false`" → global discovery; see reference
+- "Add a repo-local override with lazygit + copilot" → repo-local file
+- "Make the right pane 30% with `ratio = 0.3`" → layout pane edit in the active **scope**
 
-## Output shape
-
-For a simple repo-local two-pane override, prefer this pattern:
+## Repo-local template
 
 ```toml
 [layout]
@@ -75,6 +58,4 @@ split = "right"
 command = "copilot"
 ```
 
-For a simple global layout edit, preserve any existing `[projects]` section and update only the requested layout sections.
-
-If the user asks to add a project path, edit the global config and update `[projects].roots` instead of creating a repo-local override.
+For global layout edits, preserve the existing `[projects]` section unless discovery is in **scope**.

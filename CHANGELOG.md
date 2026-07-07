@@ -5,7 +5,7 @@
 ### Changed
 
 - New installs default `git_only` to `true` in generated `config.toml`; existing configs without `git_only` still default to `false`
-- README and `sessionizer-layout-editor` skill document `git_only` and `depth` discovery options
+- README documents `git_only` and `depth`; `sessionizer-layout-editor` skill refactored with discovery reference
 
 ## [0.5.0] - 2026-07-04
 

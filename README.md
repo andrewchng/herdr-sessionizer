@@ -128,32 +128,11 @@ Created automatically on first run if missing.
 
 If you want an agent to help edit either the global config or a repo-local override, see [Agent skill](#agent-skill).
 
-### Glob roots (ghq-style layouts)
-
-`roots` entries can be **globs**, not just plain folders. Useful when clones follow the [ghq](https://github.com/motemen/ghq) layout — host, then owner, then repo — and you do not want to list every owner by hand:
-
-```text
-~/Projects/github.com/andrewchng/herdr-sessionizer
-                 └── host ── owner ── repo
-```
-
-```toml
-[projects]
-roots = [
-  "~/Projects/github.com/*",       # every owner under github.com
-  "~/Projects/aur.archlinux.org",  # plain path when repos sit flat under the host
-]
-git_only = true
-depth = 1
-```
-
-`~/Projects/github.com/*` expands to each owner folder at picker time; with `git_only = true` and `depth = 1`, the pickers list repos inside those owners. Plain paths still work for flat layouts. See the field reference below for `**` and other forms.
-
 ### Example layout
 
 ```toml
 [projects]
-roots = ["~/Projects/github.com/*", "~/Workspace"]
+roots = ["~/Projects", "~/Workspace"]
 git_only = true
 depth = 1
 
@@ -218,7 +197,7 @@ Second tab shape:
 └──────────────┘
 ```
 
-- `[projects].roots` — parent folders or glob expressions scanned by both pickers (supports `*` and `**`; globs expand at use-time)
+- `[projects].roots` — parent folders scanned by both pickers (plain paths; optional globs — see [Glob roots](#glob-roots-optional) below)
 - `[projects].git_only` — `true` returns only directories with `.git` metadata; `false` lists all immediate child folders
 - `[projects].depth` — maximum levels below each root to scan when `git_only = true`; `1` means immediate children
 - `[layout].placement` — how plugin panes open (`overlay` or `split`)
@@ -235,6 +214,27 @@ Rules for `ratio`:
 - it is local to that split at creation time, not a percentage of the whole tab
 - if omitted, Herdr's default split sizing is used
 - it applies only when the workspace is first bootstrapped, never when an existing workspace is reopened
+
+### Glob roots (optional)
+
+Most people use plain paths in `roots`. Globs help when clones follow a nested layout — e.g. [ghq](https://github.com/motemen/ghq)'s `host/owner/repo` tree — and you do not want to list every owner folder:
+
+```text
+~/Projects/github.com/andrewchng/herdr-sessionizer
+                 └── host ── owner ── repo
+```
+
+```toml
+[projects]
+roots = [
+  "~/Projects/github.com/*",       # expands to each owner under github.com
+  "~/Projects/aur.archlinux.org",  # plain path when repos sit flat under the host
+]
+git_only = true
+depth = 1
+```
+
+With `git_only = true` and `depth = 1`, `~/Projects/github.com/*` lists repos inside each owner, not the owner folders themselves. Also supports `**` for deeper nesting.
 
 ### Per-repo layout overrides
 

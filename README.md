@@ -197,22 +197,15 @@ Second tab shape:
 └──────────────┘
 ```
 
-```text
-[projects].roots     — parent folders or glob expressions scanned by both pickers
-                       (supports * and **; globs expand at use-time)
-[projects].git_only  — true returns only directories with .git metadata;
-                       false lists all immediate child folders
-[projects].depth     — maximum levels below each root to scan when git_only = true;
-                       1 means immediate children
-
-[layout].placement   — how plugin panes open (overlay or split)
-[layout].focus       — which tab or pane to focus after layout bootstrap
-
-[tabs.<name>]        — one Herdr tab to create per section
-[[tabs.<name>.panes]] — panes inside the tab; from + split (right or down) define the split tree
-ratio                — optional share for the newly created pane on the split axis
-command              — exact command a pane runs (nvim, pi, claude, opencode, etc.)
-```
+- `[projects].roots` — parent folders or glob expressions scanned by both pickers (supports `*` and `**`; globs expand at use-time)
+- `[projects].git_only` — `true` returns only directories with `.git` metadata; `false` lists all immediate child folders
+- `[projects].depth` — maximum levels below each root to scan when `git_only = true`; `1` means immediate children
+- `[layout].placement` — how plugin panes open (`overlay` or `split`)
+- `[layout].focus` — which tab or pane to focus after layout bootstrap
+- `[tabs.<name>]` — one Herdr tab to create per section
+- `[[tabs.<name>.panes]]` — panes inside the tab; `from` + `split` (`right` or `down`) define the split tree
+- `ratio` — optional share for the newly created pane on the split axis
+- `command` — exact command a pane runs (`nvim`, `pi`, `claude`, `opencode`, etc.)
 
 Rules for `ratio`:
 

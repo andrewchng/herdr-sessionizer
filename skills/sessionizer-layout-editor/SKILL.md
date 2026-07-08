@@ -32,6 +32,7 @@ description: Sessionizer config edits. Use when the user wants project roots, gi
 ## Examples
 
 - "Add `~/Work` to my project roots" → global `[projects].roots`
+- "Add `~/Projects/github.com/*` to my project roots" → global `[projects].roots`; globs expand at use-time — see reference
 - "Set `git_only = false`" → global discovery; see reference
 - "Add a repo-local override with lazygit + copilot" → repo-local file
 - "Make the right pane 30% with `ratio = 0.3`" → layout pane edit in the active **scope**

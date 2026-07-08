@@ -249,3 +249,105 @@ describe("listProjects", () => {
     }
   });
 });
+
+// ── listProjects with globs ───────────────────────────────────
+
+// Helper: create a sandbox with a/b/x/y layout, a nested project, and a
+// file that globs must not surface as a project.
+function setupGlobSandbox(): string {
+  const sandbox = join(tmpdir(), "herdr-sessionizer-test-globs");
+  rmSync(sandbox, { recursive: true, force: true });
+  mkdirSync(sandbox, { recursive: true });
+  for (const dir of ["a/x", "a/y", "b/x", "b/y", "a/nested/proj"]) {
+    mkdirSync(join(sandbox, dir), { recursive: true });
+  }
+  writeFileSync(join(sandbox, "a", "globmatch.txt"), "ignored");
+  return sandbox;
+}
+
+describe("listProjects with globs", () => {
+  const sandbox = setupGlobSandbox();
+
+  it("expands `*` over owners and scans their children", () => {
+    const projects = listProjects([join(sandbox, "*")]);
+    expect(projects).toHaveLength(5);
+    expect(projects).toContain(join(sandbox, "a", "nested"));
+    expect(projects).toContain(join(sandbox, "a", "x"));
+    expect(projects).toContain(join(sandbox, "a", "y"));
+    expect(projects).toContain(join(sandbox, "b", "x"));
+    expect(projects).toContain(join(sandbox, "b", "y"));
+  });
+
+  it("expands `**` recursively, surfacing nested children", () => {
+    // Create a child under a/nested/proj so `**` reaches it; remove after.
+    const child = join(sandbox, "a", "nested", "proj", "child");
+    mkdirSync(child, { recursive: true });
+    try {
+      const projects = listProjects([join(sandbox, "**")]);
+      expect(projects).toContain(join(sandbox, "a", "nested", "proj"));
+      expect(projects).toContain(child);
+    } finally {
+      rmSync(child, { recursive: true, force: true });
+    }
+  });
+
+  it("returns an empty array for a zero-match glob", () => {
+    expect(listProjects([join(sandbox, "no-such-prefix-*")])).toEqual([]);
+  });
+
+  it("excludes files matched by a glob", () => {
+    // `a/*` matches globmatch.txt but only directories become bases; the
+    // file is filtered out and discovery does not throw.
+    const projects = listProjects([join(sandbox, "a", "*")]);
+    expect(projects).toEqual([join(sandbox, "a", "nested", "proj")]);
+    for (const p of projects) {
+      expect(p.endsWith("globmatch.txt")).toBe(false);
+    }
+  });
+
+  it("dedupes glob and plain roots that overlap", () => {
+    const projects = listProjects([
+      join(sandbox, "a", "*"),
+      join(sandbox, "*"),
+    ]);
+    // a/* contributes a/nested/proj; * contributes the five child dirs;
+    // no duplicates despite overlapping regions.
+    expect(projects).toHaveLength(6);
+    expect(new Set(projects).size).toBe(6);
+  });
+
+  it("does not throw when a glob base is missing and continues with the rest", () => {
+    const projects = listProjects([
+      join(sandbox, "does-not-exist", "*"),
+      join(sandbox, "*"),
+    ]);
+    expect(projects).toHaveLength(5);
+    expect(projects).toContain(join(sandbox, "a", "x"));
+  });
+
+  it("composes glob expansion with git_only and depth (ghq layout)", () => {
+    // Fresh sandbox modelling <host>/<owner>/<repo> with a non-repo child
+    // that git_only must skip.
+    const hostRoot = join(tmpdir(), "herdr-sessionizer-test-globs-ghq");
+    rmSync(hostRoot, { recursive: true, force: true });
+    mkdirSync(join(hostRoot, "owner-a", "repo-x", ".git"), { recursive: true });
+    mkdirSync(join(hostRoot, "owner-b", "repo-y", ".git"), { recursive: true });
+    mkdirSync(join(hostRoot, "owner-a", "not-a-repo"), { recursive: true });
+
+    try {
+      const projects = listProjects([join(hostRoot, "*")], {
+        git_only: true,
+        depth: 1,
+      });
+      expect(projects).toEqual([
+        join(hostRoot, "owner-a", "repo-x"),
+        join(hostRoot, "owner-b", "repo-y"),
+      ]);
+      expect(projects).not.toContain(join(hostRoot, "owner-a"));
+      expect(projects).not.toContain(join(hostRoot, "owner-b"));
+      expect(projects).not.toContain(join(hostRoot, "owner-a", "not-a-repo"));
+    } finally {
+      rmSync(hostRoot, { recursive: true, force: true });
+    }
+  });
+});

@@ -125,7 +125,7 @@ When Sessionizer **creates** a new project or worktree workspace, it applies the
 
 Created automatically on first run if missing. It controls:
 
-- **`[projects]`** — parent folders the `fzf` pickers scan for repos
+- **`[projects]`** — parent folders or glob expressions the `fzf` pickers scan for repos
 - **`[layout]`, `[tabs.*]` + `[[tabs.*.panes]]`** — the tabs, splits, per-split ratios, commands, and final focus for newly created workspaces
 
 If you want an agent to help edit either the global config or a repo-local override, see [Agent skill](#agent-skill).
@@ -199,7 +199,7 @@ Second tab shape:
 └──────────────┘
 ```
 
-- `[projects].roots` — parent folders scanned by both pickers
+- `[projects].roots` — parent folders or glob expressions scanned by both pickers (supports `*` and `**`; globs expand at use-time)
 - `[projects].git_only` — `true` returns only directories with `.git` metadata; `false` lists all immediate child folders
 - `[projects].depth` — maximum levels below each root to scan when `git_only = true`; `1` means immediate children
 - `[layout].placement` — how plugin panes open (`overlay` or `split`)

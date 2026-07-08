@@ -128,11 +128,32 @@ Created automatically on first run if missing.
 
 If you want an agent to help edit either the global config or a repo-local override, see [Agent skill](#agent-skill).
 
+### Glob roots (ghq-style layouts)
+
+`roots` entries can be **globs**, not just plain folders. Useful when clones follow the [ghq](https://github.com/motemen/ghq) layout — host, then owner, then repo — and you do not want to list every owner by hand:
+
+```text
+~/Projects/github.com/andrewchng/herdr-sessionizer
+                 └── host ── owner ── repo
+```
+
+```toml
+[projects]
+roots = [
+  "~/Projects/github.com/*",       # every owner under github.com
+  "~/Projects/aur.archlinux.org",  # plain path when repos sit flat under the host
+]
+git_only = true
+depth = 1
+```
+
+`~/Projects/github.com/*` expands to each owner folder at picker time; with `git_only = true` and `depth = 1`, the pickers list repos inside those owners. Plain paths still work for flat layouts. See the field reference below for `**` and other forms.
+
 ### Example layout
 
 ```toml
 [projects]
-roots = ["~/Projects", "~/Workspace"]
+roots = ["~/Projects/github.com/*", "~/Workspace"]
 git_only = true
 depth = 1
 
@@ -295,6 +316,7 @@ npx skills add andrewchng/herdr-sessionizer --list
 
 Example requests:
 
+- "Add `~/Projects/github.com/*` to my Sessionizer project roots"
 - "Add `~/Work` to my Sessionizer project roots"
 - "Create a repo-local override for this repo with `lazygit` on the left and `copilot` on the right"
 - "Update my global Sessionizer layout to focus the git pane"

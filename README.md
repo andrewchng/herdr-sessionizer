@@ -77,9 +77,9 @@ Sessionizer (workspace picker first; Esc → projects under projects.roots)
   workspaces ──Enter──> focus
   workspaces ──Esc──> projects ──Enter──> new workspace + layout
 
-Worktree (repo picker first, then branches/worktrees when any exist)
-  projects ──> branches ──Enter──> reopen or create — see table
-  branches ──Esc / none ──────────> type new branch → create + layout
+Worktree (always starts at repo picker)
+  projects ──> branches? ──Enter──> reopen or create — see table
+            └──────────── Esc / none ──> type new branch → create + layout
 ```
 
 | Selection                   | Result                                            |

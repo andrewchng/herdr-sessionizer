@@ -244,14 +244,7 @@ With `git_only = true` and `depth = 1`, `~/Projects/github.com/*` lists repos in
 
 The picker shows `herdr-sessionizer`, `dotfiles`, and `ghq` — not `andrewchng` or `motemen`. Non-git folders (e.g. `not-a-repo/`) are skipped.
 
-For repos deeper than one level below each glob match, use `**` and raise `depth`:
-
-```toml
-roots = ["~/Projects/**"]
-depth = 2
-```
-
-That can surface something like `~/Projects/work/monorepo/packages/api` when `.git` sits two levels below the matched path.
+For recursive scans (e.g. mixed or deeply nested layouts), use `**` — `~/Projects/**` — instead of `*`.
 
 ### Per-repo layout overrides
 

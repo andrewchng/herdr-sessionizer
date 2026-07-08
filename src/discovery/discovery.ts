@@ -8,6 +8,15 @@ export interface ProjectDiscoveryOptions {
 }
 
 /**
+ * Detect glob metacharacters in a path segment.
+ * Bun.Glob understands `*`, `?`, `[`, and `{`; their presence means the
+ * entry must be expanded before the discovery loop treats it as a base.
+ */
+function hasGlobMeta(s: string): boolean {
+  return /[*?[{]/.test(s);
+}
+
+/**
  * Enumerate project directories from a set of base root paths.
  * Scans each base for immediate child directories by default.
  */
@@ -18,7 +27,41 @@ export function listProjects(
   const seen = new Set<string>();
   const gitOnly = options.git_only ?? false;
 
+  // Expand glob expressions into concrete directories before discovery.
+  // Config-sourced entries arrive already `~`-expanded; expandHome here is
+  // defensive for direct callers/tests passing a raw `~/...` glob, since
+  // Bun.Glob does not understand `~`.
+  const expandedBases: string[] = [];
   for (const base of bases) {
+    if (!hasGlobMeta(base)) {
+      expandedBases.push(base);
+      continue;
+    }
+    const pattern = expandHome(base);
+    try {
+      const matches = new Bun.Glob(pattern).scanSync({
+        cwd: "/",
+        absolute: true,
+        onlyFiles: false,
+        dot: false,
+      });
+      for (const p of matches) {
+        try {
+          // onlyFiles:false returns files + dirs; onlyDirs is unreliable in
+          // Bun (returns files too), so filter manually.
+          if (statSync(p).isDirectory()) expandedBases.push(p);
+        } catch {
+          // Path vanished mid-scan; skip it.
+        }
+      }
+    } catch (err) {
+      console.error(
+        `[sessionizer] glob pattern "${pattern}" failed: ${err instanceof Error ? err.message : err}`
+      );
+    }
+  }
+
+  for (const base of expandedBases) {
     if (!existsSync(base)) continue;
 
     if (gitOnly) {

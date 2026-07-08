@@ -24,7 +24,6 @@ Inspired by [ThePrimeagen's tmux-sessionizer](https://github.com/ThePrimeagen/tm
 
 Sessionizer does not install system tools for you.
 
-- macOS (Linux planned; not validated yet)
 - [Herdr](https://herdr.dev/) `>= 0.7.0`
 - [Bun](https://bun.sh/) — plugin build and runtime
 - [fzf](https://github.com/junegunn/fzf) — interactive pickers
@@ -71,17 +70,26 @@ herdr plugin action invoke sessionizer.open
 herdr plugin action invoke sessionizer.worktree-open
 ```
 
-UX flow:
+### UX flow
 
 ```text
-Sessionizer:  workspaces ──Enter──> focus
-              workspaces ──Esc──> projects ──Enter──> new workspace + layout
+Sessionizer (workspace picker first; Esc → projects under projects.roots)
+  workspaces ──Enter──> focus
+  workspaces ──Esc──> projects ──Enter──> new workspace + layout
 
-Worktree:     projects ──> branches ──Enter──> reopen (existing) or create (+ layout if new)
-              branches ──Esc / none ──────────> type new branch → create + layout
+Worktree (repo picker first, then branches/worktrees when any exist)
+  projects ──> branches ──Enter──> reopen or create — see table
+  branches ──Esc / none ──────────> type new branch → create + layout
 ```
 
-Enter on something that already exists only focuses it — layout is not reapplied.
+| Selection                   | Result                                            |
+| --------------------------- | ------------------------------------------------- |
+| Existing workspace/checkout | Reopen as-is                                      |
+| Local branch                | Create a worktree workspace for that branch       |
+| Remote branch               | Create a local worktree from that remote branch   |
+| <kbd>Esc</kbd> / no choices | Prompt for a new branch, then create the worktree |
+
+See [Layout configuration](#layout-configuration) for when layout is applied.
 
 ### Example keybindings
 
@@ -105,17 +113,6 @@ command = "sessionizer.worktree-open"
 description = "open worktree workspace"
 ```
 
-**Sessionizer** — workspace picker first; Esc falls through to projects under `projects.roots`.
-
-**Worktree** — repo picker first, then branches/worktrees when any exist:
-
-| Selection                   | Result                                            |
-| --------------------------- | ------------------------------------------------- |
-| Existing workspace/checkout | Reopen as-is                                      |
-| Local branch                | Create a worktree workspace for that branch       |
-| Remote branch               | Create a local worktree from that remote branch   |
-| <kbd>Esc</kbd> / no choices | Prompt for a new branch, then create the worktree |
-
 ## Layout configuration
 
 When Sessionizer **creates** a new project or worktree workspace, it applies the layout from `config.toml`. Existing workspaces are only focused — the layout is not reapplied.
@@ -126,7 +123,7 @@ When Sessionizer **creates** a new project or worktree workspace, it applies the
 
 Created automatically on first run if missing.
 
-If you want an agent to help edit either the global config or a repo-local override, see [Agent skill](#agent-skill).
+If you want an agent to help edit either the global config or a repo-local override, see [Agent skills](#agent-skills).
 
 ### Example layout
 
@@ -234,7 +231,27 @@ git_only = true
 depth = 1
 ```
 
-With `git_only = true` and `depth = 1`, `~/Projects/github.com/*` lists repos inside each owner, not the owner folders themselves. Also supports `**` for deeper nesting.
+With `git_only = true` and `depth = 1`, `~/Projects/github.com/*` lists repos inside each owner, not the owner folders themselves:
+
+```text
+~/Projects/github.com/
+  andrewchng/
+    herdr-sessionizer/   ← listed
+    dotfiles/            ← listed
+  motemen/
+    ghq/                 ← listed
+```
+
+The picker shows `herdr-sessionizer`, `dotfiles`, and `ghq` — not `andrewchng` or `motemen`. Non-git folders (e.g. `not-a-repo/`) are skipped.
+
+For repos deeper than one level below each glob match, use `**` and raise `depth`:
+
+```toml
+roots = ["~/Projects/**"]
+depth = 2
+```
+
+That can surface something like `~/Projects/work/monorepo/packages/api` when `.git` sits two levels below the matched path.
 
 ### Per-repo layout overrides
 
@@ -294,24 +311,17 @@ command = "pi"
 
 Check `.sessionizer/config.toml` into the repo if you want the layout to travel with the project. Repos without it keep the global default.
 
-## Agent skill
+## Agent skills
 
-This repo also ships a `sessionizer-layout-editor` skill for agents that support the `skills` ecosystem. It helps agents update:
+This repo ships skills for agents that support the `skills` ecosystem:
 
-- global Sessionizer config
-- `projects.roots`
-- repo-local `.sessionizer/config.toml` overrides
-
-Install it from this repo:
-
-```sh
-npx skills add andrewchng/herdr-sessionizer --skill sessionizer-layout-editor
-```
-
-List available skills in this repo:
+- **sessionizer-layout-editor** — global Sessionizer config, `projects.roots`, repo-local `.sessionizer/config.toml` overrides
+- **sessionizer-gh-release** — ship a version (changelog, tag, GitHub release)
 
 ```sh
 npx skills add andrewchng/herdr-sessionizer --list
+npx skills add andrewchng/herdr-sessionizer --skill sessionizer-layout-editor -y -g
+npx skills add andrewchng/herdr-sessionizer --skill sessionizer-gh-release -y -g
 ```
 
 Example requests:
@@ -328,9 +338,9 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 ```sh
 bun run typecheck
 bun run test
-bun run release -- 0.2.1 --dry-run
-bun run release:tag -- 0.2.1 --dry-run
-bun run release:notes -- 0.2.1
+bun run release -- <version> --dry-run
+bun run release:tag -- <version> --dry-run
+bun run release:notes -- <version>
 bun run sessionizer
 ```
 

@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.6.0] - 2026-07-08
+
+### Added
+
+- Glob expressions in `[projects].roots` for nested clone layouts (e.g. ghq-style `~/Projects/github.com/*`)
+- Glob expansion composes with `git_only` and `depth` — patterns expand to base directories, then existing discovery runs unchanged
+
+### Changed
+
+- README and sessionizer-layout-editor discovery reference document glob roots (`*`, `**`, and plain paths)
+
 ## [0.5.1] - 2026-07-07
 
 ### Changed

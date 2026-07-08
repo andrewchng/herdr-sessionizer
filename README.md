@@ -124,10 +124,7 @@ When Sessionizer **creates** a new project or worktree workspace, it applies the
 ~/.config/herdr/plugins/config/sessionizer/config.toml
 ```
 
-Created automatically on first run if missing. It controls:
-
-- **`[projects]`** — parent folders or glob expressions the `fzf` pickers scan for repos
-- **`[layout]`, `[tabs.*]` + `[[tabs.*.panes]]`** — the tabs, splits, per-split ratios, commands, and final focus for newly created workspaces
+Created automatically on first run if missing.
 
 If you want an agent to help edit either the global config or a repo-local override, see [Agent skill](#agent-skill).
 
@@ -200,15 +197,22 @@ Second tab shape:
 └──────────────┘
 ```
 
-- `[projects].roots` — parent folders or glob expressions scanned by both pickers (supports `*` and `**`; globs expand at use-time)
-- `[projects].git_only` — `true` returns only directories with `.git` metadata; `false` lists all immediate child folders
-- `[projects].depth` — maximum levels below each root to scan when `git_only = true`; `1` means immediate children
-- `[layout].placement` — how plugin panes open (`overlay` or `split`)
-- `[layout].focus` — which tab or pane to focus after layout bootstrap
-- `[tabs.<name>]` — one Herdr tab to create per section
-- `[[tabs.<name>.panes]]` — panes inside the tab; `from` + `split` (`right` or `down`) define the split tree
-- `ratio` — optional share for the newly created pane on the split axis
-- `command` — exact command a pane runs (`nvim`, `pi`, `claude`, `opencode`, etc.)
+```text
+[projects].roots     — parent folders or glob expressions scanned by both pickers
+                       (supports * and **; globs expand at use-time)
+[projects].git_only  — true returns only directories with .git metadata;
+                       false lists all immediate child folders
+[projects].depth     — maximum levels below each root to scan when git_only = true;
+                       1 means immediate children
+
+[layout].placement   — how plugin panes open (overlay or split)
+[layout].focus       — which tab or pane to focus after layout bootstrap
+
+[tabs.<name>]        — one Herdr tab to create per section
+[[tabs.<name>.panes]] — panes inside the tab; from + split (right or down) define the split tree
+ratio                — optional share for the newly created pane on the split axis
+command              — exact command a pane runs (nvim, pi, claude, opencode, etc.)
+```
 
 Rules for `ratio`:
 

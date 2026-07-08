@@ -11,6 +11,8 @@
 
 - README and sessionizer-layout-editor discovery reference document glob roots (`*`, `**`, and plain paths)
 
+Thanks @nilp0inter ([#21](https://github.com/andrewchng/herdr-sessionizer/pull/21)).
+
 ## [0.5.1] - 2026-07-07
 
 ### Changed
@@ -29,6 +31,8 @@
 
 - README documents `git_only` and `depth` project discovery options
 - Generated default `config.toml` includes commented `git_only` and `depth` fields
+
+Thanks @MMSs ([#20](https://github.com/andrewchng/herdr-sessionizer/pull/20)).
 
 ## [0.4.0] - 2026-06-30
 

@@ -217,7 +217,7 @@ Rules for `ratio`:
 
 ### Glob roots (optional)
 
-Most people use plain paths in `roots`. Globs help when clones follow a nested layout — e.g. [ghq](https://github.com/motemen/ghq)'s `host/owner/repo` tree — and you do not want to list every owner folder:
+Globs in `roots` help when clones follow a nested layout — e.g. [ghq](https://github.com/motemen/ghq)'s `host/owner/repo` tree — and you do not want to list every owner folder:
 
 ```text
 ~/Projects/github.com/andrewchng/herdr-sessionizer

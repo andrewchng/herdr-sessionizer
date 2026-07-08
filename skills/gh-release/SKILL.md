@@ -41,8 +41,25 @@ Run these steps in order. Skip a step only when its precondition is already sati
 - `package.json` and `herdr-plugin.toml` both have version `<version>`
 - `CHANGELOG.md` has `## [<version>] - YYYY-MM-DD` with real Added/Changed bullets (not `TBD`)
 - Changes are merged on `main`
+- External contributor PRs merged in this release have a credit line in that changelog section (see below)
 
 If version files still need bumping, run `bun run release -- <version>` on a branch, fill in the changelog, merge, then continue.
+
+#### Contributor credits
+
+When the release includes work from an **external** merged PR, add a footer at the end of that version section in `CHANGELOG.md` (after Added/Changed bullets):
+
+```markdown
+Thanks @username ([#N](https://github.com/andrewchng/herdr-sessionizer/pull/N)).
+```
+
+- **Do** credit external contributors who shipped a user-facing feature
+- **Skip** maintainer-only releases (no external PR to thank)
+- **Do not** put credits in `package.json` or `herdr-plugin.toml` — changelog only
+- `release:notes` extracts the full section, so the Thanks line flows into the GitHub release body automatically
+
+After publishing, optionally comment on the merged PR: `Merged and shipped in v<version> — thanks @username`.
+To add credits to an already-published release, edit `CHANGELOG.md` on `main` and run `gh release edit v<version> --notes-file /tmp/release-notes-<version>.md` (no version bump).
 
 ### 2. Preflight on `main`
 
@@ -78,7 +95,7 @@ Dry-run first when unsure: `bun run release:tag -- <version> --dry-run`
 bun run release:notes -- <version> > /tmp/release-notes-<version>.md
 ```
 
-`release:notes` extracts the changelog section for `<version>`, converts `<kbd>` to backticks, and appends the Keep a Changelog footer. It prints to stdout only — it does not create the GitHub release.
+`release:notes` extracts the changelog section for `<version>` (including any `Thanks @…` footer), converts `<kbd>` to backticks, and appends the Keep a Changelog footer. It prints to stdout only — it does not create the GitHub release.
 
 ### 5. Publish GitHub release
 
@@ -110,7 +127,7 @@ Notes format matches prior releases: title is `v<version>`, body starts at `### 
 
 User: "Release 0.5.0."
 
-1. Verify `0.5.0` in version files and changelog on `main`
+1. Verify `0.5.0` in version files and changelog on `main` (add `Thanks @…` if an external PR shipped)
 2. `bun run test` and `bun run typecheck`
 3. `bun run release:tag -- 0.5.0`
 4. `bun run release:notes -- 0.5.0 > /tmp/release-notes-0.5.0.md`

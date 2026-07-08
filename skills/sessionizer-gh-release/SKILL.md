@@ -1,9 +1,9 @@
 ---
-name: gh-release
+name: sessionizer-gh-release
 description: Ships herdr-sessionizer releases end to end — tag on main, extract CHANGELOG notes, and publish the GitHub release. Use when the user asks to release, ship, tag, or publish a version, create a GitHub release, or finish release prep for v0.x.x.
 ---
 
-# GitHub Release
+# Sessionizer GitHub Release
 
 Release tooling lives under `scripts/release/` (`prep.ts`, `tag.ts`, `notes.ts`). The `package.json` commands stay `release`, `release:tag`, and `release:notes`.
 

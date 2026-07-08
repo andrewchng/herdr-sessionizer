@@ -5,11 +5,11 @@ Skills live in [`skills/`](skills/). Install into `~/.agents/skills` for agent r
 ```sh
 npx skills add andrewchng/herdr-sessionizer --list
 npx skills add andrewchng/herdr-sessionizer --skill sessionizer-layout-editor -y -g
-npx skills add andrewchng/herdr-sessionizer --skill gh-release -y -g
+npx skills add andrewchng/herdr-sessionizer --skill sessionizer-gh-release -y -g
 ```
 
 - **sessionizer-layout-editor** — edit Sessionizer config (roots, layout, repo-local overrides)
-- **gh-release** — ship a version (changelog, tag, GitHub release)
+- **sessionizer-gh-release** — ship a version (changelog, tag, GitHub release)
 
 ### Issue tracker
 

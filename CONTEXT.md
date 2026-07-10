@@ -62,5 +62,5 @@ The directory the picker was launched from, resolved from the focused workspace'
 
 1. Existing Sessionizer workspaces are focused, not recreated.
 2. Existing worktree workspaces are reopened as-is, not re-laid out.
-3. Only newly created workspaces receive layout bootstrap.
+3. `sessionizer.open` creates a plain terminal workspace at the selected folder — no layout. Layout bootstrap happens only for newly created workspaces via `sessionizer.open-layout` (the `SESSIONIZER_APPLY_LAYOUT` flag) or the worktree flow.
 4. Runtime behavior follows the config literally; it should not invent tabs, panes, or commands beyond the config file.

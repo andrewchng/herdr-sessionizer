@@ -65,24 +65,29 @@ herdr plugin link /path/to/herdr-sessionizer
 
 ## Usage
 
-| Flow            | Action                      |
-| --------------- | --------------------------- |
-| Project picker  | `sessionizer.open`          |
-| Worktree picker | `sessionizer.worktree-open` |
+| Flow                      | Action                      |
+| ------------------------- | --------------------------- |
+| Project picker            | `sessionizer.open`          |
+| Project picker (+ layout) | `sessionizer.open-layout`   |
+| Worktree picker           | `sessionizer.worktree-open` |
 
 ```sh
 herdr plugin action invoke sessionizer.open
+herdr plugin action invoke sessionizer.open-layout
 herdr plugin action invoke sessionizer.worktree-open
 ```
 
+`sessionizer.open` opens the selected folder as a **plain terminal** workspace — lightweight, ideal on a small screen. `sessionizer.open-layout` opens the same picker but applies the configured `[tabs.*]` layout (editor/agent/git panes) to a newly created workspace. Bind them to different keys.
+
 ### UX flow
 
-Sessionizer opens one merged picker. Rows are either an **open workspace** (Enter → focus it) or a **directory** (Enter → create a workspace and apply the layout). Directory rows come from your frecency history, the current folder's neighbours, and your configured `projects.roots`. Press `ctrl-f` to search the whole machine.
+Sessionizer opens one merged picker. Rows are either an **open workspace** (Enter → focus it) or a **directory** (Enter → create a workspace at that folder). Directory rows come from your frecency history, the current folder's neighbours, and your configured `projects.roots`. Press `ctrl-f` to search the whole machine. New workspaces open as a plain terminal via `sessionizer.open`, or with the configured layout via `sessionizer.open-layout`.
 
 ```text
 Sessionizer (one merged picker)
   open workspace  ──Enter──> focus
-  directory       ──Enter──> new workspace + layout   (or focus if already open)
+  directory       ──Enter──> new workspace   (terminal, or + layout via open-layout;
+                                              focus instead if already open)
 
   ^a all   ^o open only   ^r recent only   ^f find (deep fd search)
 ```
@@ -128,7 +133,14 @@ Add these to your Herdr config, for example:
 key = "prefix+f"
 type = "plugin_action"
 command = "sessionizer.open"
-description = "open project workspace"
+description = "open project workspace (terminal)"
+
+# Optional: a second key for the full editor/agent/git layout
+[[keys.command]]
+key = "prefix+F"
+type = "plugin_action"
+command = "sessionizer.open-layout"
+description = "open project workspace (with layout)"
 
 [[keys.command]]
 key = "prefix+up"
@@ -139,7 +151,7 @@ description = "open worktree workspace"
 
 ## Layout configuration
 
-When Sessionizer **creates** a new project or worktree workspace, it applies the layout from `config.toml`. Existing workspaces are only focused — the layout is not reapplied.
+`sessionizer.open` opens a plain terminal at the folder and does **not** apply a layout. The layout from `config.toml` is applied only when Sessionizer creates a workspace via `sessionizer.open-layout` or the worktree flow. Existing workspaces are only focused — the layout is never reapplied.
 
 ```text
 ~/.config/herdr/plugins/config/sessionizer/config.toml

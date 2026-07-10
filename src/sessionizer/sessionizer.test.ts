@@ -78,6 +78,7 @@ interface RuntimeOverrides {
   frecency?: Frecency;
   rowDepsOverrides?: Partial<RowDeps>;
   config?: SessionizerConfig;
+  applyLayout?: boolean;
   tabs?: LayoutTabs;
   panes?: LayoutPanes;
   pickRows?: (
@@ -113,6 +114,7 @@ function buildRuntime(overrides: RuntimeOverrides) {
       panes: overrides.panes ?? testPanes(),
       config: overrides.config ?? testConfig(),
       frecency,
+      applyLayout: overrides.applyLayout ?? false,
       rowDeps,
       pickRows: overrides.pickRows ?? mock(async () => null),
       createLayout:
@@ -150,7 +152,7 @@ describe("runSessionizer", () => {
     expect(focus).toHaveBeenCalledWith("ws1");
   });
 
-  it("creates, lays out, and focuses a new workspace from a directory row", async () => {
+  it("creates and focuses a plain terminal workspace by default (no layout)", async () => {
     const created = testWorkspace({
       cwd: "/projects/new-app",
       label: "new-app",
@@ -180,17 +182,42 @@ describe("runSessionizer", () => {
       label: "new-app",
       focus: false,
     });
+    // Default open opens a terminal at the folder — no layout applied.
+    expect(createLayout).not.toHaveBeenCalled();
+    expect(focus).toHaveBeenCalledWith("ws-new");
+    expect(frecency.add).toHaveBeenCalledWith("/projects/new-app");
+    expect(log).toHaveBeenCalledWith(
+      "✓ workspace 'new-app' created and focused (ws-new)"
+    );
+  });
+
+  it("applies the configured layout when opened with applyLayout", async () => {
+    const created = testWorkspace({
+      cwd: "/projects/new-app",
+      label: "new-app",
+      workspace_id: "ws-new",
+    });
+    const create = mock(async () => created);
+    const createLayout = mock(async (workspace: Workspace) => workspace);
+
+    const { runtime } = buildRuntime({
+      applyLayout: true,
+      workspaces: { list: mock(async () => []), create },
+      rowDepsOverrides: { listProjects: mock(() => ["/projects/new-app"]) },
+      createLayout,
+      pickRows: mock(async (rows: readonly string[]) => [
+        rows.find((r) => r.startsWith("dir:"))!,
+      ]),
+    });
+
+    await runSessionizer(runtime);
+
     expect(createLayout).toHaveBeenCalledWith(
       created,
       "/projects/new-app",
       runtime.config,
       runtime.tabs,
       runtime.panes
-    );
-    expect(focus).toHaveBeenCalledWith("ws-new");
-    expect(frecency.add).toHaveBeenCalledWith("/projects/new-app");
-    expect(log).toHaveBeenCalledWith(
-      "✓ workspace 'new-app' created and focused (ws-new)"
     );
   });
 
@@ -248,6 +275,7 @@ describe("runSessionizer", () => {
     const config = testConfig();
 
     const { runtime } = buildRuntime({
+      applyLayout: true,
       workspaces: {
         list: mock(async () => []),
         create: mock(async () => created),

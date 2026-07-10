@@ -37,6 +37,11 @@ async function run(): Promise<void> {
   const placement =
     process.env.SESSIONIZER_PANE_PLACEMENT ?? config.layout.placement;
   const cwd = await resolveLaunchCwd(herdr);
+  // The open-layout action passes --layout; forward it so the picker applies
+  // the configured [tabs.*] layout instead of opening a plain terminal.
+  const applyLayout =
+    process.argv.includes("--layout") ||
+    process.env.SESSIONIZER_APPLY_LAYOUT === "1";
   const args = [
     "plugin",
     "pane",
@@ -51,6 +56,10 @@ async function run(): Promise<void> {
     `SESSIONIZER_CWD=${cwd}`,
     "--focus",
   ];
+
+  if (applyLayout) {
+    args.push("--env", "SESSIONIZER_APPLY_LAYOUT=1");
+  }
 
   if (placement !== "overlay") {
     if (process.env.HERDR_PANE_ID) {

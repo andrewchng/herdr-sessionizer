@@ -61,6 +61,13 @@ interface SessionizerRuntime {
   config: SessionizerConfig;
   frecency: Frecency;
   rowDeps: RowDeps;
+  /**
+   * When true, a newly created workspace has the configured `[tabs.*]` layout
+   * applied (the `sessionizer.open-layout` action). When false (the default
+   * `sessionizer.open` action), the workspace opens as a plain terminal at the
+   * selected folder.
+   */
+  applyLayout: boolean;
   pickRows: (
     rows: readonly string[],
     options?: PickOptions
@@ -155,14 +162,18 @@ async function resolveSelection(
     focus: false,
   });
 
-  const layoutConfig = resolveLayoutConfig(path, runtime.config);
-  await runtime.createLayout(
-    workspace,
-    path,
-    layoutConfig,
-    runtime.tabs,
-    runtime.panes
-  );
+  // Default: leave the workspace as its plain terminal at cwd. Only the
+  // opt-in open-layout action applies the configured tab/pane layout.
+  if (runtime.applyLayout) {
+    const layoutConfig = resolveLayoutConfig(path, runtime.config);
+    await runtime.createLayout(
+      workspace,
+      path,
+      layoutConfig,
+      runtime.tabs,
+      runtime.panes
+    );
+  }
   await runtime.workspaces.focus(workspace.workspace_id);
 
   runtime.logger.log(
@@ -209,6 +220,7 @@ function createRuntime(): SessionizerRuntime {
     panes: new Panes(herdr),
     config: loadConfig(),
     frecency,
+    applyLayout: process.env.SESSIONIZER_APPLY_LAYOUT === "1",
     rowDeps: createRowDeps({
       listWorkspaces: () => workspaces.list(),
       frecency,

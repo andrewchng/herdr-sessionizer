@@ -1,6 +1,6 @@
 id = "sessionizer"
 name = "Sessionizer"
-version = "0.7.0"
+version = "0.8.0"
 min_herdr_version = "0.7.0"
 description = "Inspired by ThePrimeagen's tmux-sessionizer: fuzzy pickers to open projects and Git worktrees into Herdr workspaces."
 platforms = ["macos"]
@@ -12,6 +12,11 @@ command = ["bun", "install", "--frozen-lockfile"]
 id = "open"
 title = "Open sessionizer"
 command = ["bun", "run", "src/sessionizer/open-pane.ts"]
+
+[[actions]]
+id = "open-layout"
+title = "Open sessionizer (with layout)"
+command = ["bun", "run", "src/sessionizer/open-pane.ts", "--layout"]
 
 [[actions]]
 id = "worktree-open"

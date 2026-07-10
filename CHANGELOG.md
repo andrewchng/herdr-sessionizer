@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.8.0] - 2026-07-10
+
+### Changed
+
+- `sessionizer.open` now opens the selected folder as a plain terminal workspace instead of applying the configured `[tabs.*]` layout. Selecting an existing session still just focuses it. This keeps new sessions lightweight on small screens.
+
+### Added
+
+- New `sessionizer.open-layout` action: opens the same picker but applies the configured `[tabs.*]` layout to a newly created workspace (the previous `sessionizer.open` behavior). Bind it to a separate key when you want the full editor/agent/git layout.
+
 ## [0.7.0] - 2026-07-09
 
 ### Added

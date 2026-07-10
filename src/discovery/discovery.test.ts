@@ -11,12 +11,15 @@ import { describe, expect, it } from "bun:test";
 
 import {
   expandHome,
+  listCurrentDirectories,
   listProjects,
   normalizePath,
   sanitizeName,
   shellQuote,
+  shortenHome,
   worktreeSlug,
 } from "./discovery.ts";
+import { homedir } from "node:os";
 
 // ── sanitizeName ──────────────────────────────────────────────
 
@@ -143,6 +146,75 @@ describe("worktreeSlug", () => {
 
   it("handles empty string", () => {
     expect(worktreeSlug("")).toBe("");
+  });
+});
+
+// ── shortenHome ──────────────────────────────────────────────
+
+describe("shortenHome", () => {
+  it("collapses the home prefix to ~", () => {
+    expect(shortenHome(join(homedir(), "Projects", "app"))).toBe(
+      "~/Projects/app"
+    );
+  });
+
+  it("returns ~ for the home directory itself", () => {
+    expect(shortenHome(homedir())).toBe("~");
+  });
+
+  it("leaves non-home paths unchanged", () => {
+    expect(shortenHome("/var/log")).toBe("/var/log");
+  });
+});
+
+// ── listCurrentDirectories ──────────────────────────────────────
+
+function setupCurrentSandbox(): { cwd: string; parent: string } {
+  const parent = join(tmpdir(), "herdr-sessionizer-current");
+  rmSync(parent, { recursive: true, force: true });
+  const cwd = join(parent, "current");
+  mkdirSync(join(cwd, "child-a"), { recursive: true });
+  mkdirSync(join(cwd, "child-b"), { recursive: true });
+  mkdirSync(join(parent, "sibling-a"), { recursive: true });
+  mkdirSync(join(parent, "sibling-b"), { recursive: true });
+  writeFileSync(join(cwd, "file.txt"), "ignored");
+  return { cwd, parent };
+}
+
+describe("listCurrentDirectories", () => {
+  const { cwd, parent } = setupCurrentSandbox();
+
+  it("returns children and siblings, excluding the cwd itself", () => {
+    const dirs = listCurrentDirectories(cwd, {
+      siblings: true,
+      children: true,
+    });
+    expect(dirs).toContain(join(cwd, "child-a"));
+    expect(dirs).toContain(join(cwd, "child-b"));
+    expect(dirs).toContain(join(parent, "sibling-a"));
+    expect(dirs).toContain(join(parent, "sibling-b"));
+    expect(dirs).not.toContain(cwd);
+  });
+
+  it("returns only children when siblings are disabled", () => {
+    const dirs = listCurrentDirectories(cwd, {
+      siblings: false,
+      children: true,
+    });
+    expect(dirs).toEqual([join(cwd, "child-a"), join(cwd, "child-b")]);
+  });
+
+  it("returns only siblings when children are disabled", () => {
+    const dirs = listCurrentDirectories(cwd, {
+      siblings: true,
+      children: false,
+    });
+    expect(dirs).toContain(join(parent, "sibling-a"));
+    expect(dirs).not.toContain(join(cwd, "child-a"));
+  });
+
+  it("returns an empty list for a blank cwd", () => {
+    expect(listCurrentDirectories("", {})).toEqual([]);
   });
 });
 

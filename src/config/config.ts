@@ -31,6 +31,19 @@ interface RawConfig {
     git_only?: boolean;
     depth?: unknown;
   };
+  find?: {
+    roots?: string[];
+    depth?: unknown;
+  };
+  current?: {
+    enabled?: boolean;
+    siblings?: boolean;
+    children?: boolean;
+  };
+  recent?: {
+    enabled?: boolean;
+    limit?: unknown;
+  };
   layout?: {
     placement?: string;
     focus?: string;
@@ -54,12 +67,31 @@ export interface TabConfig {
   panes: PaneConfig[];
 }
 
+export interface FindConfig {
+  roots: string[];
+  depth: number;
+}
+
+export interface CurrentConfig {
+  enabled: boolean;
+  siblings: boolean;
+  children: boolean;
+}
+
+export interface RecentConfig {
+  enabled: boolean;
+  limit: number;
+}
+
 export interface SessionizerConfig {
   projects: {
     roots: string[];
     git_only: boolean;
     depth: number;
   };
+  find: FindConfig;
+  current: CurrentConfig;
+  recent: RecentConfig;
   layout: {
     placement: PanePlacement;
     focus: string;
@@ -93,6 +125,9 @@ export function resolveLayoutConfig(
 
     return {
       projects: globalConfig.projects,
+      find: globalConfig.find,
+      current: globalConfig.current,
+      recent: globalConfig.recent,
       layout: {
         placement: globalConfig.layout.placement,
         focus,
@@ -136,11 +171,53 @@ export function loadConfig(): SessionizerConfig {
       git_only: gitOnly,
       depth,
     },
+    find: buildFindConfig(pluginConfig),
+    current: buildCurrentConfig(pluginConfig),
+    recent: buildRecentConfig(pluginConfig),
     layout: {
       placement: asPlacement(pluginConfig?.layout?.placement),
       focus,
     },
     tabs: buildTabs(pluginConfig),
+  };
+}
+
+/**
+ * Deep-search config for the "find" picker source. Defaults to searching the
+ * home directory two levels deep, mirroring sesh's `fd -H -d 2 -t d . ~`.
+ */
+function buildFindConfig(config: RawConfig | undefined): FindConfig {
+  const rawRoots = config?.find?.roots;
+  const roots =
+    rawRoots && rawRoots.length > 0
+      ? rawRoots.map(expandHome).filter((value) => value.trim().length > 0)
+      : [homedir()];
+  return {
+    roots: roots.length > 0 ? roots : [homedir()],
+    depth: asFindDepth(config?.find?.depth),
+  };
+}
+
+/**
+ * Current-folder source config: which neighbours of the launch directory to
+ * surface. Enabled by default with both siblings and immediate children.
+ */
+function buildCurrentConfig(config: RawConfig | undefined): CurrentConfig {
+  return {
+    enabled: config?.current?.enabled ?? true,
+    siblings: config?.current?.siblings ?? true,
+    children: config?.current?.children ?? true,
+  };
+}
+
+/**
+ * Frecency ("recent") source config. Enabled by default, capped so the merged
+ * list stays focused on the most frecent directories.
+ */
+function buildRecentConfig(config: RawConfig | undefined): RecentConfig {
+  return {
+    enabled: config?.recent?.enabled ?? true,
+    limit: asRecentLimit(config?.recent?.limit),
   };
 }
 
@@ -212,6 +289,25 @@ function defaultConfigToml(): string {
     "# Only used when git_only = true; 1 means immediate children",
     "depth = 1",
     "",
+    "# Deep-search source: the in-picker 'find' toggle (ctrl-f) searches these",
+    "# roots up to `depth` levels (like sesh's `fd -H -d 2 -t d . ~`).",
+    "[find]",
+    'roots = ["~"]',
+    "depth = 2",
+    "",
+    "# Current-folder source: sibling and child directories of wherever the",
+    "# picker was launched from, so you can hop between nearby projects.",
+    "[current]",
+    "enabled = true",
+    "siblings = true",
+    "children = true",
+    "",
+    "# Recency source: frecency-ranked directories (reads zoxide when present,",
+    "# otherwise a built-in store). `limit` caps how many are merged in.",
+    "[recent]",
+    "enabled = true",
+    "limit = 50",
+    "",
     "[layout]",
     "# How the plugin pane itself opens: overlay | split",
     'placement = "overlay"',
@@ -268,6 +364,40 @@ function asProjectDepth(value: unknown): number {
     value < 1
   ) {
     throw new Error("Config [projects].depth must be an integer >= 1.");
+  }
+
+  return value;
+}
+
+function asFindDepth(value: unknown): number {
+  if (value === undefined) {
+    return 2;
+  }
+
+  if (
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    !Number.isFinite(value) ||
+    value < 1
+  ) {
+    throw new Error("Config [find].depth must be an integer >= 1.");
+  }
+
+  return value;
+}
+
+function asRecentLimit(value: unknown): number {
+  if (value === undefined) {
+    return 50;
+  }
+
+  if (
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    !Number.isFinite(value) ||
+    value < 1
+  ) {
+    throw new Error("Config [recent].limit must be an integer >= 1.");
   }
 
   return value;

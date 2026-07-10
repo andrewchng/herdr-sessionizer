@@ -1,10 +1,15 @@
 import { existsSync, readdirSync, realpathSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 
 export interface ProjectDiscoveryOptions {
   git_only?: boolean;
   depth?: number;
+}
+
+export interface CurrentDirOptions {
+  siblings?: boolean;
+  children?: boolean;
 }
 
 /**
@@ -104,7 +109,44 @@ function discoverGitProjects(base: string, depth: number, seen: Set<string>) {
   }
 }
 
-function listChildDirectories(path: string): string[] {
+/**
+ * Enumerate directories neighbouring `cwd`: its immediate children and/or its
+ * siblings (the other children of its parent). Powers the "current" picker
+ * source so the user can hop between nearby projects.
+ */
+export function listCurrentDirectories(
+  cwd: string,
+  options: CurrentDirOptions = {}
+): string[] {
+  const includeChildren = options.children ?? true;
+  const includeSiblings = options.siblings ?? true;
+  const base = normalizePath(cwd);
+  if (base === "") return [];
+
+  const seen = new Set<string>();
+
+  if (includeChildren) {
+    for (const child of listChildDirectories(base)) {
+      seen.add(normalizePath(child));
+    }
+  }
+
+  if (includeSiblings) {
+    const parent = dirname(base);
+    // dirname of "/" is "/"; guard against listing the root as its own sibling
+    // scope and against including cwd itself among the siblings.
+    if (parent !== base) {
+      for (const sibling of listChildDirectories(parent)) {
+        const normalized = normalizePath(sibling);
+        if (normalized !== base) seen.add(normalized);
+      }
+    }
+  }
+
+  return [...seen].sort();
+}
+
+export function listChildDirectories(path: string): string[] {
   try {
     return readdirSync(path, { withFileTypes: true })
       .map((entry) => join(path, entry.name))
@@ -153,7 +195,18 @@ export function normalizePath(path: string | undefined): string {
  * Expand a leading `~` to the user's home directory.
  */
 export function expandHome(value: string): string {
+  if (value === "~") return homedir();
   return value.startsWith("~/") ? value.replace("~", homedir()) : value;
+}
+
+/**
+ * Collapse a leading home-directory prefix back to `~` for compact display.
+ */
+export function shortenHome(path: string): string {
+  const home = homedir();
+  if (path === home) return "~";
+  if (path.startsWith(home + "/")) return "~" + path.slice(home.length);
+  return path;
 }
 
 /**

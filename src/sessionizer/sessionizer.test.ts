@@ -4,13 +4,23 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 import type { SessionizerConfig } from "../config/config.ts";
+import type { Frecency } from "../frecency/frecency.ts";
 import type { Workspace } from "../client/types.ts";
 import type { LayoutPanes, LayoutTabs } from "../layouts/project.ts";
 import { runSessionizer } from "./sessionizer.ts";
+import {
+  candidateRow,
+  directoryCandidate,
+  openCandidates,
+} from "./candidates.ts";
+import type { RowDeps } from "./rows.ts";
 
 function testConfig(): SessionizerConfig {
   return {
     projects: { roots: ["/projects"], git_only: false, depth: 1 },
+    find: { roots: ["~"], depth: 2 },
+    current: { enabled: true, siblings: true, children: true },
+    recent: { enabled: true, limit: 50 },
     layout: { placement: "overlay", focus: "assistant" },
     tabs: [],
   };
@@ -20,6 +30,7 @@ function testWorkspace(overrides?: Partial<Workspace>): Workspace {
   return {
     workspace_id: "ws1",
     label: "fieldnotes",
+    cwd: "/projects/fieldnotes",
     pane_count: 3,
     tab_count: 2,
     ...overrides,
@@ -47,178 +58,167 @@ function testPanes(): LayoutPanes {
   };
 }
 
-describe("runSessionizer", () => {
-  it("focuses an existing workspace when selected from the first picker", async () => {
-    const focus = mock(async () => {});
-    const pickRows = mock(async (rows: readonly string[]) => [rows[0]!]);
+function testFrecency(): Frecency {
+  return {
+    list: mock(() => []),
+    add: mock(() => {}),
+  };
+}
 
-    await runSessionizer({
-      workspaces: {
-        list: mock(async () => [testWorkspace()]),
-        create: mock(async (_options) => testWorkspace()),
-        focus,
+interface RuntimeOverrides {
+  workspaces?: Partial<{
+    list: () => Promise<Workspace[]>;
+    create: (options: {
+      cwd: string;
+      label: string;
+      focus?: boolean;
+    }) => Promise<Workspace>;
+    focus: (workspaceId: string) => Promise<void>;
+  }>;
+  frecency?: Frecency;
+  rowDepsOverrides?: Partial<RowDeps>;
+  config?: SessionizerConfig;
+  tabs?: LayoutTabs;
+  panes?: LayoutPanes;
+  pickRows?: (
+    rows: readonly string[],
+    options?: unknown
+  ) => Promise<string[] | null>;
+  createLayout?: (workspace: Workspace) => Promise<Workspace>;
+  logger?: { log: (m?: unknown) => void; error: (m?: unknown) => void };
+  exit?: (code: number) => never;
+}
+
+function buildRuntime(overrides: RuntimeOverrides) {
+  const frecency = overrides.frecency ?? testFrecency();
+  const workspaces = {
+    list: overrides.workspaces?.list ?? mock(async () => []),
+    create: overrides.workspaces?.create ?? mock(async () => testWorkspace()),
+    focus: overrides.workspaces?.focus ?? mock(async () => {}),
+  };
+  const rowDeps: RowDeps = {
+    listWorkspaces: workspaces.list,
+    frecency,
+    listProjects: mock(() => []),
+    listCurrentDirectories: mock(() => []),
+    runFind: mock(() => []),
+    dirExists: mock(() => true),
+    ...overrides.rowDepsOverrides,
+  };
+
+  return {
+    runtime: {
+      workspaces,
+      tabs: overrides.tabs ?? testTabs(),
+      panes: overrides.panes ?? testPanes(),
+      config: overrides.config ?? testConfig(),
+      frecency,
+      rowDeps,
+      pickRows: overrides.pickRows ?? mock(async () => null),
+      createLayout:
+        overrides.createLayout ??
+        mock(async (workspace: Workspace) => workspace),
+      resolveCwd: () => "/projects",
+      reloadBinds: () => [],
+      logger: overrides.logger ?? {
+        log: mock(() => {}),
+        error: mock(() => {}),
       },
-      tabs: testTabs(),
-      panes: testPanes(),
-      config: testConfig(),
-      pickRows,
-      listProjects: mock(() => ["/projects/fieldnotes"]),
-      createLayout: mock(async (workspace: Workspace) => workspace),
-      logger: { log: mock(() => {}), error: mock(() => {}) },
-      exit: (code) => {
-        throw new Error(`unexpected exit ${code}`);
-      },
+      exit:
+        overrides.exit ??
+        ((code: number) => {
+          throw new Error(`unexpected exit ${code}`);
+        }),
+    },
+    workspaces,
+    frecency,
+  };
+}
+
+describe("runSessionizer", () => {
+  it("focuses an open workspace when its row is selected", async () => {
+    const focus = mock(async () => {});
+    const { runtime } = buildRuntime({
+      workspaces: { list: mock(async () => [testWorkspace()]), focus },
+      pickRows: mock(async (rows: readonly string[]) => [
+        rows.find((r) => r.startsWith("ws:"))!,
+      ]),
     });
+
+    await runSessionizer(runtime);
 
     expect(focus).toHaveBeenCalledWith("ws1");
-    expect(pickRows).toHaveBeenCalledTimes(1);
   });
 
-  it("falls through to the project picker when the existing-session picker is dismissed", async () => {
-    const tabs = testTabs();
-    const panes = testPanes();
-    const create = mock(
-      async ({ cwd, label }: { cwd: string; label: string }) =>
-        testWorkspace({ cwd, label, workspace_id: "ws-project" })
-    );
-    const focus = mock(async () => {});
-    const createLayout = mock(async (workspace: Workspace) => workspace);
-    const pickRows = mock(
-      async (_rows: readonly string[], options?: { prompt?: string }) => {
-        if (options?.prompt === "Switch session (Esc for new): ") {
-          return null;
-        }
-
-        return ["/projects/fieldnotes"];
-      }
-    );
-
-    await runSessionizer({
-      workspaces: {
-        list: mock(async () => [testWorkspace()]),
-        create,
-        focus,
-      },
-      tabs,
-      panes,
-      config: testConfig(),
-      pickRows,
-      listProjects: mock(() => ["/projects/fieldnotes"]),
-      createLayout,
-      logger: { log: mock(() => {}), error: mock(() => {}) },
-      exit: (code) => {
-        throw new Error(`unexpected exit ${code}`);
-      },
-    });
-
-    expect(pickRows).toHaveBeenCalledTimes(2);
-    expect(create).toHaveBeenCalledWith({
-      cwd: "/projects/fieldnotes",
-      label: "fieldnotes",
-      focus: false,
-    });
-    expect(createLayout).toHaveBeenCalledWith(
-      testWorkspace({
-        cwd: "/projects/fieldnotes",
-        label: "fieldnotes",
-        workspace_id: "ws-project",
-      }),
-      "/projects/fieldnotes",
-      testConfig(),
-      tabs,
-      panes
-    );
-    expect(focus).toHaveBeenCalledWith("ws-project");
-  });
-
-  it("exits with an error when no projects are found", async () => {
-    const error = mock(() => {});
-
-    await expect(
-      runSessionizer({
-        workspaces: {
-          list: mock(async () => []),
-          create: mock(async (_options) => testWorkspace()),
-          focus: mock(async () => {}),
-        },
-        tabs: testTabs(),
-        panes: testPanes(),
-        config: testConfig(),
-        pickRows: mock(async () => null),
-        listProjects: mock(() => []),
-        createLayout: mock(async (workspace: Workspace) => workspace),
-        logger: { log: mock(() => {}), error },
-        exit: (code) => {
-          throw new Error(`exit ${code}`);
-        },
-      })
-    ).rejects.toThrow("exit 1");
-
-    expect(error).toHaveBeenCalledWith(
-      "No projects found in configured directories."
-    );
-  });
-
-  it("creates, lays out, and focuses a new workspace from the project picker", async () => {
-    const tabs = testTabs();
-    const panes = testPanes();
-    const workspace = testWorkspace({
-      cwd: "/projects/herdr-sessionizer",
-      label: "herdr-sessionizer",
+  it("creates, lays out, and focuses a new workspace from a directory row", async () => {
+    const created = testWorkspace({
+      cwd: "/projects/new-app",
+      label: "new-app",
       workspace_id: "ws-new",
     });
-    const create = mock(async () => workspace);
-    const createLayout = mock(
-      async (createdWorkspace: Workspace) => createdWorkspace
-    );
+    const create = mock(async () => created);
     const focus = mock(async () => {});
+    const createLayout = mock(async (workspace: Workspace) => workspace);
     const log = mock(() => {});
+    const frecency = testFrecency();
 
-    await runSessionizer({
-      workspaces: {
-        list: mock(async () => []),
-        create,
-        focus,
-      },
-      tabs,
-      panes,
-      config: testConfig(),
-      pickRows: mock(
-        async (_rows: readonly string[], options?: { prompt?: string }) => {
-          if (options?.prompt === "Switch session (Esc for new): ") {
-            return null;
-          }
-
-          return ["/projects/herdr-sessionizer"];
-        }
-      ),
-      listProjects: mock(() => ["/projects/herdr-sessionizer"]),
+    const { runtime } = buildRuntime({
+      workspaces: { list: mock(async () => []), create, focus },
+      frecency,
+      rowDepsOverrides: { listProjects: mock(() => ["/projects/new-app"]) },
       createLayout,
       logger: { log, error: mock(() => {}) },
-      exit: (code) => {
-        throw new Error(`unexpected exit ${code}`);
-      },
+      pickRows: mock(async (rows: readonly string[]) => [
+        rows.find((r) => r.startsWith("dir:"))!,
+      ]),
     });
 
+    await runSessionizer(runtime);
+
     expect(create).toHaveBeenCalledWith({
-      cwd: "/projects/herdr-sessionizer",
-      label: "herdr-sessionizer",
+      cwd: "/projects/new-app",
+      label: "new-app",
       focus: false,
     });
     expect(createLayout).toHaveBeenCalledWith(
-      workspace,
-      "/projects/herdr-sessionizer",
-      testConfig(),
-      tabs,
-      panes
+      created,
+      "/projects/new-app",
+      runtime.config,
+      runtime.tabs,
+      runtime.panes
     );
     expect(focus).toHaveBeenCalledWith("ws-new");
+    expect(frecency.add).toHaveBeenCalledWith("/projects/new-app");
     expect(log).toHaveBeenCalledWith(
-      "✓ workspace 'herdr-sessionizer' created and focused (ws-new)"
+      "✓ workspace 'new-app' created and focused (ws-new)"
     );
   });
 
-  it("applies a repo-local layout override when creating a new workspace", async () => {
+  it("focuses an existing workspace when a directory row matches its cwd", async () => {
+    // Simulates a find-mode selection whose path already backs an open
+    // workspace; resolution must reopen it, not create a duplicate.
+    const create = mock(async () => testWorkspace());
+    const focus = mock(async () => {});
+    const { runtime } = buildRuntime({
+      workspaces: {
+        list: mock(async () => [
+          testWorkspace({ workspace_id: "ws-open", cwd: "/projects/existing" }),
+        ]),
+        create,
+        focus,
+      },
+      pickRows: mock(async () => [
+        candidateRow(directoryCandidate("/projects/existing", "find")),
+      ]),
+    });
+
+    await runSessionizer(runtime);
+
+    expect(focus).toHaveBeenCalledWith("ws-open");
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("applies a repo-local layout override when creating from a directory row", async () => {
     const projectRoot = mkdtempSync(join(tmpdir(), "sessionizer-project-"));
     mkdirSync(join(projectRoot, ".sessionizer"), { recursive: true });
     writeFileSync(
@@ -239,46 +239,31 @@ describe("runSessionizer", () => {
       "utf-8"
     );
 
-    const tabs = testTabs();
-    const panes = testPanes();
-    const workspace = testWorkspace({
+    const created = testWorkspace({
       cwd: projectRoot,
       label: "repo-override",
       workspace_id: "ws-override",
     });
-    const createLayout = mock(
-      async (createdWorkspace: Workspace) => createdWorkspace
-    );
+    const createLayout = mock(async (workspace: Workspace) => workspace);
     const config = testConfig();
 
-    await runSessionizer({
+    const { runtime } = buildRuntime({
       workspaces: {
         list: mock(async () => []),
-        create: mock(async () => workspace),
-        focus: mock(async () => {}),
+        create: mock(async () => created),
       },
-      tabs,
-      panes,
       config,
-      pickRows: mock(
-        async (_rows: readonly string[], options?: { prompt?: string }) => {
-          if (options?.prompt === "Switch session (Esc for new): ") {
-            return null;
-          }
-
-          return [projectRoot];
-        }
-      ),
-      listProjects: mock(() => [projectRoot]),
       createLayout,
-      logger: { log: mock(() => {}), error: mock(() => {}) },
-      exit: (code) => {
-        throw new Error(`unexpected exit ${code}`);
-      },
+      rowDepsOverrides: { listProjects: mock(() => [projectRoot]) },
+      pickRows: mock(async (rows: readonly string[]) => [
+        rows.find((r) => r.startsWith("dir:"))!,
+      ]),
     });
 
+    await runSessionizer(runtime);
+
     expect(createLayout).toHaveBeenCalledWith(
-      workspace,
+      created,
       projectRoot,
       {
         ...config,
@@ -300,8 +285,70 @@ describe("runSessionizer", () => {
           },
         ],
       },
-      tabs,
-      panes
+      runtime.tabs,
+      runtime.panes
+    );
+  });
+
+  it("exits with an error when no candidates are found", async () => {
+    const error = mock(() => {});
+
+    await expect(
+      runSessionizer(
+        buildRuntime({
+          logger: { log: mock(() => {}), error },
+          exit: (code) => {
+            throw new Error(`exit ${code}`);
+          },
+        }).runtime
+      )
+    ).rejects.toThrow("exit 1");
+
+    expect(error).toHaveBeenCalledWith(
+      "No open sessions, recent directories, or project folders found."
+    );
+  });
+
+  it("does nothing when the picker is dismissed", async () => {
+    const create = mock(async () => testWorkspace());
+    const focus = mock(async () => {});
+    const { runtime } = buildRuntime({
+      workspaces: { list: mock(async () => [testWorkspace()]), create, focus },
+      pickRows: mock(async () => null),
+    });
+
+    await runSessionizer(runtime);
+
+    expect(create).not.toHaveBeenCalled();
+    expect(focus).not.toHaveBeenCalled();
+  });
+
+  it("presents open workspaces and project roots in the merged default list", async () => {
+    let presentedRows: readonly string[] = [];
+    const { runtime } = buildRuntime({
+      workspaces: {
+        list: mock(async () => [
+          testWorkspace({ workspace_id: "ws-a", cwd: "/projects/alpha" }),
+        ]),
+      },
+      rowDepsOverrides: { listProjects: mock(() => ["/projects/beta"]) },
+      pickRows: mock(async (rows: readonly string[]) => {
+        presentedRows = rows;
+        return null;
+      }),
+    });
+
+    await runSessionizer(runtime);
+
+    const openRows = openCandidates([
+      testWorkspace({ workspace_id: "ws-a", cwd: "/projects/alpha" }),
+    ]);
+    expect(presentedRows.some((r) => r.startsWith("ws:ws-a"))).toBe(true);
+    expect(presentedRows.some((r) => r === candidateRow(openRows[0]!))).toBe(
+      true
+    );
+    expect(presentedRows.some((r) => r.startsWith("dir:/projects/beta"))).toBe(
+      true
     );
   });
 });

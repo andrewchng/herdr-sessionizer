@@ -4,21 +4,22 @@ Sessionizer is a [Herdr](https://herdr.dev/) plugin that uses fuzzy pickers to o
 
 ![Sessionizer demo — fuzzy workspace picker with README preview](docs/assets/demo.gif)
 
-- **Sessionizer** — focus an existing workspace or create a new project workspace
+- **Sessionizer** — one fuzzy picker that merges open workspaces, frecency-ranked directories, current-folder neighbours, and configured project roots, with an in-picker "find" toggle to search the whole machine
 - **Worktree** — create or reopen a Git worktree workspace
 
 > **Platform:** macOS only for now. Tested on macOS; Linux support is planned.
 
 ## Inspiration
 
-Inspired by [ThePrimeagen's tmux-sessionizer](https://github.com/ThePrimeagen/tmux-sessionizer): fuzzy-find a project, land in the right dev environment — but for Herdr workspaces instead of tmux sessions.
+Inspired by [ThePrimeagen's tmux-sessionizer](https://github.com/ThePrimeagen/tmux-sessionizer) and [sesh](https://github.com/joshmedeski/sesh): fuzzy-find a project, land in the right dev environment — but for Herdr workspaces instead of tmux sessions.
 
-| [tmux-sessionizer](https://github.com/ThePrimeagen/tmux-sessionizer) | Sessionizer                    |
-| -------------------------------------------------------------------- | ------------------------------ |
-| `fzf` over project roots                                             | `fzf` over `projects.roots`    |
-| tmux session                                                         | Herdr workspace                |
-| tmux windows/panes                                                   | Sessionizer tab/pane layout    |
-| tmux-only                                                            | Herdr-native + worktree picker |
+| [sesh](https://github.com/joshmedeski/sesh) | Sessionizer                                         |
+| ------------------------------------------- | --------------------------------------------------- |
+| merges tmux sessions + zoxide + config      | merges open workspaces + frecency + current + roots |
+| `zoxide` frecency                           | `zoxide` frecency (built-in store fallback)         |
+| `ctrl-f` → `fd` find                        | `ctrl-f` → `fd` find                                |
+| tmux session                                | Herdr workspace                                     |
+| tmux windows/panes                          | Sessionizer tab/pane layout                         |
 
 ## Requirements
 
@@ -33,7 +34,11 @@ curl -fsSL https://bun.com/install | bash
 brew install fzf
 ```
 
-Optional: [bat](https://github.com/sharkdp/bat) for richer `README.md` previews (`brew install bat`).
+Optional but recommended:
+
+- [zoxide](https://github.com/ajeetdsouza/zoxide) — powers the frecency ("recent") source. Without it, Sessionizer uses a built-in store that starts empty (`brew install zoxide`).
+- [fd](https://github.com/sharkdp/fd) — powers the "find" deep search. Falls back to POSIX `find` when absent (`brew install fd`).
+- [bat](https://github.com/sharkdp/bat) — richer `README.md` previews (`brew install bat`).
 
 ## Setup
 
@@ -72,11 +77,24 @@ herdr plugin action invoke sessionizer.worktree-open
 
 ### UX flow
 
-```text
-Sessionizer (workspace picker first; Esc → projects under projects.roots)
-  workspaces ──Enter──> focus
-  workspaces ──Esc──> projects ──Enter──> new workspace + layout
+Sessionizer opens one merged picker. Rows are either an **open workspace** (Enter → focus it) or a **directory** (Enter → create a workspace and apply the layout). Directory rows come from your frecency history, the current folder's neighbours, and your configured `projects.roots`. Press `ctrl-f` to search the whole machine.
 
+```text
+Sessionizer (one merged picker)
+  open workspace  ──Enter──> focus
+  directory       ──Enter──> new workspace + layout   (or focus if already open)
+
+  ^a all   ^o open only   ^r recent only   ^f find (deep fd search)
+```
+
+| Key binding | Source shown                                                      |
+| ----------- | ----------------------------------------------------------------- |
+| `ctrl-a`    | all — open + recent + current folder + `projects.roots` (default) |
+| `ctrl-o`    | open workspaces only                                              |
+| `ctrl-r`    | recent (frecency) only                                            |
+| `ctrl-f`    | find — deep `fd`/`find` search under `[find].roots`               |
+
+```text
 Worktree (always starts at repo picker)
   projects ──> branches? ──Enter──> reopen or create — see table
             └──────────── Esc / none ──> type new branch → create + layout
@@ -90,6 +108,12 @@ Worktree (always starts at repo picker)
 | <kbd>Esc</kbd> / no choices | Prompt for a new branch, then create the worktree |
 
 See [Layout configuration](#layout-configuration) for when layout is applied.
+
+### Frecency & find
+
+The picker ranks directories by **frecency** (frequency + recency). When [zoxide](https://github.com/ajeetdsouza/zoxide) is installed, Sessionizer reads its database (`zoxide query --list --score`) and records every directory it opens (`zoxide add`), so the ranking stays in sync with your shell `cd` history. Without zoxide, a built-in store at `${XDG_STATE_HOME:-~/.local/state}/herdr/sessionizer/frecency.json` is used instead — it starts empty and fills as you open projects.
+
+The **current folder** source lists sibling and child directories of wherever the picker was launched from, so you can hop between nearby projects. **Find** (`ctrl-f`) deep-searches `[find].roots` (default: your home directory) up to `[find].depth` levels using `fd` — mirroring sesh's `fd -H -d 2 -t d . ~` — and falls back to POSIX `find` when `fd` is not installed.
 
 ### Example keybindings
 
@@ -132,6 +156,22 @@ If you want an agent to help edit either the global config or a repo-local overr
 roots = ["~/Projects", "~/Workspace"]
 git_only = true
 depth = 1
+
+# Deep-search source (ctrl-f). Optional; shown with defaults.
+[find]
+roots = ["~"]
+depth = 2
+
+# Current-folder source (siblings + children). Optional; shown with defaults.
+[current]
+enabled = true
+siblings = true
+children = true
+
+# Frecency source. Optional; shown with defaults.
+[recent]
+enabled = true
+limit = 50
 
 [layout]
 placement = "overlay"
@@ -194,9 +234,14 @@ Second tab shape:
 └──────────────┘
 ```
 
-- `[projects].roots` — parent folders scanned by both pickers (plain paths; optional globs — see [Glob roots](#glob-roots-optional) below)
+- `[projects].roots` — parent folders scanned for the `root` source and the worktree picker (plain paths; optional globs — see [Glob roots](#glob-roots-optional) below)
 - `[projects].git_only` — `true` returns only directories with `.git` metadata; `false` lists all immediate child folders
 - `[projects].depth` — maximum levels below each root to scan when `git_only = true`; `1` means immediate children
+- `[find].roots` — roots the `ctrl-f` deep search scans (default `["~"]`)
+- `[find].depth` — max levels below each find root (default `2`, like sesh)
+- `[current].enabled` / `[current].siblings` / `[current].children` — toggle the current-folder source and whether it lists siblings and/or immediate children (all default `true`)
+- `[recent].enabled` — toggle the frecency source (default `true`)
+- `[recent].limit` — max frecency entries merged into the default view (default `50`)
 - `[layout].placement` — how plugin panes open (`overlay` or `split`)
 - `[layout].focus` — which tab or pane to focus after layout bootstrap
 - `[tabs.<name>]` — one Herdr tab to create per section
@@ -259,7 +304,7 @@ When Sessionizer or Worktree creates a new workspace at `cwd`, Sessionizer check
 1. `<cwd>/.sessionizer/config.toml` — if present, use its `[layout].focus` and `[tabs.*]` (full replacement; no merge with global tabs)
 2. Global `config.toml` — default layout
 
-`[projects].roots` and `[layout].placement` always come from the global config. Repo-local files may include those sections, but they are ignored. Invalid repo-local config fails with an error that names the file path.
+`[projects]`, `[find]`, `[current]`, `[recent]`, and `[layout].placement` always come from the global config. Repo-local files may include those sections, but they are ignored. Invalid repo-local config fails with an error that names the file path.
 
 | Event                                       | Layout source                                        |
 | ------------------------------------------- | ---------------------------------------------------- |

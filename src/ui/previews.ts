@@ -40,6 +40,30 @@ export const WORKSPACE_PREVIEW = [
   "' sh {2} {3} {4} {5} {6} {7}",
 ].join(" ");
 
+export const CANDIDATE_PREVIEW = [
+  "sh -c '",
+  'source="$1";',
+  'path="$2";',
+  'branch="$3";',
+  'tabs="$4";',
+  'panes="$5";',
+  'printf \"source: %s\\n\" \"$source\";',
+  'if [ -n \"$branch\" ]; then printf \"branch: %s\\n\" \"$branch\"; fi;',
+  'if [ -n \"$tabs\" ]; then printf \"tabs: %s  panes: %s\\n\" \"$tabs\" \"$panes\"; fi;',
+  'if [ -n \"$path\" ]; then printf \"path: %s\\n\" \"$path\"; fi;',
+  'printf \"\\n\";',
+  'if [ -n \"$path\" ] && [ -f \"$path/README.md\" ]; then',
+  "  if command -v bat >/dev/null 2>&1; then",
+  '    bat --color=always -- \"$path/README.md\";',
+  "  else",
+  '    head -50 \"$path/README.md\";',
+  "  fi;",
+  'elif [ -n \"$path\" ] && [ -d \"$path\" ]; then',
+  '  command ls -la -- \"$path\" 2>/dev/null | head -50;',
+  "fi",
+  "' sh {3} {4} {5} {6} {7}",
+].join(" ");
+
 export const WORKTREE_CANDIDATE_PREVIEW = [
   "sh -c '",
   'label="$1";',

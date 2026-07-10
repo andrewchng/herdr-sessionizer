@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.7.0] - 2026-07-09
+
+### Added
+
+- Unified frecency picker: the Sessionizer picker now merges open workspaces, frecency-ranked directories, current-folder neighbours (siblings + children), and configured `projects.roots` into one ranked list
+- Frecency ranking backed by [zoxide](https://github.com/ajeetdsouza/zoxide) when installed (reads `zoxide query --list --score`, records opens via `zoxide add`); falls back to a built-in store at `${XDG_STATE_HOME:-~/.local/state}/herdr/sessionizer/frecency.json`
+- In-picker "find" toggle (`ctrl-f`) that deep-searches the filesystem with `fd` (falling back to `find`), like sesh's `fd -H -d 2 -t d . ~`
+- Source-toggle key bindings: `ctrl-a` all · `ctrl-o` open · `ctrl-r` recent · `ctrl-f` find
+- New optional config sections: `[find]` (`roots`, `depth`), `[current]` (`enabled`, `siblings`, `children`), `[recent]` (`enabled`, `limit`)
+
+### Changed
+
+- The two-step picker (open workspaces → Esc → projects) is replaced by a single unified picker; selecting an open workspace focuses it, selecting a directory creates + lays out a workspace (see ADR-0002)
+- `sessionizer.open` now passes the launching workspace's cwd to the picker (`SESSIONIZER_CWD`) so the current-folder and find sources have a meaningful base
+- `expandHome` now also expands a bare `~`
+
 ## [0.6.0] - 2026-07-08
 
 ### Added

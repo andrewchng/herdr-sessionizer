@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 
 import {
   loadConfig,
@@ -14,6 +14,9 @@ import {
 function globalConfig(): SessionizerConfig {
   return {
     projects: { roots: ["/projects"], git_only: false, depth: 1 },
+    find: { roots: ["~"], depth: 2 },
+    current: { enabled: true, siblings: true, children: true },
+    recent: { enabled: true, limit: 50 },
     layout: { placement: "overlay", focus: "editor" },
     tabs: [
       {
@@ -119,6 +122,89 @@ describe("loadConfig", () => {
 
       expect(config.projects.git_only).toBe(true);
       expect(config.projects.depth).toBe(3);
+    });
+  });
+
+  it("applies find/current/recent defaults for a fresh config", () => {
+    withPluginConfigDir(() => {
+      const config = loadConfig();
+      expect(config.find).toEqual({ roots: [homedir()], depth: 2 });
+      expect(config.current).toEqual({
+        enabled: true,
+        siblings: true,
+        children: true,
+      });
+      expect(config.recent).toEqual({ enabled: true, limit: 50 });
+    });
+  });
+
+  it("parses explicit find/current/recent values", () => {
+    withPluginConfigDir((dir) => {
+      writeFileSync(
+        join(dir, "config.toml"),
+        [
+          minimalGlobalConfig(['roots = ["~/Projects"]']),
+          "[find]",
+          'roots = ["/work", "/src"]',
+          "depth = 4",
+          "",
+          "[current]",
+          "enabled = false",
+          "siblings = false",
+          "children = true",
+          "",
+          "[recent]",
+          "enabled = false",
+          "limit = 10",
+          "",
+        ].join("\n"),
+        "utf-8"
+      );
+
+      const config = loadConfig();
+      expect(config.find).toEqual({ roots: ["/work", "/src"], depth: 4 });
+      expect(config.current).toEqual({
+        enabled: false,
+        siblings: false,
+        children: true,
+      });
+      expect(config.recent).toEqual({ enabled: false, limit: 10 });
+    });
+  });
+
+  it("rejects an invalid find depth", () => {
+    withPluginConfigDir((dir) => {
+      writeFileSync(
+        join(dir, "config.toml"),
+        [
+          minimalGlobalConfig(['roots = ["~/Projects"]']),
+          "[find]",
+          "depth = 0",
+          "",
+        ].join("\n"),
+        "utf-8"
+      );
+      expect(() => loadConfig()).toThrow(
+        "Config [find].depth must be an integer >= 1."
+      );
+    });
+  });
+
+  it("rejects an invalid recent limit", () => {
+    withPluginConfigDir((dir) => {
+      writeFileSync(
+        join(dir, "config.toml"),
+        [
+          minimalGlobalConfig(['roots = ["~/Projects"]']),
+          "[recent]",
+          "limit = -3",
+          "",
+        ].join("\n"),
+        "utf-8"
+      );
+      expect(() => loadConfig()).toThrow(
+        "Config [recent].limit must be an integer >= 1."
+      );
     });
   });
 });

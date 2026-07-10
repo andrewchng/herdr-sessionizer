@@ -8,6 +8,7 @@ export interface PickOptions {
   withNth?: string;
   preview?: string;
   previewWindow?: string;
+  bind?: string[];
   bin?: string;
   env?: Record<string, string>;
 }
@@ -28,6 +29,9 @@ export async function pick<T extends string>(
   if (options.preview) args.push("--preview", options.preview);
   if (options.previewWindow)
     args.push("--preview-window", options.previewWindow);
+  if (options.bind) {
+    for (const bind of options.bind) args.push("--bind", bind);
+  }
 
   const proc = Bun.spawn(args, {
     stdin: "pipe",

@@ -2,6 +2,7 @@ import { basename } from "node:path";
 
 import {
   listProjects,
+  normalizePath,
   sanitizeName,
   type ProjectDiscoveryOptions,
 } from "../discovery/discovery.ts";
@@ -87,17 +88,15 @@ export async function runSessionizer(
 ): Promise<void> {
   const { workspaces, tabs, panes, config } = runtime;
 
-  const existing = await runtime.pickRows(
-    (await workspaces.list()).map(workspaceRow),
-    {
-      prompt: "Switch session (Esc for new): ",
-      header: "↑↓ navigate, Enter select, Esc → new project",
-      delimiter: WORKSPACE_ROW_DELIMITER,
-      withNth: "2",
-      preview: WORKSPACE_PREVIEW,
-      previewWindow: "right:50%",
-    }
-  );
+  const allWorkspaces = await workspaces.list();
+  const existing = await runtime.pickRows(allWorkspaces.map(workspaceRow), {
+    prompt: "Switch session (Esc for new): ",
+    header: "↑↓ navigate, Enter select, Esc → new project",
+    delimiter: WORKSPACE_ROW_DELIMITER,
+    withNth: "2",
+    preview: WORKSPACE_PREVIEW,
+    previewWindow: "right:50%",
+  });
 
   if (existing && existing.length > 0) {
     await workspaces.focus(extractWorkspaceId(existing[0]!));
@@ -120,6 +119,15 @@ export async function runSessionizer(
   if (!selected || selected.length === 0) return;
 
   const project = selected[0]!;
+  const openWorkspace = findProjectWorkspace(allWorkspaces, project);
+  if (openWorkspace) {
+    await workspaces.focus(openWorkspace.workspace_id);
+    runtime.logger.log(
+      `✓ focused existing workspace for '${project}' (${openWorkspace.workspace_id})`
+    );
+    return;
+  }
+
   const projectName = project.split("/").pop() ?? project;
   const label = sanitizeName(projectName);
   const workspace = await workspaces.create({
@@ -134,6 +142,17 @@ export async function runSessionizer(
 
   runtime.logger.log(
     `✓ workspace '${label}' created and focused (${workspace.workspace_id})`
+  );
+}
+
+function findProjectWorkspace(
+  workspaces: readonly Workspace[],
+  projectPath: string
+): Workspace | undefined {
+  const normalizedProject = normalizePath(projectPath);
+  return workspaces.find(
+    (workspace) =>
+      !workspace.worktree && normalizePath(workspace.cwd) === normalizedProject
   );
 }
 

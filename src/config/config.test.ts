@@ -124,6 +124,77 @@ describe("loadConfig", () => {
 });
 
 describe("resolveLayoutConfig", () => {
+  it("loads a projects-only config without [layout] or [tabs] sections", () => {
+    withPluginConfigDir((dir) => {
+      writeFileSync(
+        join(dir, "config.toml"),
+        ["[projects]", 'roots = ["~/Projects"]', ""].join("\n"),
+        "utf-8"
+      );
+
+      const config = loadConfig();
+
+      expect(config.tabs).toEqual([]);
+      expect(config.layout.placement).toBe("overlay");
+      expect(config.layout.focus).toBe("");
+    });
+  });
+
+  it("still requires [layout].focus when [tabs] sections exist", () => {
+    withPluginConfigDir((dir) => {
+      writeFileSync(
+        join(dir, "config.toml"),
+        [
+          "[projects]",
+          'roots = ["~/Projects"]',
+          "",
+          "[layout]",
+          'placement = "overlay"',
+          "",
+          "[tabs.dev]",
+          'label = "dev"',
+          "",
+          "[[tabs.dev.panes]]",
+          'title = "nvim"',
+          'command = "nvim"',
+          "",
+        ].join("\n"),
+        "utf-8"
+      );
+
+      expect(() => loadConfig()).toThrow("Config must define [layout].focus.");
+    });
+  });
+
+  it("still requires [layout].placement when [tabs] sections exist", () => {
+    withPluginConfigDir((dir) => {
+      writeFileSync(
+        join(dir, "config.toml"),
+        [
+          "[projects]",
+          'roots = ["~/Projects"]',
+          "",
+          "[layout]",
+          'focus = "editor"',
+          "",
+          "[tabs.dev]",
+          'label = "dev"',
+          "",
+          "[[tabs.dev.panes]]",
+          'id = "editor"',
+          'title = "nvim"',
+          'command = "nvim"',
+          "",
+        ].join("\n"),
+        "utf-8"
+      );
+
+      expect(() => loadConfig()).toThrow(
+        "Config must define [layout].placement as 'overlay' or 'split'."
+      );
+    });
+  });
+
   it("uses repo-local focus and tabs when override exists", () => {
     const repoRoot = mkdtempSync(join(tmpdir(), "sessionizer-repo-"));
     const configPath = writeRepoLayout(

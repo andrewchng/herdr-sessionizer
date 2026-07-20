@@ -130,6 +130,7 @@ describe("WorktreeResolver", () => {
         project: "/repo",
         branch: "feature/test-flow",
         error,
+        branchExists: true,
       })
     ).resolves.toEqual({
       path: "/repo/feature-test-flow",
@@ -160,6 +161,7 @@ describe("WorktreeResolver", () => {
         project: "/repo",
         branch: "feature/test flow",
         error,
+        branchExists: true,
       })
     ).resolves.toEqual({
       path: "/repo/feature-test-flow",

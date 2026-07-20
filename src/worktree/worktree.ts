@@ -9,7 +9,10 @@ import { Workspaces } from "../ops/workspaces.ts";
 import { Worktrees } from "../ops/worktrees.ts";
 import { pick } from "../ui/fzf.ts";
 import { promptText } from "../ui/prompt.ts";
-import { attachExistingBranchWorktree } from "./branch-fallback.ts";
+import {
+  attachExistingBranchWorktree,
+  localBranchExists,
+} from "./branch-fallback.ts";
 import {
   defaultDiscoverWorktreeCandidates,
   runWorktreeFlow,
@@ -64,6 +67,7 @@ function createRuntime(): WorktreeFlowRuntime {
     promptBranch: promptBranchName,
     discoverCandidates: defaultDiscoverWorktreeCandidates,
     attachExistingBranch: attachExistingBranchWorktree,
+    localBranchExists,
     logger: console,
     exit: (code) => process.exit(code),
   };

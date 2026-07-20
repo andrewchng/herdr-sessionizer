@@ -38,6 +38,20 @@ const defaultRuntime: WorktreeBranchFallbackRuntime = {
   pathExists: existsSync,
 };
 
+export async function localBranchExists(
+  project: string,
+  branch: string,
+  runtime: WorktreeBranchFallbackRuntime = defaultRuntime
+): Promise<boolean> {
+  const result = await runtime.runGit(project, [
+    "rev-parse",
+    "--verify",
+    "--quiet",
+    `refs/heads/${branch}`,
+  ]);
+  return result.exitCode === 0;
+}
+
 export async function attachExistingBranchWorktree(
   project: string,
   branch: string,

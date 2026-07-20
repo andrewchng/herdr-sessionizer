@@ -12,6 +12,8 @@ export interface ResolveExistingWorktreeOptions {
   project: string;
   branch: string;
   error?: HerdrError;
+  /** Whether the local branch already exists, checked against git state. */
+  branchExists?: boolean;
 }
 
 export type ListWorktreesPorcelain = (
@@ -31,7 +33,7 @@ export class WorktreeResolver {
       return { path: errorPath, source: "error" };
     }
 
-    if (!shouldInspectGit(options.error)) {
+    if (!shouldInspectGit(options)) {
       return undefined;
     }
 
@@ -111,8 +113,8 @@ export function existingWorktreePathFromPorcelainBySlug(
   return undefined;
 }
 
-function shouldInspectGit(error: HerdrError | undefined): boolean {
-  return !error || error.stderr.includes("a branch named");
+function shouldInspectGit(options: ResolveExistingWorktreeOptions): boolean {
+  return !options.error || options.branchExists === true;
 }
 
 async function defaultListWorktreesPorcelain(

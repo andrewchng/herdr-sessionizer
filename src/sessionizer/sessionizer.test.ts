@@ -136,7 +136,7 @@ describe("runSessionizer", () => {
     const focus = mock(async () => {});
     const log = mock(() => {});
     const open = testWorkspace({
-      cwd: "/projects/fieldnotes",
+      path: "/projects/fieldnotes",
       workspace_id: "ws-open",
     });
 
@@ -171,6 +171,44 @@ describe("runSessionizer", () => {
     expect(log).toHaveBeenCalledWith(
       "✓ focused existing workspace for '/projects/fieldnotes' (ws-open)"
     );
+  });
+
+  it("falls back to the legacy cwd field when matching existing workspaces", async () => {
+    const create = mock(async (_options: unknown) => testWorkspace());
+    const focus = mock(async () => {});
+    const open = testWorkspace({
+      cwd: "/projects/fieldnotes",
+      workspace_id: "ws-legacy",
+    });
+
+    await runSessionizer({
+      workspaces: {
+        list: mock(async () => [open]),
+        create,
+        focus,
+      },
+      tabs: testTabs(),
+      panes: testPanes(),
+      config: testConfig(),
+      pickRows: mock(
+        async (_rows: readonly string[], options?: { prompt?: string }) => {
+          if (options?.prompt === "Switch session (Esc for new): ") {
+            return null;
+          }
+
+          return ["/projects/fieldnotes"];
+        }
+      ),
+      listProjects: mock(() => ["/projects/fieldnotes"]),
+      createLayout: mock(async (workspace: Workspace) => workspace),
+      logger: { log: mock(() => {}), error: mock(() => {}) },
+      exit: (code) => {
+        throw new Error(`unexpected exit ${code}`);
+      },
+    });
+
+    expect(create).not.toHaveBeenCalled();
+    expect(focus).toHaveBeenCalledWith("ws-legacy");
   });
 
   it("still creates a workspace when only a worktree workspace matches the project path", async () => {

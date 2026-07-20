@@ -152,7 +152,8 @@ function findProjectWorkspace(
   const normalizedProject = normalizePath(projectPath);
   return workspaces.find(
     (workspace) =>
-      !workspace.worktree && normalizePath(workspace.cwd) === normalizedProject
+      !workspace.worktree &&
+      normalizePath(workspace.path ?? workspace.cwd) === normalizedProject
   );
 }
 
@@ -184,6 +185,7 @@ function workspaceSummary(workspace: Workspace): string {
 
 function workspacePath(workspace: Workspace): string | undefined {
   return (
+    workspace.path ??
     workspace.cwd ??
     workspace.worktree?.checkout_path ??
     workspace.worktree?.repo_root ??

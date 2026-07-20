@@ -1,6 +1,7 @@
 export interface Workspace {
   workspace_id: string;
   label?: string;
+  path?: string;
   cwd?: string;
   worktree?: WorktreeProvenance;
   tab_count?: number;

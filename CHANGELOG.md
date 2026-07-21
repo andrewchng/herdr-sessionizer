@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.1] - 2026-07-21
+
+### Fixed
+
+- Expand a bare `~` project root to the home directory (was silently ignored)
+
+### Changed
+
+- Dev dependency: TypeScript 7.0 (typecheck only; no runtime change)
+- README cleanup for UX flow, config field reference, and glob roots guidance
+
+Thanks @pperanich ([#26](https://github.com/andrewchng/herdr-sessionizer/pull/26)).
+
 ## [0.6.0] - 2026-07-08
 
 ### Added

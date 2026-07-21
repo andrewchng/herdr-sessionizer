@@ -93,6 +93,16 @@ describe("expandHome", () => {
     expect(result).toStartWith("/");
     expect(result).toEndWith("/foo");
   });
+
+  it("expands a bare ~ to the home directory", () => {
+    const result = expandHome("~");
+    expect(result).toStartWith("/");
+    expect(result).not.toInclude("~");
+  });
+
+  it("leaves ~user paths unchanged", () => {
+    expect(expandHome("~other/foo")).toBe("~other/foo");
+  });
 });
 
 // ── shellQuote ──────────────────────────────────────────────

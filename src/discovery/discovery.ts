@@ -153,6 +153,7 @@ export function normalizePath(path: string | undefined): string {
  * Expand a leading `~` to the user's home directory.
  */
 export function expandHome(value: string): string {
+  if (value === "~") return homedir();
   return value.startsWith("~/") ? value.replace("~", homedir()) : value;
 }
 

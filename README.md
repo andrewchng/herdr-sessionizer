@@ -118,7 +118,7 @@ description = "open worktree workspace"
 
 ## Layout configuration
 
-When Sessionizer **creates** a new project or worktree workspace, it applies the layout from `config.toml`. Existing workspaces are only focused — the layout is not reapplied.
+When Sessionizer **creates** a new project or worktree workspace, or **opens** an existing worktree checkout, it applies the layout from `config.toml`. Focusing an existing Herdr workspace is unchanged — the layout is not reapplied.
 
 ```text
 ~/.config/herdr/plugins/config/sessionizer/config.toml
@@ -280,7 +280,8 @@ When Sessionizer or Worktree creates a new workspace at `cwd`, Sessionizer check
 | ------------------------------------------- | ---------------------------------------------------- |
 | Sessionizer creates a new project workspace | Repo override at picked `cwd`, else global default   |
 | Worktree creates a new workspace            | Repo override at checkout `cwd`, else global default |
-| Focus or reopen an existing workspace       | No relayout                                          |
+| Worktree opens an existing checkout         | Repo override at checkout `cwd`, else global default |
+| Focus an existing workspace                 | No relayout                                          |
 
 #### Example repo override
 

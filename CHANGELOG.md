@@ -5,6 +5,7 @@
 ### Changed
 
 - Generated default `config.toml` now seeds `[ui].placement = "overlay"` (previously `popup` at 90%); switch to `popup` explicitly for the session-modal picker
+- Opening an existing worktree checkout now applies the tab layout (same as create). Focusing an existing Herdr workspace is unchanged.
 
 ## [0.7.1] - 2026-08-01
 

@@ -60,7 +60,7 @@ function testRuntime(
 }
 
 describe("runWorktree", () => {
-  it("reopens an existing worktree after create hits a duplicate-branch error without relayout", async () => {
+  it("reopens an existing worktree after create hits a duplicate-branch error and applies the layout", async () => {
     const duplicateBranchError = new HerdrError(
       ["worktree", "create"],
       1,
@@ -151,11 +151,26 @@ describe("runWorktree", () => {
       path: "/repo/feature-test-flow",
       focus: true,
     });
-    expect(createLayout).not.toHaveBeenCalled();
+    expect(createLayout).toHaveBeenCalledWith(
+      existingWorkspace,
+      "/repo/feature-test-flow",
+      {
+        projects: { roots: ["/repo"], git_only: false, depth: 1 },
+        ui: { placement: "overlay" },
+        layout: { focus: "terminal" },
+        tabs: [],
+      },
+      {},
+      {},
+      {
+        commandOverride: 'copilot chat "fix this"',
+        branch: "feature/test-flow",
+      }
+    );
     expect(attachExistingBranch).not.toHaveBeenCalled();
-    expect(focus).not.toHaveBeenCalled();
+    expect(focus).toHaveBeenCalledWith("ws-feature");
     expect(log).toHaveBeenCalledWith(
-      "✓ opened existing worktree path '/repo/feature-test-flow' for 'feature/test-flow'"
+      "✓ worktree 'feature/test-flow' opened and focused (ws-feature)"
     );
   });
 
@@ -639,5 +654,112 @@ describe("runWorktree", () => {
 
     expect(open).not.toHaveBeenCalled();
     expect(create).not.toHaveBeenCalled();
+  });
+
+  it("applies the layout when opening an existing worktree checkout", async () => {
+    const candidate: WorktreeCandidate = {
+      id: "worktree:/worktrees/repo/feature-test-flow",
+      kind: "worktree",
+      label: "worktree          feature/test-flow",
+      branch: "feature/test-flow",
+      path: "/worktrees/repo/feature-test-flow",
+    };
+    const openedWorkspace = testWorkspace({
+      workspace_id: "ws-opened",
+      worktree: {
+        checkout_path: "/worktrees/repo/feature-test-flow",
+      },
+    });
+    const open = mock(async () => ({
+      workspace: openedWorkspace,
+      worktreePath: "/worktrees/repo/feature-test-flow",
+    }));
+    const createLayout = mock(async (workspace: Workspace) => workspace);
+    const focus = mock(async () => {});
+    const log = mock(() => {});
+
+    await runWorktree(
+      [],
+      testRuntime({
+        worktrees: { open, create: mock(async () => testWorkspace()) },
+        workspaces: {
+          list: mock(async () => []),
+          get: mock(async () => openedWorkspace),
+          focus,
+        },
+        discoverCandidates: mock(async () => [candidate]),
+        pickWorktreeCandidate: mock(async () => [
+          worktreeCandidateRow(candidate),
+        ]),
+        createLayout,
+        logger: { log, error: mock(() => {}) },
+      })
+    );
+
+    expect(open).toHaveBeenCalledWith({
+      workspaceId: undefined,
+      cwd: "/repo",
+      path: "/worktrees/repo/feature-test-flow",
+      focus: true,
+    });
+    expect(createLayout).toHaveBeenCalledWith(
+      openedWorkspace,
+      "/worktrees/repo/feature-test-flow",
+      {
+        projects: { roots: ["/repo"], git_only: false, depth: 1 },
+        ui: { placement: "overlay" },
+        layout: { focus: "terminal" },
+        tabs: [],
+      },
+      {},
+      {},
+      {
+        commandOverride: undefined,
+        branch: "feature/test-flow",
+      }
+    );
+    expect(focus).toHaveBeenCalledWith("ws-opened");
+    expect(log).toHaveBeenCalledWith(
+      "✓ worktree 'feature/test-flow' opened and focused (ws-opened)"
+    );
+  });
+
+  it("applies the layout when opening an existing worktree by project and branch", async () => {
+    const openedWorkspace = testWorkspace({
+      workspace_id: "ws-opened",
+      worktree: {
+        checkout_path: "/repo/feature-test-flow",
+      },
+    });
+    const open = mock(async () => ({
+      workspace: openedWorkspace,
+      worktreePath: "/repo/feature-test-flow",
+    }));
+    const create = mock(async () => testWorkspace());
+    const createLayout = mock(async (workspace: Workspace) => workspace);
+    const focus = mock(async () => {});
+    const log = mock(() => {});
+
+    await runWorktree(
+      ["--project", "/repo", "--branch", "feature/test-flow"],
+      testRuntime({
+        worktrees: { open, create },
+        workspaces: {
+          list: mock(async () => []),
+          get: mock(async () => openedWorkspace),
+          focus,
+        },
+        createLayout,
+        logger: { log, error: mock(() => {}) },
+      })
+    );
+
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(create).not.toHaveBeenCalled();
+    expect(createLayout).toHaveBeenCalledTimes(1);
+    expect(focus).toHaveBeenCalledWith("ws-opened");
+    expect(log).toHaveBeenCalledWith(
+      "✓ worktree 'feature/test-flow' opened and focused (ws-opened)"
+    );
   });
 });

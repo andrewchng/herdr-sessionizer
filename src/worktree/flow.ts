@@ -7,7 +7,7 @@ import { resolveLayoutConfig } from "../config/config.ts";
 import type { PickOptions } from "../ui/fzf.ts";
 import { PROJECT_PREVIEW, WORKTREE_CANDIDATE_PREVIEW } from "../ui/previews.ts";
 import type { WorktreeResolver } from "./resolver.ts";
-import type { Worktrees } from "../ops/worktrees.ts";
+import type { Worktrees, WorktreeOpenResult } from "../ops/worktrees.ts";
 import type {
   DiscoverWorktreeCandidateOptions,
   WorktreeCandidate,
@@ -137,15 +137,17 @@ export async function runWorktreeFlow(
   const repoWorkspaceId = findRepoWorkspaceId(workspaces, intent.project);
 
   if (intent.kind === "open-worktree") {
-    await runtime.worktrees.open({
+    const opened = await runtime.worktrees.open({
       workspaceId: repoWorkspaceId,
       cwd: repoWorkspaceId ? undefined : intent.project,
       path: intent.path,
       focus: true,
     });
-    runtime.logger.log(
-      `✓ opened existing worktree path '${intent.path}' for '${intent.branch}'`
-    );
+    await bootstrapOpenedWorktree(runtime, opened, {
+      branch: intent.branch,
+      fallbackPath: intent.path,
+      openedMessage: `✓ opened existing worktree path '${intent.path}' for '${intent.branch}'`,
+    });
     return;
   }
 
@@ -275,13 +277,18 @@ async function openOrCreateWorktree(
   }
 
   try {
-    await runtime.worktrees.open({
+    const opened = await runtime.worktrees.open({
       workspaceId: repoWorkspaceId,
       cwd: repoWorkspaceId ? undefined : project,
       branch,
       focus: true,
     });
-    runtime.logger.log(`✓ opened existing worktree '${branch}'`);
+    await bootstrapOpenedWorktree(runtime, opened, {
+      branch,
+      command,
+      fallbackPath: project,
+      openedMessage: `✓ opened existing worktree '${branch}'`,
+    });
     return;
   } catch (error) {
     if (!asHerdrError(error)) throw error;
@@ -309,15 +316,18 @@ async function openOrCreateWorktree(
       branchExists,
     });
     if (existing) {
-      await runtime.worktrees.open({
+      const opened = await runtime.worktrees.open({
         workspaceId: repoWorkspaceId,
         cwd: repoWorkspaceId ? undefined : project,
         path: existing.path,
         focus: true,
       });
-      runtime.logger.log(
-        `✓ opened existing worktree path '${existing.path}' for '${branch}'`
-      );
+      await bootstrapOpenedWorktree(runtime, opened, {
+        branch,
+        command,
+        fallbackPath: existing.path,
+        openedMessage: `✓ opened existing worktree path '${existing.path}' for '${branch}'`,
+      });
       return;
     }
     if (!branchExists) throw herdrError;
@@ -359,6 +369,7 @@ async function bootstrapWorktree(
     layoutFallback: string;
     branch: string;
     command?: string;
+    verb?: "created" | "opened";
   }
 ): Promise<void> {
   const layoutCwd = await resolveLayoutCwd(
@@ -379,9 +390,32 @@ async function bootstrapWorktree(
     }
   );
   await runtime.workspaces.focus(workspace.workspace_id);
+  const verb = options.verb ?? "created";
   runtime.logger.log(
-    `✓ worktree '${options.branch}' created and focused (${workspace.workspace_id})`
+    `✓ worktree '${options.branch}' ${verb} and focused (${workspace.workspace_id})`
   );
+}
+
+async function bootstrapOpenedWorktree(
+  runtime: WorktreeFlowRuntime,
+  opened: WorktreeOpenResult,
+  options: {
+    branch: string;
+    command?: string;
+    fallbackPath: string;
+    openedMessage: string;
+  }
+): Promise<void> {
+  if (opened.workspace) {
+    await bootstrapWorktree(runtime, opened.workspace, {
+      layoutFallback: opened.worktreePath ?? options.fallbackPath,
+      branch: options.branch,
+      command: options.command,
+      verb: "opened",
+    });
+    return;
+  }
+  runtime.logger.log(options.openedMessage);
 }
 
 export function parseArgs(argv: readonly string[]): CliArgs {

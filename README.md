@@ -314,12 +314,10 @@ Check `.sessionizer/config.toml` into the repo if you want the layout to travel 
 This repo ships skills for agents that support the `skills` ecosystem:
 
 - **sessionizer-layout-editor** — global Sessionizer config, `projects.roots`, repo-local `.sessionizer/config.toml` overrides
-- **sessionizer-gh-release** — ship a version (changelog, tag, GitHub release)
 
 ```sh
 npx skills add andrewchng/herdr-sessionizer --list
 npx skills add andrewchng/herdr-sessionizer --skill sessionizer-layout-editor -y -g
-npx skills add andrewchng/herdr-sessionizer --skill sessionizer-gh-release -y -g
 ```
 
 Example requests:

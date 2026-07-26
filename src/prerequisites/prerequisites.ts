@@ -16,7 +16,8 @@ export function fzfMissingMessage(): string {
   return [
     "fzf is required for Sessionizer picker flows but was not found on PATH.",
     "Install it, then retry:",
-    "  brew install fzf",
+    "  macOS: brew install fzf",
+    "  Linux: install fzf with your distro's package manager",
     "  Docs: https://github.com/junegunn/fzf#installation",
   ].join("\n");
 }

@@ -7,7 +7,7 @@ Sessionizer is a [Herdr](https://herdr.dev/) plugin that uses fuzzy pickers to o
 - **Sessionizer** — focus an existing workspace or create a new project workspace
 - **Worktree** — create or reopen a Git worktree workspace
 
-> **Platform:** macOS only for now. Tested on macOS; Linux support is planned.
+> **Platform:** macOS and Linux.
 
 ## Inspiration
 

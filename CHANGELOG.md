@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.6.2] - 2026-07-26
+
+### Added
+
+- Official Linux platform support (`platforms = ["macos", "linux"]`); README and fzf install hint updated accordingly
+
+### Fixed
+
+- Worktree duplicate-branch recovery now checks git state (`localBranchExists`) instead of sniffing herdr stderr for `a branch named`
+- Config with only `[projects]` (no `[layout]` / `[tabs]`) loads successfully; empty tabs open a plain shell; layout focus/placement stay required when tabs are defined
+
+### Changed
+
+- README documents minimal projects-only config behavior
+
+Thanks @pperanich ([#25](https://github.com/andrewchng/herdr-sessionizer/pull/25), [#28](https://github.com/andrewchng/herdr-sessionizer/pull/28), [#29](https://github.com/andrewchng/herdr-sessionizer/pull/29)).
+
 ## [0.6.1] - 2026-07-21
 
 ### Fixed

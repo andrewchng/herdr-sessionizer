@@ -3,7 +3,10 @@ import { join } from "node:path";
 
 import { describe, expect, it, mock } from "bun:test";
 
-import { attachExistingBranchWorktree } from "./branch-fallback.ts";
+import {
+  attachExistingBranchWorktree,
+  localBranchExists,
+} from "./branch-fallback.ts";
 
 const worktreePath = join(
   homedir(),
@@ -106,5 +109,41 @@ describe("attachExistingBranchWorktree", () => {
     ).rejects.toThrow(
       `target worktree path '${worktreePath}' already exists but is not a reusable checkout for branch 'feature/test-flow'; remove or relocate that directory and retry`
     );
+  });
+});
+
+describe("localBranchExists", () => {
+  it("returns true when git verifies the branch ref", async () => {
+    const runGit = mock(async (_cwd: string, args: string[]) => {
+      expect(args).toEqual([
+        "rev-parse",
+        "--verify",
+        "--quiet",
+        "refs/heads/feature/test-flow",
+      ]);
+      return { stdout: "abc123\n", stderr: "", exitCode: 0 };
+    });
+
+    await expect(
+      localBranchExists("/repo", "feature/test-flow", {
+        runGit,
+        pathExists: () => true,
+      })
+    ).resolves.toBe(true);
+  });
+
+  it("returns false when the branch ref is missing", async () => {
+    const runGit = mock(async () => ({
+      stdout: "",
+      stderr: "",
+      exitCode: 1,
+    }));
+
+    await expect(
+      localBranchExists("/repo", "missing", {
+        runGit,
+        pathExists: () => true,
+      })
+    ).resolves.toBe(false);
   });
 });

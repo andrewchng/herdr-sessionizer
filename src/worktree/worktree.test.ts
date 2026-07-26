@@ -49,6 +49,7 @@ function testRuntime(
     promptBranch: mock(async () => "feature/test-flow"),
     discoverCandidates: mock(async () => []),
     attachExistingBranch: mock(async () => "/repo/feature-test-flow"),
+    localBranchExists: mock(async () => true),
     logger: { log: mock(() => {}), error: mock(() => {}) },
     exit: (code) => {
       throw new Error(`unexpected exit ${code}`);
@@ -141,6 +142,7 @@ describe("runWorktree", () => {
       project: "/repo",
       branch: "feature/test-flow",
       error: duplicateBranchError,
+      branchExists: true,
     });
     expect(open.mock.calls[1]?.[0]).toEqual({
       workspaceId: undefined,
@@ -154,6 +156,34 @@ describe("runWorktree", () => {
     expect(log).toHaveBeenCalledWith(
       "✓ opened existing worktree path '/repo/feature-test-flow' for 'feature/test-flow'"
     );
+  });
+
+  it("rethrows the create error when the local branch does not exist", async () => {
+    const unrelatedError = new HerdrError(
+      ["worktree", "create"],
+      1,
+      "fatal: could not create work tree dir: Permission denied"
+    );
+    const open = mock(async () => {
+      throw unrelatedError;
+    });
+    const create = mock(async () => {
+      throw unrelatedError;
+    });
+    const attachExistingBranch = mock(async () => "/unused");
+    const runtime = testRuntime({
+      worktrees: { open, create },
+      localBranchExists: mock(async () => false),
+      attachExistingBranch,
+    });
+
+    await expect(
+      runWorktree(
+        ["--project", "/repo", "--branch", "feature/test-flow"],
+        runtime
+      )
+    ).rejects.toBe(unrelatedError);
+    expect(attachExistingBranch).not.toHaveBeenCalled();
   });
 
   it("attaches an existing branch as a new worktree when no existing checkout can be resolved", async () => {

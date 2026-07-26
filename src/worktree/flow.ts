@@ -72,6 +72,7 @@ export interface WorktreeFlowRuntime {
     options: DiscoverWorktreeCandidateOptions
   ) => Promise<WorktreeCandidate[]>;
   attachExistingBranch: (project: string, branch: string) => Promise<string>;
+  localBranchExists: (project: string, branch: string) => Promise<boolean>;
   logger: Pick<typeof console, "log" | "error">;
   exit: (code: number) => never;
 }
@@ -296,10 +297,12 @@ async function openOrCreateWorktree(
   } catch (error) {
     const herdrError = asHerdrError(error);
     if (!herdrError) throw error;
+    const branchExists = await runtime.localBranchExists(project, branch);
     const existing = await runtime.resolver.resolveExisting({
       project,
       branch,
       error: herdrError,
+      branchExists,
     });
     if (existing) {
       await runtime.worktrees.open({
@@ -313,7 +316,7 @@ async function openOrCreateWorktree(
       );
       return;
     }
-    if (!isDuplicateBranchError(herdrError)) throw herdrError;
+    if (!branchExists) throw herdrError;
 
     const path = await runtime.attachExistingBranch(project, branch);
     const reopened = await runtime.worktrees.open({
@@ -446,10 +449,6 @@ function asHerdrError(error: unknown): HerdrError | undefined {
     return error as HerdrError;
   }
   return undefined;
-}
-
-function isDuplicateBranchError(error: HerdrError): boolean {
-  return error.stderr.includes("a branch named");
 }
 
 export const defaultDiscoverWorktreeCandidates = discoverWorktreeCandidates;

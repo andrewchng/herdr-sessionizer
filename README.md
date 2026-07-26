@@ -123,6 +123,11 @@ When Sessionizer **creates** a new project or worktree workspace, it applies the
 
 Created automatically on first run if missing.
 
+`[layout]` and `[tabs]` are optional. A config with only `[projects]` is
+valid: new workspaces then open with a plain shell and no layout is applied.
+When `[tabs]` sections exist, `[layout].placement` and `[layout].focus` are
+required.
+
 If you want an agent to help edit either the global config or a repo-local override, see [Agent skills](#agent-skills).
 
 ### Example layout

@@ -125,8 +125,9 @@ export function loadConfig(): SessionizerConfig {
   const gitOnly = pluginConfig?.projects?.git_only ?? false;
   const depth = asProjectDepth(pluginConfig?.projects?.depth);
 
+  const tabs = buildTabs(pluginConfig, { required: false });
   const focus = pluginConfig?.layout?.focus?.trim();
-  if (!focus) {
+  if (!focus && tabs.length > 0) {
     throw new Error("Config must define [layout].focus.");
   }
 
@@ -137,10 +138,12 @@ export function loadConfig(): SessionizerConfig {
       depth,
     },
     layout: {
-      placement: asPlacement(pluginConfig?.layout?.placement),
-      focus,
+      placement: asPlacement(pluginConfig?.layout?.placement, {
+        required: tabs.length > 0,
+      }),
+      focus: focus ?? "",
     },
-    tabs: buildTabs(pluginConfig),
+    tabs,
   };
 }
 
@@ -156,9 +159,15 @@ function loadRaw(path: string): RawConfig | undefined {
   return parse(readFileSync(path, "utf-8")) as RawConfig;
 }
 
-function buildTabs(config: RawConfig | undefined): TabConfig[] {
+function buildTabs(
+  config: RawConfig | undefined,
+  options: { required: boolean } = { required: true }
+): TabConfig[] {
   const rawTabs = config?.tabs;
   if (!rawTabs || Object.keys(rawTabs).length === 0) {
+    if (!options.required) {
+      return [];
+    }
     throw new Error("Config must define at least one [tabs.<name>] section.");
   }
 
@@ -249,8 +258,12 @@ function defaultConfigToml(): string {
   ].join("\n");
 }
 
-function asPlacement(value: string | undefined): PanePlacement {
+function asPlacement(
+  value: string | undefined,
+  options: { required: boolean } = { required: true }
+): PanePlacement {
   if (value === "overlay" || value === "split") return value;
+  if (value === undefined && !options.required) return "overlay";
   throw new Error(
     "Config must define [layout].placement as 'overlay' or 'split'."
   );

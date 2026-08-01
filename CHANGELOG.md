@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- `[ui].placement` for how Sessionizer / Worktree pickers open in Herdr: `overlay`, `split`, or `popup` (popup requires Herdr `>= 0.7.4`)
+- Optional `[ui].width` / `[ui].height` for popup outer size (terminal cells or percentages such as `"80%"`)
+
+### Changed
+
+- Picker placement moves from `[layout].placement` to `[ui]`; workspace bootstrap `[layout]` now only carries `focus` (no fallback for the old key)
+- Placement is no longer required when `[tabs]` are defined (defaults to `overlay`)
+
 ## [0.6.2] - 2026-07-26
 
 ### Added

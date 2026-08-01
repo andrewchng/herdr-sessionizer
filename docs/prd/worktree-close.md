@@ -123,7 +123,7 @@ The action entry point follows the same thin-wrapper pattern as `src/open-worktr
 
 - `src/worktree-close.ts` — the core flow, runtime-injected for testability. Mirrors the structure of `src/worktree.ts`.
 - `src/worktree-close-pane.ts` — one-liner pane entry point: imports `runWorktreeClose`, calls it with the default runtime, logs and exits 1 on failure. Mirrors `src/sessionizer-pane.ts` (no env-var scaffolding, since the close flow takes no caller-supplied arguments).
-- `src/open-worktree-close-pane.ts` — the action entry point. Mirrors `src/open-worktree-pane.ts`; opens the `worktree-close` pane using `config.layout.placement`.
+- `src/open-worktree-close-pane.ts` — the action entry point. Mirrors `src/open-worktree-pane.ts`; opens the `worktree-close` pane using `config.ui.placement`.
 - `src/ui/workspace-row.ts` — extracted `workspaceRow` and `extractWorkspaceId` (currently private to `src/sessionizer.ts`). Adding `repo_name` brings the column count from 7 to 8.
 
 ### Modified files

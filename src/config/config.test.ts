@@ -14,7 +14,8 @@ import {
 function globalConfig(): SessionizerConfig {
   return {
     projects: { roots: ["/projects"], git_only: false, depth: 1 },
-    layout: { placement: "overlay", focus: "editor" },
+    ui: { placement: "overlay" },
+    layout: { focus: "editor" },
     tabs: [
       {
         id: "dev",
@@ -47,8 +48,10 @@ function minimalGlobalConfig(projects: string[]): string {
     "[projects]",
     ...projects,
     "",
-    "[layout]",
+    "[ui]",
     'placement = "overlay"',
+    "",
+    "[layout]",
     'focus = "editor"',
     "",
     "[tabs.dev]",
@@ -135,7 +138,7 @@ describe("resolveLayoutConfig", () => {
       const config = loadConfig();
 
       expect(config.tabs).toEqual([]);
-      expect(config.layout.placement).toBe("overlay");
+      expect(config.ui.placement).toBe("overlay");
       expect(config.layout.focus).toBe("");
     });
   });
@@ -148,7 +151,7 @@ describe("resolveLayoutConfig", () => {
           "[projects]",
           'roots = ["~/Projects"]',
           "",
-          "[layout]",
+          "[ui]",
           'placement = "overlay"',
           "",
           "[tabs.dev]",
@@ -166,7 +169,7 @@ describe("resolveLayoutConfig", () => {
     });
   });
 
-  it("still requires [layout].placement when [tabs] sections exist", () => {
+  it("defaults [ui].placement to overlay when omitted", () => {
     withPluginConfigDir((dir) => {
       writeFileSync(
         join(dir, "config.toml"),
@@ -189,8 +192,104 @@ describe("resolveLayoutConfig", () => {
         "utf-8"
       );
 
+      expect(loadConfig().ui.placement).toBe("overlay");
+    });
+  });
+
+  it("reads [ui].placement including popup sizing", () => {
+    withPluginConfigDir((dir) => {
+      writeFileSync(
+        join(dir, "config.toml"),
+        [
+          "[projects]",
+          'roots = ["~/Projects"]',
+          "",
+          "[ui]",
+          'placement = "popup"',
+          'width = "80%"',
+          "height = 24",
+          "",
+          "[layout]",
+          'focus = "editor"',
+          "",
+          "[tabs.dev]",
+          'label = "dev"',
+          "",
+          "[[tabs.dev.panes]]",
+          'id = "editor"',
+          'title = "nvim"',
+          'command = "nvim"',
+          "",
+        ].join("\n"),
+        "utf-8"
+      );
+
+      expect(loadConfig().ui).toEqual({
+        placement: "popup",
+        width: "80%",
+        height: 24,
+      });
+    });
+  });
+
+  it("ignores legacy [layout].placement and defaults to overlay", () => {
+    withPluginConfigDir((dir) => {
+      writeFileSync(
+        join(dir, "config.toml"),
+        [
+          "[projects]",
+          'roots = ["~/Projects"]',
+          "",
+          "[layout]",
+          'placement = "split"',
+          'focus = "editor"',
+          "",
+          "[tabs.dev]",
+          'label = "dev"',
+          "",
+          "[[tabs.dev.panes]]",
+          'id = "editor"',
+          'title = "nvim"',
+          'command = "nvim"',
+          "",
+        ].join("\n"),
+        "utf-8"
+      );
+
+      // Unknown keys under [layout] are ignored; placement only lives under [ui].
+      expect(loadConfig().ui.placement).toBe("overlay");
+    });
+  });
+
+  it("rejects popup size when placement is not popup", () => {
+    withPluginConfigDir((dir) => {
+      writeFileSync(
+        join(dir, "config.toml"),
+        [
+          "[projects]",
+          'roots = ["~/Projects"]',
+          "",
+          "[ui]",
+          'placement = "overlay"',
+          'width = "80%"',
+          "",
+          "[layout]",
+          'focus = "editor"',
+          "",
+          "[tabs.dev]",
+          'label = "dev"',
+          "",
+          "[[tabs.dev.panes]]",
+          'id = "editor"',
+          'title = "nvim"',
+          'command = "nvim"',
+          "",
+        ].join("\n"),
+        "utf-8"
+      );
+
       expect(() => loadConfig()).toThrow(
-        "Config must define [layout].placement as 'overlay' or 'split'."
+        'Config [ui].width and [ui].height are only valid when [ui].placement = "popup".'
       );
     });
   });
@@ -224,7 +323,7 @@ describe("resolveLayoutConfig", () => {
 
     const resolved = resolveLayoutConfig(repoRoot, globalConfig());
 
-    expect(resolved.layout.placement).toBe("overlay");
+    expect(resolved.ui.placement).toBe("overlay");
     expect(resolved.layout.focus).toBe("wiki");
     expect(resolved.tabs).toEqual([
       {

@@ -18,22 +18,24 @@ description: Sessionizer config edits. Use when the user wants project roots, gi
 
 1. Read the existing target file if present.
 2. Enforce **scope**:
-   - **repo-local**: `[layout].focus` and `[tabs.*]` only — no `[projects]`, no `[layout].placement`; tabs fully replace global (no merge)
-   - **global**: `[projects]`, `[layout]`, and tabs/panes
+   - **repo-local**: `[layout].focus` and `[tabs.*]` only — no `[projects]`, no `[ui]`; tabs fully replace global (no merge)
+   - **global**: `[projects]`, `[ui]`, `[layout]`, and tabs/panes
 3. Build or edit layout:
-   - `[layout].focus` required
+   - `[layout].focus` required when tabs exist
    - `[tabs.<name>]` with `label` and `[[tabs.<name>.panes]]`
    - first pane: no `from`; later panes: `from` + `split` (`right` or `down`); optional `ratio` in `(0, 1)` on the split axis
    - pane ids unique per tab; `focus` must name an existing tab or pane
-4. **Discovery** edits (global only): follow [references/discovery.md](references/discovery.md)
-5. Minimal diff — change only what the user asked for; stay in the chosen **scope**
-6. Done when: TOML is valid, scope rules hold, and you summarized the layout plus the **bootstrap** reminder
+4. **Picker UI** edits (global only): `[ui].placement` is `overlay` | `split` | `popup` (popup needs Herdr `>= 0.7.4`); optional `[ui].width` / `[ui].height` only with `popup` (cells or `"80%"`). Do not put placement under `[layout]`.
+5. **Discovery** edits (global only): follow [references/discovery.md](references/discovery.md)
+6. Minimal diff — change only what the user asked for; stay in the chosen **scope**
+7. Done when: TOML is valid, scope rules hold, and you summarized the layout plus the **bootstrap** reminder
 
 ## Examples
 
 - "Add `~/Work` to my project roots" → global `[projects].roots`
 - "Add `~/Projects/github.com/*` to my project roots" → global `[projects].roots`; globs expand at use-time — see reference
 - "Set `git_only = false`" → global discovery; see reference
+- "Open pickers as a popup" → global `[ui].placement = "popup"` (optional width/height)
 - "Add a repo-local override with lazygit + copilot" → repo-local file
 - "Make the right pane 30% with `ratio = 0.3`" → layout pane edit in the active **scope**
 

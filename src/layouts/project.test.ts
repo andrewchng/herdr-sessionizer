@@ -11,7 +11,8 @@ import {
 function testConfig(overrides?: Partial<SessionizerConfig>): SessionizerConfig {
   return {
     projects: { roots: ["/tmp"], git_only: false, depth: 1 },
-    layout: { placement: "overlay", focus: "assistant" },
+    ui: { placement: "overlay" },
+    layout: { focus: "assistant" },
     tabs: [
       {
         id: "terminal",

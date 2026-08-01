@@ -123,10 +123,14 @@ When Sessionizer **creates** a new project or worktree workspace, it applies the
 
 Created automatically on first run if missing.
 
-`[layout]` and `[tabs]` are optional. A config with only `[projects]` is
+`[ui]`, `[layout]`, and `[tabs]` are optional. A config with only `[projects]` is
 valid: new workspaces then open with a plain shell and no layout is applied.
-When `[tabs]` sections exist, `[layout].placement` and `[layout].focus` are
-required.
+When `[tabs]` sections exist, `[layout].focus` is required.
+
+`[ui]` controls how Sessionizer / Worktree **pickers** open inside Herdr (not
+workspace bootstrap). Placement defaults to `overlay`. Use `popup` for a
+session-modal floating terminal (Herdr `>= 0.7.4`); optional `width` / `height`
+accept cell counts or percentages such as `"80%"`.
 
 If you want an agent to help edit either the global config or a repo-local override, see [Agent skills](#agent-skills).
 
@@ -138,8 +142,13 @@ roots = ["~/Projects", "~/Workspace"]
 git_only = true
 depth = 1
 
-[layout]
+[ui]
 placement = "overlay"
+# placement = "popup"   # requires Herdr >= 0.7.4
+# width = "80%"
+# height = "80%"
+
+[layout]
 focus = "editor"
 
 [tabs.dev]
@@ -202,7 +211,8 @@ Second tab shape:
 - `[projects].roots` — parent folders scanned by both pickers (plain paths; optional globs — see [Glob roots](#glob-roots-optional) below)
 - `[projects].git_only` — `true` returns only directories with `.git` metadata; `false` lists all immediate child folders
 - `[projects].depth` — maximum levels below each root to scan when `git_only = true`; `1` means immediate children
-- `[layout].placement` — how plugin panes open (`overlay` or `split`)
+- `[ui].placement` — how Sessionizer / Worktree pickers open in Herdr (`overlay`, `split`, or `popup`; `popup` needs Herdr `>= 0.7.4`)
+- `[ui].width` / `[ui].height` — optional popup outer size (cells or `"80%"`); only with `placement = "popup"`
 - `[layout].focus` — which tab or pane to focus after layout bootstrap
 - `[tabs.<name>]` — one Herdr tab to create per section
 - `[[tabs.<name>.panes]]` — panes inside the tab; `from` + `split` (`right` or `down`) define the split tree
@@ -264,7 +274,7 @@ When Sessionizer or Worktree creates a new workspace at `cwd`, Sessionizer check
 1. `<cwd>/.sessionizer/config.toml` — if present, use its `[layout].focus` and `[tabs.*]` (full replacement; no merge with global tabs)
 2. Global `config.toml` — default layout
 
-`[projects].roots` and `[layout].placement` always come from the global config. Repo-local files may include those sections, but they are ignored. Invalid repo-local config fails with an error that names the file path.
+`[projects].roots` and `[ui]` (picker placement/size) always come from the global config. Repo-local files may include those sections, but they are ignored. Invalid repo-local config fails with an error that names the file path.
 
 | Event                                       | Layout source                                        |
 | ------------------------------------------- | ---------------------------------------------------- |

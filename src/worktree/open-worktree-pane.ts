@@ -13,6 +13,7 @@ export async function openWorktreePane(
 
   const herdr = new Herdr();
   const config = loadConfig();
+  const placement = config.ui.placement;
   const args = [
     "plugin",
     "pane",
@@ -22,9 +23,18 @@ export async function openWorktreePane(
     "--entrypoint",
     "worktree",
     "--placement",
-    config.layout.placement,
+    placement,
     "--focus",
   ];
+
+  if (placement === "popup") {
+    if (config.ui.width !== undefined) {
+      args.push("--width", String(config.ui.width));
+    }
+    if (config.ui.height !== undefined) {
+      args.push("--height", String(config.ui.height));
+    }
+  }
 
   for (const [key, value] of Object.entries(extraEnv)) {
     args.push("--env", `${key}=${value}`);

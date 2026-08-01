@@ -591,4 +591,53 @@ describe("runWorktree", () => {
     expect(pickWorktreeCandidate).not.toHaveBeenCalled();
     expect(promptBranch).toHaveBeenCalled();
   });
+
+  it("exits without creating a worktree when the branch name prompt is cancelled", async () => {
+    const create = mock(async () => testWorkspace());
+    const open = mock(async () => {
+      throw new HerdrError(["worktree", "open"], 1, "not found");
+    });
+    const promptBranch = mock(async () => null);
+
+    await runWorktree(
+      [],
+      testRuntime({
+        worktrees: { open, create },
+        discoverCandidates: mock(async () => []),
+        pickWorktreeCandidate: mock(async () => null),
+        promptBranch,
+      })
+    );
+
+    expect(promptBranch).toHaveBeenCalled();
+    expect(open).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("exits without creating when Esc dismisses candidates then cancels the branch name", async () => {
+    const candidate: WorktreeCandidate = {
+      id: "local:feature/existing",
+      kind: "local-branch",
+      label: "local branch        feature/existing",
+      branch: "feature/existing",
+      previewPath: "/repo",
+    };
+    const create = mock(async () => testWorkspace());
+    const open = mock(async () => {
+      throw new HerdrError(["worktree", "open"], 1, "not found");
+    });
+
+    await runWorktree(
+      [],
+      testRuntime({
+        worktrees: { open, create },
+        discoverCandidates: mock(async () => [candidate]),
+        pickWorktreeCandidate: mock(async () => null),
+        promptBranch: mock(async () => null),
+      })
+    );
+
+    expect(open).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+  });
 });

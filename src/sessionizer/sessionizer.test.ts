@@ -11,7 +11,8 @@ import { runSessionizer } from "./sessionizer.ts";
 function testConfig(): SessionizerConfig {
   return {
     projects: { roots: ["/projects"], git_only: false, depth: 1 },
-    layout: { placement: "overlay", focus: "assistant" },
+    ui: { placement: "overlay" },
+    layout: { focus: "assistant" },
     tabs: [],
   };
 }
@@ -282,7 +283,8 @@ describe("runSessionizer", () => {
       projectRoot,
       {
         ...config,
-        layout: { placement: "overlay", focus: "wiki" },
+        ui: { placement: "overlay" },
+        layout: { focus: "wiki" },
         tabs: [
           {
             id: "wiki",

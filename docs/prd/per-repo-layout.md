@@ -8,7 +8,7 @@ Related: #12, ADR-0001, `src/config.ts`, `src/sessionizer.ts`, `src/worktree.ts`
 
 Today every newly created workspace uses the same global layout from the plugin config dir (`HERDR_PLUGIN_CONFIG_DIR/config.toml`). This PRD adds optional **repo-local layout overrides** at `<project>/.sessionizer/config.toml` so each repository can declare its own tabs, panes, and focus target when Sessionizer or Worktree bootstraps a **new** workspace.
 
-Global config continues to own `[projects].roots` and `[layout].placement`. Repo-local config owns only the layout slice: `[layout].focus` and `[tabs.*]`.
+Global config continues to own `[projects].roots` and picker UI (`[ui].placement`). Repo-local config owns only the layout slice: `[layout].focus` and `[tabs.*]`.
 
 ## Goals
 
@@ -38,7 +38,7 @@ $HERDR_PLUGIN_CONFIG_DIR/config.toml
 Required global fields (unchanged):
 
 - `[projects].roots`
-- `[layout].placement`
+- `[ui].placement` (optional; defaults to `overlay`)
 - `[layout].focus` and `[tabs.*]` — used as **default layout** when no repo override exists
 
 ### Repo-local override
@@ -55,7 +55,7 @@ Allowed fields in repo-local file:
 Ignored if present in repo-local file (read from global only):
 
 - `[projects]`
-- `[layout].placement`
+- `[ui]`
 
 ### Lookup order at bootstrap time
 
@@ -64,7 +64,7 @@ Given `layoutCwd` (absolute project or worktree checkout path):
 1. If `join(layoutCwd, '.sessionizer', 'config.toml')` exists → parse as layout override
 2. Else → use `focus` + `tabs` from global `config.toml`
 
-`projects.roots` and `layout.placement` always come from global config.
+`projects.roots` and `ui.placement` always come from global config.
 
 ### API shape (proposed)
 
@@ -72,7 +72,12 @@ Given `layoutCwd` (absolute project or worktree checkout path):
 // src/config.ts
 export interface SessionizerConfig {
   projects: { roots: string[] };
-  layout: { placement: PanePlacement; focus: string };
+  ui: {
+    placement: PanePlacement;
+    width?: number | string;
+    height?: number | string;
+  };
+  layout: { focus: string };
   tabs: TabConfig[];
 }
 
@@ -81,8 +86,8 @@ export function loadConfig(): SessionizerConfig; // global; unchanged call sites
 export function resolveLayoutConfig(
   layoutCwd: string,
   global?: SessionizerConfig
-): Pick<SessionizerConfig, "layout" | "tabs">;
-// Returns merged config: global.placement + resolved focus/tabs
+): SessionizerConfig;
+// Returns merged config: global.ui + resolved focus/tabs
 ```
 
 `resolveLayoutConfig` throws with a message that includes the repo-local path on parse/validation failure.
@@ -208,4 +213,4 @@ Use `mkdtemp` fixtures; no dependency on real `llm-wiki` path in unit tests.
 | Partial overrides               | No — full layout slice replacement |
 | Invalid repo config             | Fail loud                          |
 | `[projects].roots` in repo file | Ignored                            |
-| `layout.placement` in repo file | Ignored; global only               |
+| `ui` in repo file               | Ignored; global only               |

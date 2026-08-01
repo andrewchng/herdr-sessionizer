@@ -6,7 +6,7 @@ import { expandHome } from "../discovery/discovery.ts";
 
 import { parse } from "smol-toml";
 
-type PanePlacement = "overlay" | "split";
+export type PanePlacement = "overlay" | "split" | "popup";
 type SplitDirection = "right" | "down";
 
 interface RawPaneConfig {
@@ -31,8 +31,12 @@ interface RawConfig {
     git_only?: boolean;
     depth?: unknown;
   };
-  layout?: {
+  ui?: {
     placement?: string;
+    width?: unknown;
+    height?: unknown;
+  };
+  layout?: {
     focus?: string;
   };
   tabs?: Record<string, RawTabConfig>;
@@ -54,14 +58,23 @@ export interface TabConfig {
   panes: PaneConfig[];
 }
 
+export interface UiConfig {
+  /** How Sessionizer / Worktree pickers open inside Herdr. */
+  placement: PanePlacement;
+  /** Outer popup width (cells or `"80%"`). Only used when placement is `popup`. */
+  width?: number | string;
+  /** Outer popup height (cells or `"80%"`). Only used when placement is `popup`. */
+  height?: number | string;
+}
+
 export interface SessionizerConfig {
   projects: {
     roots: string[];
     git_only: boolean;
     depth: number;
   };
+  ui: UiConfig;
   layout: {
-    placement: PanePlacement;
     focus: string;
   };
   tabs: TabConfig[];
@@ -93,8 +106,8 @@ export function resolveLayoutConfig(
 
     return {
       projects: globalConfig.projects,
+      ui: globalConfig.ui,
       layout: {
-        placement: globalConfig.layout.placement,
         focus,
       },
       tabs: buildTabs(raw),
@@ -137,10 +150,8 @@ export function loadConfig(): SessionizerConfig {
       git_only: gitOnly,
       depth,
     },
+    ui: resolveUiConfig(pluginConfig),
     layout: {
-      placement: asPlacement(pluginConfig?.layout?.placement, {
-        required: tabs.length > 0,
-      }),
       focus: focus ?? "",
     },
     tabs,
@@ -221,9 +232,14 @@ function defaultConfigToml(): string {
     "# Only used when git_only = true; 1 means immediate children",
     "depth = 1",
     "",
+    "[ui]",
+    "# How Sessionizer / Worktree pickers open in Herdr: overlay | split | popup",
+    "# popup requires Herdr >= 0.7.4 (width/height only apply to popup)",
+    'placement = "popup"',
+    'width = "80%"',
+    'height = "80%"',
+    "",
     "[layout]",
-    "# How the plugin pane itself opens: overlay | split",
-    'placement = "overlay"',
     "# Which pane or tab to focus after layout creation",
     'focus = "editor"',
     "",
@@ -258,14 +274,61 @@ function defaultConfigToml(): string {
   ].join("\n");
 }
 
-function asPlacement(
-  value: string | undefined,
-  options: { required: boolean } = { required: true }
-): PanePlacement {
-  if (value === "overlay" || value === "split") return value;
-  if (value === undefined && !options.required) return "overlay";
+function resolveUiConfig(config: RawConfig | undefined): UiConfig {
+  const placement = asPlacement(config?.ui?.placement);
+  const width = asOptionalPopupSize(config?.ui?.width, "width");
+  const height = asOptionalPopupSize(config?.ui?.height, "height");
+
+  if ((width !== undefined || height !== undefined) && placement !== "popup") {
+    throw new Error(
+      'Config [ui].width and [ui].height are only valid when [ui].placement = "popup".'
+    );
+  }
+
+  return {
+    placement,
+    ...(width !== undefined ? { width } : {}),
+    ...(height !== undefined ? { height } : {}),
+  };
+}
+
+function asPlacement(value: string | undefined): PanePlacement {
+  if (value === undefined) return "overlay";
+  if (value === "overlay" || value === "split" || value === "popup") {
+    return value;
+  }
   throw new Error(
-    "Config must define [layout].placement as 'overlay' or 'split'."
+    "Config must define [ui].placement as 'overlay', 'split', or 'popup'."
+  );
+}
+
+function asOptionalPopupSize(
+  value: unknown,
+  field: "width" | "height"
+): number | string | undefined {
+  if (value === undefined) return undefined;
+
+  if (typeof value === "number") {
+    if (!Number.isInteger(value) || value < 0 || value > 65535) {
+      throw new Error(
+        `Config [ui].${field} must be an integer cell count from 0 to 65535, or a percentage like "80%".`
+      );
+    }
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (/^(100|[1-9][0-9]?)%$/.test(trimmed)) {
+      return trimmed;
+    }
+    throw new Error(
+      `Config [ui].${field} must be an integer cell count from 0 to 65535, or a percentage like "80%".`
+    );
+  }
+
+  throw new Error(
+    `Config [ui].${field} must be an integer cell count from 0 to 65535, or a percentage like "80%".`
   );
 }
 

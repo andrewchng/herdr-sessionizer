@@ -61,9 +61,9 @@ export interface TabConfig {
 export interface UiConfig {
   /** How Sessionizer / Worktree pickers open inside Herdr. */
   placement: PanePlacement;
-  /** Outer popup width (cells or `"80%"`). Only used when placement is `popup`. */
+  /** Outer popup width (cells or `"90%"`). Only used when placement is `popup`. */
   width?: number | string;
-  /** Outer popup height (cells or `"80%"`). Only used when placement is `popup`. */
+  /** Outer popup height (cells or `"90%"`). Only used when placement is `popup`. */
   height?: number | string;
 }
 
@@ -236,8 +236,8 @@ function defaultConfigToml(): string {
     "# How Sessionizer / Worktree pickers open in Herdr: overlay | split | popup",
     "# popup requires Herdr >= 0.7.4 (width/height only apply to popup)",
     'placement = "popup"',
-    'width = "80%"',
-    'height = "80%"',
+    'width = "90%"',
+    'height = "90%"',
     "",
     "[layout]",
     "# Which pane or tab to focus after layout creation",

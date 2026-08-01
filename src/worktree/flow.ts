@@ -67,7 +67,8 @@ export interface WorktreeFlowRuntime {
   ) => string[];
   pickProject: PickRows;
   pickWorktreeCandidate: PickRows;
-  promptBranch: () => Promise<string>;
+  /** Returns a branch name, or `null` when the user cancels (Esc / Ctrl+C). */
+  promptBranch: () => Promise<string | null>;
   discoverCandidates: (
     options: DiscoverWorktreeCandidateOptions
   ) => Promise<WorktreeCandidate[]>;
@@ -207,10 +208,13 @@ async function resolveInteractiveIntent(
     }
   }
 
+  const branch = await runtime.promptBranch();
+  if (branch === null) return { kind: "cancelled" };
+
   return {
     kind: "create-branch",
     project,
-    branch: await runtime.promptBranch(),
+    branch,
   };
 }
 

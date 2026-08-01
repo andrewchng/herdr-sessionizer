@@ -80,14 +80,16 @@ Sessionizer (workspace picker first; Esc → projects under projects.roots)
 Worktree (always starts at repo picker)
   projects ──> branches? ──Enter──> reopen or create — see table
             └──────────── Esc / none ──> type new branch → create + layout
+                                           └─ Esc ──> exit Sessionizer
 ```
 
-| Selection                   | Result                                            |
-| --------------------------- | ------------------------------------------------- |
-| Existing workspace/checkout | Reopen as-is                                      |
-| Local branch                | Create a worktree workspace for that branch       |
-| Remote branch               | Create a local worktree from that remote branch   |
-| <kbd>Esc</kbd> / no choices | Prompt for a new branch, then create the worktree |
+| Selection                     | Result                                            |
+| ----------------------------- | ------------------------------------------------- |
+| Existing workspace/checkout   | Reopen as-is                                      |
+| Local branch                  | Create a worktree workspace for that branch       |
+| Remote branch                 | Create a local worktree from that remote branch   |
+| <kbd>Esc</kbd> / no choices   | Prompt for a new branch, then create the worktree |
+| <kbd>Esc</kbd> at branch name | Exit the worktree flow without creating anything  |
 
 See [Layout configuration](#layout-configuration) for when layout is applied.
 

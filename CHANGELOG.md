@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- Worktree branch name prompt: <kbd>Esc</kbd> (and Ctrl+C) cancel the flow and exit Sessionizer instead of leaving you stuck in the prompt
+
 ## [0.6.2] - 2026-07-26
 
 ### Added

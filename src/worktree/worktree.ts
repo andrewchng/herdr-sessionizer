@@ -27,9 +27,10 @@ export async function runWorktree(
   await runWorktreeFlow(argv, runtime);
 }
 
-async function promptBranchName(): Promise<string> {
+async function promptBranchName(): Promise<string | null> {
   while (true) {
     const value = await promptText("Branch name: ");
+    if (value === null) return null;
     if (!value) {
       console.error("Branch name cannot be empty.");
       continue;

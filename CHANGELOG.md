@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-08-01
+
 ### Added
 
 - `[ui].placement` for how Sessionizer / Worktree pickers open in Herdr: `overlay`, `split`, or `popup` (popup requires Herdr `>= 0.7.4`)

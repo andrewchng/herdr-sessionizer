@@ -352,3 +352,7 @@ bun run sessionizer
 ```
 
 Use `bun run release -- <version>` on the release-prep branch to update version files, then run `bun run release:tag -- <version>` from merged `main` to create and push the annotated `v<version>` release tag.
+
+## Support
+
+If Herdr Sessionizer saves you a few clicks, consider [sponsoring me on GitHub](https://github.com/sponsors/andrewchng). Sponsorship funds ongoing maintenance — Herdr and fzf upgrades, issue triage, the small papercuts.

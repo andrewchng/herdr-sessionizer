@@ -9,7 +9,7 @@
 
 ### Fixed
 
-- Worktree branch name prompt: <kbd>Esc</kbd> (and Ctrl+C) cancel the flow and exit Sessionizer instead of leaving you stuck in the prompt
+- Worktree branch name prompt: <kbd>Esc</kbd> (and Ctrl+C) cancel the flow and exit Sessionizer instead of leaving you stuck in the prompt (uses fzf free-text, same cancel path as pickers)
 
 ### Changed
 

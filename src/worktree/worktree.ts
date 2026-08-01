@@ -7,8 +7,7 @@ import { Panes } from "../ops/panes.ts";
 import { Tabs } from "../ops/tabs.ts";
 import { Workspaces } from "../ops/workspaces.ts";
 import { Worktrees } from "../ops/worktrees.ts";
-import { pick } from "../ui/fzf.ts";
-import { promptText } from "../ui/prompt.ts";
+import { pick, promptQuery } from "../ui/fzf.ts";
 import {
   attachExistingBranchWorktree,
   localBranchExists,
@@ -29,7 +28,12 @@ export async function runWorktree(
 
 async function promptBranchName(): Promise<string | null> {
   while (true) {
-    const value = await promptText("Branch name: ");
+    // Use fzf free-text (not raw-mode readline) so Esc cancels the same way
+    // as the project/candidate pickers and the Herdr plugin pane exits.
+    const value = await promptQuery({
+      prompt: "Branch name: ",
+      header: "Type a branch name · Enter create · Esc cancel",
+    });
     if (value === null) return null;
     if (!value) {
       console.error("Branch name cannot be empty.");

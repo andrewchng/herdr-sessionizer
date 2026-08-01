@@ -10,7 +10,7 @@ import {
   WORKTREE_CANDIDATE_ROW_DELIMITER,
   worktreeCandidateRow,
 } from "./candidates.ts";
-import { runWorktree } from "./worktree.ts";
+import { buildWorktreeArgvFromEnv, runWorktree } from "./worktree.ts";
 
 function testWorkspace(overrides?: Partial<Workspace>): Workspace {
   return {
@@ -1080,5 +1080,36 @@ describe("runWorktree", () => {
     expect(log).toHaveBeenCalledWith(
       "✓ attached existing branch 'feature/test-flow' at '/repo/feature-test-flow'"
     );
+  });
+});
+
+describe("buildWorktreeArgvFromEnv", () => {
+  it("builds argv from project, branch, and command env", () => {
+    expect(
+      buildWorktreeArgvFromEnv({
+        WORKTREE_PROJECT: "/repo",
+        WORKTREE_BRANCH: "feat/x",
+        WORKTREE_COMMAND: "echo hi",
+      })
+    ).toEqual([
+      "--project",
+      "/repo",
+      "--branch",
+      "feat/x",
+      "--command",
+      "echo hi",
+    ]);
+  });
+
+  it("falls back to WORKTREE_CONTEXT for command", () => {
+    expect(
+      buildWorktreeArgvFromEnv({
+        WORKTREE_CONTEXT: "fix validation",
+      })
+    ).toEqual(["--command", "fix validation"]);
+  });
+
+  it("returns empty argv when no worktree env is set", () => {
+    expect(buildWorktreeArgvFromEnv({})).toEqual([]);
   });
 });

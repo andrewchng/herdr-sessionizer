@@ -26,3 +26,11 @@ jobs:
         run: |
           bun run test
           bun run test:integration
+
+      - name: Build plugin binary
+        run: bun run build
+
+      - name: Assert compiled binary
+        run: |
+          test -x dist/sessionizer
+          ./dist/sessionizer --help

@@ -27,6 +27,24 @@ export async function runWorktree(
   await runWorktreeFlow(argv, runtime);
 }
 
+/** Build worktree CLI argv from pane env vars (Herdr --env passthrough). */
+export function buildWorktreeArgvFromEnv(
+  env: Record<string, string | undefined> = process.env
+): string[] {
+  const argv: string[] = [];
+  if (env.WORKTREE_PROJECT) {
+    argv.push("--project", env.WORKTREE_PROJECT);
+  }
+  if (env.WORKTREE_BRANCH) {
+    argv.push("--branch", env.WORKTREE_BRANCH);
+  }
+  const command = env.WORKTREE_COMMAND ?? env.WORKTREE_CONTEXT;
+  if (command) {
+    argv.push("--command", command);
+  }
+  return argv;
+}
+
 async function promptBranchName(): Promise<string | null> {
   while (true) {
     // Use fzf free-text (not raw-mode readline) so Esc cancels the same way

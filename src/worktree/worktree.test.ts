@@ -38,7 +38,8 @@ function testRuntime(
     panes: {},
     config: {
       projects: { roots: ["/repo"], git_only: false, depth: 1 },
-      layout: { placement: "overlay", focus: "terminal" },
+      ui: { placement: "overlay" },
+      layout: { focus: "terminal" },
       tabs: [],
     },
     resolver: { resolveExisting: mock(async () => undefined) },
@@ -264,7 +265,8 @@ describe("runWorktree", () => {
       "/Users/mac/.herdr/worktrees/repo/feature-test-flow",
       {
         projects: { roots: ["/repo"], git_only: false, depth: 1 },
-        layout: { placement: "overlay", focus: "terminal" },
+        ui: { placement: "overlay" },
+        layout: { focus: "terminal" },
         tabs: [],
       },
       {},
@@ -429,7 +431,8 @@ describe("runWorktree", () => {
       "/worktrees/repo/feature-test-flow",
       {
         projects: { roots: ["/repo"], git_only: false, depth: 1 },
-        layout: { placement: "overlay", focus: "terminal" },
+        ui: { placement: "overlay" },
+        layout: { focus: "terminal" },
         tabs: [],
       },
       {},

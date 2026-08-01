@@ -14,7 +14,7 @@ async function run(): Promise<void> {
   const herdr = new Herdr();
   const config = loadConfig();
   const placement =
-    process.env.SESSIONIZER_PANE_PLACEMENT ?? config.layout.placement;
+    process.env.SESSIONIZER_PANE_PLACEMENT ?? config.ui.placement;
   const args = [
     "plugin",
     "pane",
@@ -28,7 +28,12 @@ async function run(): Promise<void> {
     "--focus",
   ];
 
-  if (placement !== "overlay") {
+  if (placement === "popup") {
+    const width = process.env.SESSIONIZER_PANE_WIDTH ?? config.ui.width;
+    const height = process.env.SESSIONIZER_PANE_HEIGHT ?? config.ui.height;
+    if (width !== undefined) args.push("--width", String(width));
+    if (height !== undefined) args.push("--height", String(height));
+  } else if (placement !== "overlay") {
     if (process.env.HERDR_PANE_ID) {
       args.push("--target-pane", process.env.HERDR_PANE_ID);
     } else if (process.env.HERDR_WORKSPACE_ID) {

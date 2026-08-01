@@ -10,7 +10,9 @@
 ### Changed
 
 - Picker placement moves from `[layout].placement` to `[ui]`; workspace bootstrap `[layout]` now only carries `focus` (no fallback for the old key)
-- Placement is no longer required when `[tabs]` are defined (defaults to `overlay`)
+- New default config uses `[ui].placement = "popup"` with `width` / `height` = `"80%"`
+- Placement is no longer required when `[tabs]` are defined (omitted `[ui]` still falls back to `overlay`)
+- Minimum Herdr version is now `0.7.4` (`min_herdr_version` + README prerequisites; required for popup picker placement)
 
 ## [0.6.2] - 2026-07-26
 

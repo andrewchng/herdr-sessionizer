@@ -103,6 +103,11 @@ describe("loadConfig", () => {
 
       expect(config.projects.git_only).toBe(true);
       expect(config.projects.depth).toBe(1);
+      expect(config.ui).toEqual({
+        placement: "popup",
+        width: "80%",
+        height: "80%",
+      });
     });
   });
 

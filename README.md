@@ -24,7 +24,7 @@ Inspired by [ThePrimeagen's tmux-sessionizer](https://github.com/ThePrimeagen/tm
 
 Sessionizer does not install system tools for you.
 
-- [Herdr](https://herdr.dev/) `>= 0.7.0`
+- [Herdr](https://herdr.dev/) `>= 0.7.4`
 - [Bun](https://bun.sh/) — plugin build and runtime
 - [fzf](https://github.com/junegunn/fzf) — interactive pickers
 
@@ -128,9 +128,9 @@ valid: new workspaces then open with a plain shell and no layout is applied.
 When `[tabs]` sections exist, `[layout].focus` is required.
 
 `[ui]` controls how Sessionizer / Worktree **pickers** open inside Herdr (not
-workspace bootstrap). Placement defaults to `overlay`. Use `popup` for a
-session-modal floating terminal (Herdr `>= 0.7.4`); optional `width` / `height`
-accept cell counts or percentages such as `"80%"`.
+workspace bootstrap). New configs default to a session-modal `popup` at `80%`
+width/height (Herdr `>= 0.7.4`). You can switch to `overlay` or `split`, or omit
+`[ui]` entirely to fall back to `overlay`.
 
 If you want an agent to help edit either the global config or a repo-local override, see [Agent skills](#agent-skills).
 
@@ -143,10 +143,9 @@ git_only = true
 depth = 1
 
 [ui]
-placement = "overlay"
-# placement = "popup"   # requires Herdr >= 0.7.4
-# width = "80%"
-# height = "80%"
+placement = "popup"   # overlay | split | popup (popup needs Herdr >= 0.7.4)
+width = "80%"
+height = "80%"
 
 [layout]
 focus = "editor"
@@ -211,8 +210,8 @@ Second tab shape:
 - `[projects].roots` — parent folders scanned by both pickers (plain paths; optional globs — see [Glob roots](#glob-roots-optional) below)
 - `[projects].git_only` — `true` returns only directories with `.git` metadata; `false` lists all immediate child folders
 - `[projects].depth` — maximum levels below each root to scan when `git_only = true`; `1` means immediate children
-- `[ui].placement` — how Sessionizer / Worktree pickers open in Herdr (`overlay`, `split`, or `popup`; `popup` needs Herdr `>= 0.7.4`)
-- `[ui].width` / `[ui].height` — optional popup outer size (cells or `"80%"`); only with `placement = "popup"`
+- `[ui].placement` — how Sessionizer / Worktree pickers open in Herdr (`overlay`, `split`, or `popup`; new configs default to `popup`, which needs Herdr `>= 0.7.4`)
+- `[ui].width` / `[ui].height` — popup outer size (cells or `"80%"`); only with `placement = "popup"` (new configs default to `"80%"`)
 - `[layout].focus` — which tab or pane to focus after layout bootstrap
 - `[tabs.<name>]` — one Herdr tab to create per section
 - `[[tabs.<name>.panes]]` — panes inside the tab; `from` + `split` (`right` or `down`) define the split tree

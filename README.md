@@ -75,7 +75,8 @@ herdr plugin action invoke sessionizer.worktree-open
 ```text
 Sessionizer (workspace picker first; Esc → projects under projects.roots)
   workspaces ──Enter──> focus
-  workspaces ──Esc──> projects ──Enter──> new workspace + layout
+  workspaces ──Esc──> projects ──Enter──> new workspace + layout + focus
+                    └──────────── Esc / none ──> exit
 
 Worktree (always starts at repo picker)
   projects ──> branches? ──Enter──> reopen or create — see table

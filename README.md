@@ -124,7 +124,7 @@ When you attach to a remote Herdr server, the Sessionizer keybindings above are 
 herdr --remote <target> --remote-keybindings server
 ```
 
-Alternatively, add the same `prefix+f` / `prefix+up` bindings to the Herdr config on the machine that launches `herdr --remote`.
+Bindings added to the machine that launches `herdr --remote` do **not** trigger the plugin in a remote session — they must come from the remote server's keybindings.
 
 > The plugin itself runs on the remote host — bun, fzf, and the plugin checkout must be present there. See [Requirements](#requirements) for the runtime prerequisites.
 

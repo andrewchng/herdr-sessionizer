@@ -1,8 +1,10 @@
 # PRD: Per-repo layout overrides
 
-Status: Ready for implementation
+Status: Shipped
 Owner: Sessionizer plugin
-Related: #12, ADR-0001, `src/config.ts`, `src/sessionizer.ts`, `src/worktree.ts`
+Related: #12, ADR-0001, `src/config/config.ts`, `src/sessionizer/sessionizer.ts`, `src/worktree/worktree.ts`
+
+> Implemented. Repo-local layout overrides land at `<project>/.sessionizer/config.toml`, resolved in `src/config/config.ts` (`REPO_LAYOUT_CONFIG_RELATIVE` / `resolveRepoLayoutPath`). This PRD is retained for history.
 
 ## Summary
 

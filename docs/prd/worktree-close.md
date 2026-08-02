@@ -1,8 +1,10 @@
 # PRD: Worktree close picker
 
-Status: Ready for implementation
+Status: Proposal — not yet implemented
 Owner: Sessionizer plugin
 Related: `sessionizer.open`, `sessionizer.worktree-open`, ADR-0001
+
+> Backlog proposal. No `worktree-close` action, pane, or `Worktrees.remove` exists in the codebase yet (verified 2026-08-01).
 
 ## Summary
 

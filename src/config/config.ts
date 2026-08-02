@@ -6,7 +6,7 @@ import { expandHome } from "../discovery/discovery.ts";
 
 import { parse } from "smol-toml";
 
-export type PanePlacement = "overlay" | "split" | "popup";
+type PanePlacement = "overlay" | "split" | "popup";
 type SplitDirection = "right" | "down";
 
 interface RawPaneConfig {
@@ -58,7 +58,7 @@ export interface TabConfig {
   panes: PaneConfig[];
 }
 
-export interface UiConfig {
+interface UiConfig {
   /** How Sessionizer / Worktree pickers open inside Herdr. */
   placement: PanePlacement;
   /** Outer popup width (cells or `"90%"`). Only used when placement is `popup`. */

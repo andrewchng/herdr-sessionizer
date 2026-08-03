@@ -30,7 +30,7 @@ description: Sessionizer config edits. Use when the user wants project roots, gi
    - optional `[ui].width` / `[ui].height` only with `popup` (cells or `"80%"`)
    - **do not** put placement under `[layout]`
    - if the file still has legacy `[layout].placement`, **move it to `[ui].placement` and remove the old key** (no dual-write)
-   - new seeded configs default to `placement = "popup"`, `width = "80%"`, `height = "80%"`; omitted `[ui]` falls back to `overlay` at runtime
+   - new seeded configs default to `placement = "overlay"`; omitted `[ui]` also falls back to `overlay` at runtime
 5. **Discovery** edits (global only): follow [references/discovery.md](references/discovery.md)
 6. Minimal diff — change only what the user asked for; stay in the chosen **scope**. When editing global layout or discovery, **preserve existing `[ui]`** (and `[projects]` for layout edits) unless the user asked to change them.
 7. Done when: TOML is valid, scope rules hold, and you summarized the layout/UI change plus the **bootstrap** reminder when layout tabs changed
@@ -41,7 +41,7 @@ description: Sessionizer config edits. Use when the user wants project roots, gi
 - "Add `~/Projects/github.com/*` to my project roots" → global `[projects].roots`; globs expand at use-time — see reference
 - "Set `git_only = false`" → global discovery; see reference
 - "Open pickers as a popup" → global `[ui].placement = "popup"` (optional width/height; default size is Herdr half-size if omitted)
-- "Use the default popup size" → `placement = "popup"`, `width = "80%"`, `height = "80%"`
+- "Use a large popup" → `placement = "popup"`, `width = "90%"`, `height = "90%"`
 - "Add a repo-local override with lazygit + copilot" → repo-local file
 - "Make the right pane 30% with `ratio = 0.3`" → layout pane edit in the active **scope**
 
@@ -49,9 +49,9 @@ description: Sessionizer config edits. Use when the user wants project roots, gi
 
 ```toml
 [ui]
-placement = "popup"   # overlay | split | popup
-width = "80%"
-height = "80%"
+placement = "popup"   # overlay | split | popup; seeded default is overlay
+width = "90%"
+height = "90%"
 ```
 
 ## Repo-local template

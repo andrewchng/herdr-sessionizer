@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Generated default `config.toml` now seeds `[ui].placement = "overlay"` (previously `popup` at 90%); switch to `popup` explicitly for the session-modal picker
+
 ## [0.7.1] - 2026-08-01
 
 ### Fixed

@@ -104,9 +104,7 @@ describe("loadConfig", () => {
       expect(config.projects.git_only).toBe(true);
       expect(config.projects.depth).toBe(1);
       expect(config.ui).toEqual({
-        placement: "popup",
-        width: "90%",
-        height: "90%",
+        placement: "overlay",
       });
     });
   });

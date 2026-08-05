@@ -340,17 +340,12 @@ async function openOrCreateWorktree(
       label,
       focus: false,
     });
-    const reopenedWorkspace = reopened.workspace;
-    if (!reopenedWorkspace) {
-      throw new Error(
-        `worktree open succeeded but no workspace was returned for '${path}'`
-      );
-    }
-
-    await bootstrapWorktree(runtime, reopenedWorkspace, {
-      layoutFallback: reopened.worktreePath ?? path,
+    await bootstrapOpenedWorktree(runtime, reopened, {
       branch,
       command,
+      fallbackPath: path,
+      openedMessage: `✓ attached existing branch '${branch}' at '${path}'`,
+      verb: "created",
     });
     return;
   }
@@ -404,16 +399,22 @@ async function bootstrapOpenedWorktree(
     command?: string;
     fallbackPath: string;
     openedMessage: string;
+    verb?: "created" | "opened";
   }
 ): Promise<void> {
-  if (opened.workspace) {
+  if (opened.workspace && !opened.alreadyOpen) {
     await bootstrapWorktree(runtime, opened.workspace, {
       layoutFallback: opened.worktreePath ?? options.fallbackPath,
       branch: options.branch,
       command: options.command,
-      verb: "opened",
+      verb: options.verb ?? "opened",
     });
     return;
+  }
+  // Reattach of an already-open workspace: focus only, never relayout
+  // (ADR-0001). Idempotent where `worktree open --focus` already focused.
+  if (opened.workspace) {
+    await runtime.workspaces.focus(opened.workspace.workspace_id);
   }
   runtime.logger.log(options.openedMessage);
 }

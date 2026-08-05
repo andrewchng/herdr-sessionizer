@@ -84,13 +84,16 @@ Worktree (always starts at repo picker)
                                            └─ Esc ──> exit
 ```
 
-| Selection                     | Result                                            |
-| ----------------------------- | ------------------------------------------------- |
-| Existing workspace/checkout   | Reopen as-is                                      |
-| Local branch                  | Create a worktree workspace for that branch       |
-| Remote branch                 | Create a local worktree from that remote branch   |
-| <kbd>Esc</kbd> / no choices   | Prompt for a new branch, then create the worktree |
-| <kbd>Esc</kbd> at branch name | Exit the worktree flow without creating anything  |
+| Selection                     | Result                                                                                |
+| ----------------------------- | ------------------------------------------------------------------------------------- |
+| Existing workspace/checkout   | Reopen as-is                                                                          |
+| Open PR                       | Fetch `pull/<n>/head` into local `pr-<n>`, create worktree + layout (first open only) |
+| Local branch                  | Create a worktree workspace for that branch                                           |
+| Remote branch                 | Create a local worktree from that remote branch                                       |
+| <kbd>Esc</kbd> / no choices   | Prompt for a new branch, then create the worktree                                     |
+| <kbd>Esc</kbd> at branch name | Exit the worktree flow without creating anything                                      |
+
+Open PRs appear when [`gh`](https://cli.github.com/) is installed and authenticated for the selected repo (including draft and cross-fork heads). If `gh` is missing or fails, the picker still works — PR rows are simply omitted. After a PR is opened once, the picker shows the existing `pr-<n>` workspace/checkout/branch instead of the open-PR row; reopening does not re-fetch the PR tip or re-apply layout.
 
 See [Layout configuration](#layout-configuration) for when layout is applied.
 

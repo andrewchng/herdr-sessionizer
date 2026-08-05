@@ -3,6 +3,7 @@ import { describe, expect, it, mock } from "bun:test";
 import { HerdrError } from "../client/errors.ts";
 import type { Workspace } from "../client/types.ts";
 import type { WorktreeFlowRuntime } from "./flow.ts";
+import { intentFromCandidate } from "./flow.ts";
 import { WORKTREE_CANDIDATE_PREVIEW } from "../ui/previews.ts";
 import {
   type WorktreeCandidate,
@@ -51,6 +52,7 @@ function testRuntime(
     discoverCandidates: mock(async () => []),
     attachExistingBranch: mock(async () => "/repo/feature-test-flow"),
     localBranchExists: mock(async () => true),
+    fetchPullRequestHead: mock(async () => {}),
     logger: { log: mock(() => {}), error: mock(() => {}) },
     exit: (code) => {
       throw new Error(`unexpected exit ${code}`);
@@ -58,6 +60,30 @@ function testRuntime(
     ...overrides,
   };
 }
+
+describe("intentFromCandidate", () => {
+  it("maps pull-request candidates to create-pull-request intent", () => {
+    expect(
+      intentFromCandidate("/repo", {
+        id: "pr:29",
+        kind: "pull-request",
+        label:
+          "open pr  #29  fix(worktree): gate branch fallback  pperanich:fix/branch-exists-check",
+        branch: "pr-29",
+        prNumber: 29,
+        title: "fix(worktree): gate branch fallback",
+        headRefName: "fix/branch-exists-check",
+        headOwner: "pperanich",
+        previewPath: "/repo",
+      })
+    ).toEqual({
+      kind: "create-pull-request",
+      project: "/repo",
+      branch: "pr-29",
+      prNumber: 29,
+    });
+  });
+});
 
 describe("runWorktree", () => {
   it("reopens an existing worktree after create hits a duplicate-branch error without relayout", async () => {
@@ -530,6 +556,139 @@ describe("runWorktree", () => {
       label: "feature_remote",
       focus: false,
     });
+  });
+
+  it("fetches a PR head then creates and bootstraps a pr-N worktree", async () => {
+    const candidate: WorktreeCandidate = {
+      id: "pr:29",
+      kind: "pull-request",
+      label:
+        "open pr  #29  fix(worktree): gate branch fallback  pperanich:fix/branch-exists-check",
+      branch: "pr-29",
+      prNumber: 29,
+      title: "fix(worktree): gate branch fallback",
+      headRefName: "fix/branch-exists-check",
+      headOwner: "pperanich",
+      previewPath: "/repo",
+    };
+    const workspace = testWorkspace({
+      workspace_id: "ws-pr-29",
+      worktree: {
+        checkout_path: "/worktrees/repo/pr-29",
+      },
+    });
+    const fetchPullRequestHead = mock(async () => {});
+    const create = mock(async () => workspace);
+    const createLayout = mock(async (created: Workspace) => created);
+    const focus = mock(async () => {});
+
+    await runWorktree(
+      [],
+      testRuntime({
+        worktrees: {
+          open: mock(async () => {
+            throw new HerdrError(["worktree", "open"], 1, "not found");
+          }),
+          create,
+        },
+        workspaces: {
+          list: mock(async () => []),
+          get: mock(async () => workspace),
+          focus,
+        },
+        discoverCandidates: mock(async () => [candidate]),
+        pickWorktreeCandidate: mock(async () => [
+          worktreeCandidateRow(candidate),
+        ]),
+        fetchPullRequestHead,
+        createLayout,
+      })
+    );
+
+    expect(fetchPullRequestHead).toHaveBeenCalledWith("/repo", 29, "pr-29");
+    expect(create).toHaveBeenCalledWith({
+      workspaceId: undefined,
+      cwd: "/repo",
+      branch: "pr-29",
+      base: undefined,
+      label: "pr-29",
+      focus: false,
+    });
+    expect(createLayout).toHaveBeenCalled();
+    expect(focus).toHaveBeenCalledWith("ws-pr-29");
+  });
+
+  it("does not fetch when reopening an existing pr-N workspace", async () => {
+    const candidate: WorktreeCandidate = {
+      id: "workspace:ws-pr-29",
+      kind: "workspace",
+      label: "existing workspace  pr-29",
+      branch: "pr-29",
+      workspaceId: "ws-pr-29",
+      path: "/worktrees/repo/pr-29",
+    };
+    const fetchPullRequestHead = mock(async () => {});
+    const createLayout = mock(async (workspace: Workspace) => workspace);
+    const focus = mock(async () => {});
+
+    await runWorktree(
+      [],
+      testRuntime({
+        workspaces: {
+          list: mock(async () => []),
+          get: mock(async () => undefined),
+          focus,
+        },
+        discoverCandidates: mock(async () => [candidate]),
+        pickWorktreeCandidate: mock(async () => [
+          worktreeCandidateRow(candidate),
+        ]),
+        fetchPullRequestHead,
+        createLayout,
+      })
+    );
+
+    expect(fetchPullRequestHead).not.toHaveBeenCalled();
+    expect(createLayout).not.toHaveBeenCalled();
+    expect(focus).toHaveBeenCalledWith("ws-pr-29");
+  });
+
+  it("surfaces fetch failures without creating a worktree", async () => {
+    const candidate: WorktreeCandidate = {
+      id: "pr:29",
+      kind: "pull-request",
+      label: "open pr  #29  title  owner:head",
+      branch: "pr-29",
+      prNumber: 29,
+      title: "title",
+      headRefName: "head",
+      headOwner: "owner",
+      previewPath: "/repo",
+    };
+    const fetchError = new Error("git fetch failed for pull request #29");
+    const create = mock(async () => testWorkspace());
+
+    await expect(
+      runWorktree(
+        [],
+        testRuntime({
+          worktrees: {
+            open: mock(async () => {
+              throw new HerdrError(["worktree", "open"], 1, "not found");
+            }),
+            create,
+          },
+          discoverCandidates: mock(async () => [candidate]),
+          pickWorktreeCandidate: mock(async () => [
+            worktreeCandidateRow(candidate),
+          ]),
+          fetchPullRequestHead: mock(async () => {
+            throw fetchError;
+          }),
+        })
+      )
+    ).rejects.toBe(fetchError);
+    expect(create).not.toHaveBeenCalled();
   });
 
   it("prompts for a new branch when the candidate picker is dismissed", async () => {

@@ -15,6 +15,7 @@ import type {
 import {
   WORKTREE_CANDIDATE_ROW_DELIMITER,
   discoverWorktreeCandidates,
+  fetchPullRequestHead,
   worktreeCandidateFromRow,
   worktreeCandidateRow,
 } from "./candidates.ts";
@@ -74,6 +75,11 @@ export interface WorktreeFlowRuntime {
   ) => Promise<WorktreeCandidate[]>;
   attachExistingBranch: (project: string, branch: string) => Promise<string>;
   localBranchExists: (project: string, branch: string) => Promise<boolean>;
+  fetchPullRequestHead: (
+    project: string,
+    prNumber: number,
+    branch: string
+  ) => Promise<void>;
   logger: Pick<typeof console, "log" | "error">;
   exit: (code: number) => never;
 }
@@ -99,6 +105,12 @@ type WorktreeIntent =
       project: string;
       branch: string;
       base?: string;
+    }
+  | {
+      kind: "create-pull-request";
+      project: string;
+      branch: string;
+      prNumber: number;
     };
 
 export async function runWorktreeFlow(
@@ -146,6 +158,21 @@ export async function runWorktreeFlow(
     runtime.logger.log(
       `✓ opened existing worktree path '${intent.path}' for '${intent.branch}'`
     );
+    return;
+  }
+
+  if (intent.kind === "create-pull-request") {
+    await runtime.fetchPullRequestHead(
+      intent.project,
+      intent.prNumber,
+      intent.branch
+    );
+    await openOrCreateWorktree(runtime, {
+      project: intent.project,
+      branch: intent.branch,
+      command,
+      repoWorkspaceId,
+    });
     return;
   }
 
@@ -218,7 +245,7 @@ async function resolveInteractiveIntent(
   };
 }
 
-function intentFromCandidate(
+export function intentFromCandidate(
   project: string,
   candidate: WorktreeCandidate
 ): WorktreeIntent {
@@ -237,6 +264,15 @@ function intentFromCandidate(
       project,
       path: candidate.path,
       branch: candidate.branch,
+    };
+  }
+
+  if (candidate.kind === "pull-request") {
+    return {
+      kind: "create-pull-request",
+      project,
+      branch: candidate.branch,
+      prNumber: candidate.prNumber,
     };
   }
 

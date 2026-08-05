@@ -21,6 +21,17 @@ export type WorktreeCandidate =
     }
   | {
       id: string;
+      kind: "pull-request";
+      label: string;
+      branch: string;
+      prNumber: number;
+      title: string;
+      headRefName: string;
+      headOwner: string;
+      previewPath: string;
+    }
+  | {
+      id: string;
       kind: "local-branch";
       label: string;
       branch: string;
@@ -45,9 +56,19 @@ export interface GitBranchCandidates {
   remote: string[];
 }
 
+export interface OpenPullRequest {
+  number: number;
+  title: string;
+  headRefName: string;
+  headOwner: string;
+  isDraft?: boolean;
+  isCrossRepository?: boolean;
+}
+
 export interface WorktreeCandidateRuntime {
   listGitWorktrees(project: string): Promise<GitWorktreeCandidate[]>;
   listGitBranches(project: string): Promise<GitBranchCandidates>;
+  listOpenPullRequests(project: string): Promise<OpenPullRequest[]>;
 }
 
 export interface DiscoverWorktreeCandidateOptions {
@@ -63,9 +84,10 @@ export async function discoverWorktreeCandidates({
   workspaces,
   runtime = defaultWorktreeCandidateRuntime,
 }: DiscoverWorktreeCandidateOptions): Promise<WorktreeCandidate[]> {
-  const [gitWorktrees, gitBranches] = await Promise.all([
+  const [gitWorktrees, gitBranches, openPullRequests] = await Promise.all([
     runtime.listGitWorktrees(project),
     runtime.listGitBranches(project),
+    listOpenPullRequestsSoft(runtime, project),
   ]);
   return buildWorktreeCandidates({
     project,
@@ -73,6 +95,7 @@ export async function discoverWorktreeCandidates({
     workspaces,
     gitWorktrees,
     gitBranches,
+    openPullRequests,
   });
 }
 
@@ -82,6 +105,7 @@ export interface BuildWorktreeCandidateOptions {
   workspaces: readonly Workspace[];
   gitWorktrees: readonly GitWorktreeCandidate[];
   gitBranches: GitBranchCandidates;
+  openPullRequests?: readonly OpenPullRequest[];
 }
 
 export function buildWorktreeCandidates({
@@ -90,6 +114,7 @@ export function buildWorktreeCandidates({
   workspaces,
   gitWorktrees,
   gitBranches,
+  openPullRequests = [],
 }: BuildWorktreeCandidateOptions): WorktreeCandidate[] {
   const seenBranches = new Set<string>();
   const seenPaths = new Set<string>();
@@ -131,6 +156,31 @@ export function buildWorktreeCandidates({
     seenPaths.add(normalizedPath);
   }
 
+  // PRs appear before local branches in the list, but must still hide when a
+  // local `pr-N` already exists (workspace/checkout/local 1:1 identity).
+  const branchesRepresentingPr = new Set(seenBranches);
+  for (const branch of gitBranches.local) {
+    branchesRepresentingPr.add(branch);
+  }
+
+  for (const pr of openPullRequests) {
+    const branch = pullRequestBranchName(pr.number);
+    if (branchesRepresentingPr.has(branch)) continue;
+    candidates.push({
+      id: `pr:${pr.number}`,
+      kind: "pull-request",
+      label: openPullRequestLabel(pr),
+      branch,
+      prNumber: pr.number,
+      title: pr.title,
+      headRefName: pr.headRefName,
+      headOwner: pr.headOwner,
+      previewPath: project,
+    });
+    seenBranches.add(branch);
+    branchesRepresentingPr.add(branch);
+  }
+
   for (const branch of gitBranches.local) {
     if (seenBranches.has(branch)) continue;
     candidates.push({
@@ -160,9 +210,67 @@ export function buildWorktreeCandidates({
   return candidates;
 }
 
+export function pullRequestBranchName(prNumber: number): string {
+  return `pr-${prNumber}`;
+}
+
+export function openPullRequestLabel(pr: OpenPullRequest): string {
+  const title = sanitizePullRequestTitle(pr.title);
+  return `open pr  #${pr.number}  ${title}  ${pr.headOwner}:${pr.headRefName}`;
+}
+
+export function parseOpenPullRequests(json: string): OpenPullRequest[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+
+  const pullRequests: OpenPullRequest[] = [];
+  for (const item of parsed) {
+    if (!item || typeof item !== "object") continue;
+    const record = item as Record<string, unknown>;
+    const number = record.number;
+    const title = record.title;
+    const headRefName = record.headRefName;
+    if (
+      typeof number !== "number" ||
+      !Number.isFinite(number) ||
+      number <= 0 ||
+      typeof title !== "string" ||
+      typeof headRefName !== "string" ||
+      headRefName.length === 0
+    ) {
+      continue;
+    }
+
+    const headOwner = headOwnerFromPrJson(record);
+    if (!headOwner) continue;
+
+    pullRequests.push({
+      number,
+      title,
+      headRefName,
+      headOwner,
+      isDraft: typeof record.isDraft === "boolean" ? record.isDraft : undefined,
+      isCrossRepository:
+        typeof record.isCrossRepository === "boolean"
+          ? record.isCrossRepository
+          : undefined,
+    });
+  }
+  return pullRequests;
+}
+
 export function worktreeCandidateRow(candidate: WorktreeCandidate): string {
   const detail =
-    candidate.kind === "remote-branch" ? `base: ${candidate.base}` : "";
+    candidate.kind === "remote-branch"
+      ? `base: ${candidate.base}`
+      : candidate.kind === "pull-request"
+        ? `pr #${candidate.prNumber} → ${candidate.branch} | pull/${candidate.prNumber}/head`
+        : "";
   return [
     candidate.id,
     candidate.label,
@@ -178,6 +286,47 @@ function candidatePreviewPath(candidate: WorktreeCandidate): string {
     return candidate.path ?? "";
   }
   return candidate.previewPath;
+}
+
+async function listOpenPullRequestsSoft(
+  runtime: WorktreeCandidateRuntime,
+  project: string
+): Promise<OpenPullRequest[]> {
+  try {
+    return await runtime.listOpenPullRequests(project);
+  } catch {
+    return [];
+  }
+}
+
+function headOwnerFromPrJson(
+  record: Record<string, unknown>
+): string | undefined {
+  const headRepositoryOwner = record.headRepositoryOwner;
+  if (
+    headRepositoryOwner &&
+    typeof headRepositoryOwner === "object" &&
+    typeof (headRepositoryOwner as { login?: unknown }).login === "string" &&
+    (headRepositoryOwner as { login: string }).login.length > 0
+  ) {
+    return (headRepositoryOwner as { login: string }).login;
+  }
+
+  const author = record.author;
+  if (
+    author &&
+    typeof author === "object" &&
+    typeof (author as { login?: unknown }).login === "string" &&
+    (author as { login: string }).login.length > 0
+  ) {
+    return (author as { login: string }).login;
+  }
+
+  return undefined;
+}
+
+function sanitizePullRequestTitle(title: string): string {
+  return title.replace(/[\t\r\n]+/g, " ").trim();
 }
 
 export function worktreeCandidatePreviewPath(row: string): string | undefined {
@@ -279,20 +428,71 @@ const defaultWorktreeCandidateRuntime: WorktreeCandidateRuntime = {
       remote: remote.exitCode === 0 ? parseGitBranchLines(remote.stdout) : [],
     };
   },
+  async listOpenPullRequests(project) {
+    const result = await runGh(project, [
+      "pr",
+      "list",
+      "--state",
+      "open",
+      "--limit",
+      "30",
+      "--json",
+      "number,title,headRefName,headRepositoryOwner,author,isDraft,isCrossRepository",
+    ]);
+    if (result.exitCode !== 0) return [];
+    return parseOpenPullRequests(result.stdout);
+  },
 };
+
+export async function fetchPullRequestHead(
+  project: string,
+  prNumber: number,
+  branch: string = pullRequestBranchName(prNumber)
+): Promise<void> {
+  const refspec = `pull/${prNumber}/head:refs/heads/${branch}`;
+  const result = await runGit(project, ["fetch", "origin", refspec]);
+  if (result.exitCode !== 0) {
+    const detail = result.stderr.trim() || result.stdout.trim();
+    throw new Error(
+      detail || `git fetch failed for pull request #${prNumber} (${refspec})`
+    );
+  }
+}
 
 async function runGit(
   cwd: string,
   args: string[]
-): Promise<{ stdout: string; exitCode: number }> {
+): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   const proc = Bun.spawn(["git", "-C", cwd, ...args], {
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, , exitCode] = await Promise.all([
+  const [stdout, stderr, exitCode] = await Promise.all([
     new Response(proc.stdout).text(),
     new Response(proc.stderr).text(),
     proc.exited,
   ]);
-  return { stdout, exitCode };
+  return { stdout, stderr, exitCode };
+}
+
+async function runGh(
+  cwd: string,
+  args: string[]
+): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+  try {
+    const proc = Bun.spawn(["gh", ...args], {
+      cwd,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ]);
+    return { stdout, stderr, exitCode };
+  } catch {
+    // Missing `gh` binary or spawn failure — soft skip.
+    return { stdout: "", stderr: "", exitCode: 127 };
+  }
 }

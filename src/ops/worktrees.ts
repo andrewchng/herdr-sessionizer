@@ -1,7 +1,7 @@
 import type { Herdr } from "../client/herdr.ts";
 import type { Workspace } from "../client/types.ts";
 
-export interface WorktreeCreateOptions {
+interface WorktreeCreateOptions {
   workspaceId?: string;
   cwd?: string;
   branch: string;
@@ -11,7 +11,7 @@ export interface WorktreeCreateOptions {
   focus?: boolean;
 }
 
-export interface WorktreeOpenOptions {
+interface WorktreeOpenOptions {
   workspaceId?: string;
   cwd?: string;
   branch?: string;

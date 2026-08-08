@@ -12,7 +12,7 @@ export interface PickOptions {
   env?: Record<string, string>;
 }
 
-export interface PromptQueryOptions {
+interface PromptQueryOptions {
   prompt?: string;
   header?: string;
   bin?: string;

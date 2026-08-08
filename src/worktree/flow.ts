@@ -419,7 +419,7 @@ async function bootstrapOpenedWorktree(
   runtime.logger.log(options.openedMessage);
 }
 
-export function parseArgs(argv: readonly string[]): CliArgs {
+function parseArgs(argv: readonly string[]): CliArgs {
   let project: string | undefined;
   let branch: string | undefined;
   let command: string | undefined;

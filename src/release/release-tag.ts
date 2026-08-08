@@ -1,6 +1,6 @@
 import { assertValidVersion } from "./release.ts";
 
-export interface ReleaseTagState {
+interface ReleaseTagState {
   currentBranch: string;
   workingTreeClean: boolean;
   packageVersion: string;

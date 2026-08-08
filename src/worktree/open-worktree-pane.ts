@@ -3,7 +3,7 @@ export {};
 import { Herdr } from "../client/herdr.ts";
 import { loadConfig } from "../config/config.ts";
 
-export async function openWorktreePane(
+async function openWorktreePane(
   extraEnv: Record<string, string> = {}
 ): Promise<void> {
   const pluginId = process.env.HERDR_PLUGIN_ID;

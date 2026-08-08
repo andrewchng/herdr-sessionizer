@@ -3,12 +3,12 @@ import { basename } from "node:path";
 import { HerdrError } from "../client/errors.ts";
 import { worktreeSlug } from "../discovery/discovery.ts";
 
-export interface ExistingWorktreeResolution {
+interface ExistingWorktreeResolution {
   path: string;
   source: "error" | "git-branch" | "git-slug";
 }
 
-export interface ResolveExistingWorktreeOptions {
+interface ResolveExistingWorktreeOptions {
   project: string;
   branch: string;
   error?: HerdrError;
@@ -16,9 +16,7 @@ export interface ResolveExistingWorktreeOptions {
   branchExists?: boolean;
 }
 
-export type ListWorktreesPorcelain = (
-  project: string
-) => Promise<string | undefined>;
+type ListWorktreesPorcelain = (project: string) => Promise<string | undefined>;
 
 export class WorktreeResolver {
   constructor(

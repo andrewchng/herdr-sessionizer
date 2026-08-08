@@ -118,7 +118,7 @@ description = "open worktree workspace"
 
 ## Layout configuration
 
-When Sessionizer **creates** a new project or worktree workspace, it applies the layout from `config.toml`. Existing workspaces are only focused — the layout is not reapplied.
+When Sessionizer **creates** a new project or worktree workspace, or **opens** an existing worktree checkout, it applies the layout from `config.toml`. Focusing an existing Herdr workspace is unchanged — the layout is not reapplied.
 
 ```text
 ~/.config/herdr/plugins/config/sessionizer/config.toml
@@ -131,8 +131,8 @@ valid: new workspaces then open with a plain shell and no layout is applied.
 When `[tabs]` sections exist, `[layout].focus` is required.
 
 `[ui]` controls how Sessionizer / Worktree **pickers** open inside Herdr (not
-workspace bootstrap). New configs default to a session-modal `popup` at `90%`
-width/height (Herdr `>= 0.7.4`). You can switch to `overlay` or `split`, or omit
+workspace bootstrap). New configs default to `overlay`. You can switch to `split`
+or `popup` (Herdr `>= 0.7.4`, session-modal at `90%` width/height), or omit
 `[ui]` entirely to fall back to `overlay`.
 
 If you want an agent to help edit either the global config or a repo-local override, see [Agent skills](#agent-skills).
@@ -146,9 +146,7 @@ git_only = true
 depth = 1
 
 [ui]
-placement = "popup"   # overlay | split | popup (popup needs Herdr >= 0.7.4)
-width = "90%"
-height = "90%"
+placement = "overlay"   # overlay | split | popup (popup needs Herdr >= 0.7.4)
 
 [layout]
 focus = "editor"
@@ -213,8 +211,8 @@ Second tab shape:
 - `[projects].roots` — parent folders scanned by both pickers (plain paths; optional globs — see [Glob roots](#glob-roots-optional) below)
 - `[projects].git_only` — `true` returns only directories with `.git` metadata; `false` lists all immediate child folders
 - `[projects].depth` — maximum levels below each root to scan when `git_only = true`; `1` means immediate children
-- `[ui].placement` — how Sessionizer / Worktree pickers open in Herdr (`overlay`, `split`, or `popup`; new configs default to `popup`, which needs Herdr `>= 0.7.4`)
-- `[ui].width` / `[ui].height` — popup outer size (cells or `"90%"`); only with `placement = "popup"` (new configs default to `"90%"`)
+- `[ui].placement` — how Sessionizer / Worktree pickers open in Herdr (`overlay`, `split`, or `popup`; new configs default to `overlay`, `popup` needs Herdr `>= 0.7.4`)
+- `[ui].width` / `[ui].height` — popup outer size (cells or `"90%"`); only with `placement = "popup"`
 - `[layout].focus` — which tab or pane to focus after layout bootstrap
 - `[tabs.<name>]` — one Herdr tab to create per section
 - `[[tabs.<name>.panes]]` — panes inside the tab; `from` + `split` (`right` or `down`) define the split tree
@@ -282,7 +280,8 @@ When Sessionizer or Worktree creates a new workspace at `cwd`, Sessionizer check
 | ------------------------------------------- | ---------------------------------------------------- |
 | Sessionizer creates a new project workspace | Repo override at picked `cwd`, else global default   |
 | Worktree creates a new workspace            | Repo override at checkout `cwd`, else global default |
-| Focus or reopen an existing workspace       | No relayout                                          |
+| Worktree opens an existing checkout         | Repo override at checkout `cwd`, else global default |
+| Focus an existing workspace                 | No relayout                                          |
 
 #### Example repo override
 

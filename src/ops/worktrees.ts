@@ -23,6 +23,7 @@ interface WorktreeOpenOptions {
 interface WorktreeEnvelope {
   result?: {
     workspace?: Workspace;
+    already_open?: boolean;
     worktree?: {
       path?: string;
       checkout_path?: string;
@@ -30,9 +31,11 @@ interface WorktreeEnvelope {
   };
 }
 
-interface WorktreeOpenResult {
+export interface WorktreeOpenResult {
   workspace?: Workspace;
   worktreePath?: string;
+  /** True when herdr refocused an already-open workspace instead of opening the checkout fresh. */
+  alreadyOpen: boolean;
 }
 
 export class Worktrees {
@@ -81,6 +84,7 @@ export class Worktrees {
       worktreePath:
         response.result?.worktree?.checkout_path ??
         response.result?.worktree?.path,
+      alreadyOpen: response.result?.already_open ?? false,
     };
   }
 }

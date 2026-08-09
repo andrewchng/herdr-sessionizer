@@ -93,7 +93,9 @@ Worktree (always starts at repo picker)
 | <kbd>Esc</kbd> / no choices   | Prompt for a new branch, then create the worktree                                     |
 | <kbd>Esc</kbd> at branch name | Exit the worktree flow without creating anything                                      |
 
-Open PRs appear when [`gh`](https://cli.github.com/) is installed and authenticated for the selected repo (including draft and cross-fork heads). If `gh` is missing or fails, the picker still works — PR rows are simply omitted. After a PR is opened once, the picker shows the existing `pr-<n>` workspace/checkout/branch instead of the open-PR row; reopening does not re-fetch the PR tip or re-apply layout.
+Open PRs appear when [`gh`](https://cli.github.com/) is installed and authenticated for the selected repo (including draft and cross-fork heads). If `gh` is missing or fails, the picker still works — PR rows are simply omitted. Rows are labeled `open pr  #<n>  <title>  <owner>:<head>` with `[draft]` / `[fork]` badges. The preview pane shows the workspace it will create and identifies who opened the PR (e.g. `author: pperanich | fork: pperanich/herdr-sessionizer`). After a PR is opened once, the picker shows the existing `pr-<n>` workspace/checkout/branch instead of the open-PR row; reopening does not re-fetch the PR tip or re-apply layout.
+
+The git branch is always named `pr-<n>` (1:1 with the PR), but the herdr workspace is labeled `pr-<n>-<short-title>` (e.g. `pr-29-fix_worktree_gate`) so it is recognizable in Herdr. Opening a PR also configures `branch.pr-<n>.merge = refs/pull/<n>/head` (upstream = `origin`), so `git pull` inside the worktree pulls the latest PR head — including pushes from cross-fork contributors, since GitHub serves `refs/pull/<n>/head` on `origin`.
 
 See [Layout configuration](#layout-configuration) for when layout is applied.
 

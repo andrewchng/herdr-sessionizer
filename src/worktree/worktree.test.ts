@@ -81,6 +81,7 @@ describe("intentFromCandidate", () => {
       project: "/repo",
       branch: "pr-29",
       prNumber: 29,
+      label: "pr-29-fix_worktree_gate",
     });
   });
 });
@@ -611,7 +612,7 @@ describe("runWorktree", () => {
       cwd: "/repo",
       branch: "pr-29",
       base: undefined,
-      label: "pr-29",
+      label: "pr-29-fix_worktree_gate",
       focus: false,
     });
     expect(createLayout).toHaveBeenCalled();

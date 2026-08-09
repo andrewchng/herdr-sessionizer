@@ -1,14 +1,21 @@
 import { describe, expect, it, mock } from "bun:test";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import type { Workspace } from "../client/types.ts";
 import {
+  WORKTREE_CANDIDATE_ROW_DELIMITER,
   buildWorktreeCandidates,
   discoverWorktreeCandidates,
+  fetchPullRequestHead,
   openPullRequestLabel,
   parseGitBranchLines,
   parseGitWorktreePorcelain,
   parseOpenPullRequests,
   pullRequestBranchName,
+  pullRequestWorkspaceLabel,
   worktreeCandidateFromRow,
   worktreeCandidatePreviewPath,
   worktreeCandidateRow,
@@ -66,16 +73,22 @@ describe("parseOpenPullRequests", () => {
         headRefName: "fix/branch-exists-check",
         headRepositoryOwner: { login: "pperanich" },
         author: { login: "pperanich" },
+        headRepository: { nameWithOwner: "pperanich/herdr-sessionizer" },
         isDraft: true,
         isCrossRepository: true,
+        baseRefName: "main",
+        additions: 34,
+        deletions: 12,
       },
       {
         number: 30,
         title: "docs: update readme",
         headRefName: "docs/readme",
         headRepositoryOwner: { login: "andrewchng" },
+        headRepository: { nameWithOwner: "andrewchng/herdr-sessionizer" },
         isDraft: false,
         isCrossRepository: false,
+        baseRefName: "main",
       },
     ]);
 
@@ -87,6 +100,11 @@ describe("parseOpenPullRequests", () => {
         headOwner: "pperanich",
         isDraft: true,
         isCrossRepository: true,
+        author: "pperanich",
+        headRepositoryNameWithOwner: "pperanich/herdr-sessionizer",
+        baseRefName: "main",
+        additions: 34,
+        deletions: 12,
       },
       {
         number: 30,
@@ -95,6 +113,8 @@ describe("parseOpenPullRequests", () => {
         headOwner: "andrewchng",
         isDraft: false,
         isCrossRepository: false,
+        headRepositoryNameWithOwner: "andrewchng/herdr-sessionizer",
+        baseRefName: "main",
       },
     ]);
   });
@@ -335,6 +355,53 @@ describe("pull request helpers", () => {
       })
     ).toBe("open pr  #29  fix with whitespace  alice:fix/branch");
   });
+
+  it("badges draft and cross-fork PRs in the label", () => {
+    expect(
+      openPullRequestLabel({
+        number: 29,
+        title: "drafty change",
+        headRefName: "wip",
+        headOwner: "alice",
+        isDraft: true,
+      })
+    ).toBe("open pr  #29  [draft]  drafty change  alice:wip");
+    expect(
+      openPullRequestLabel({
+        number: 7,
+        title: "from a fork",
+        headRefName: "patch",
+        headOwner: "bob",
+        isCrossRepository: true,
+      })
+    ).toBe("open pr  #7  [fork]  from a fork  bob:patch");
+    expect(
+      openPullRequestLabel({
+        number: 8,
+        title: "both",
+        headRefName: "h",
+        headOwner: "carol",
+        isDraft: true,
+        isCrossRepository: true,
+      })
+    ).toBe("open pr  #8  [draft fork]  both  carol:h");
+  });
+
+  it("builds a meaningful herdr workspace label for a PR", () => {
+    expect(
+      pullRequestWorkspaceLabel(29, "fix(worktree): gate branch fallback")
+    ).toBe("pr-29-fix_worktree_gate");
+    expect(pullRequestWorkspaceLabel(29, "Add a thing")).toBe(
+      "pr-29-Add_a_thing"
+    );
+    expect(pullRequestWorkspaceLabel(29, "")).toBe("pr-29");
+    expect(
+      pullRequestWorkspaceLabel(
+        29,
+        "some very long title words here that spill over"
+      )
+    ).toBe("pr-29-some_very_long_title");
+  });
 });
 
 describe("worktreeCandidateRow", () => {
@@ -370,7 +437,7 @@ describe("worktreeCandidateRow", () => {
     expect(worktreeCandidatePreviewPath(row)).toBe("/repo");
   });
 
-  it("includes PR fetch detail in the picker row metadata", () => {
+  it("keeps PR rows to the label only, with preview metadata in a hidden field", () => {
     const row = worktreeCandidateRow({
       id: "pr:29",
       kind: "pull-request",
@@ -385,8 +452,125 @@ describe("worktreeCandidateRow", () => {
     });
 
     expect(worktreeCandidateVisibleRow(row)).toBe(
-      "open pr  #29  fix(worktree): gate branch fallback  pperanich:fix/branch-exists-check\tpr #29 → pr-29 | pull/29/head"
+      "open pr  #29  fix(worktree): gate branch fallback  pperanich:fix/branch-exists-check"
     );
     expect(worktreeCandidatePreviewPath(row)).toBe("/repo");
+  });
+
+  it("carries contributor and fork metadata for the preview pane", () => {
+    const row = worktreeCandidateRow({
+      id: "pr:29",
+      kind: "pull-request",
+      label: "open pr  #29  [fork]  title  pperanich:head",
+      branch: "pr-29",
+      prNumber: 29,
+      title: "title",
+      headRefName: "head",
+      headOwner: "pperanich",
+      isCrossRepository: true,
+      author: "pperanich",
+      headRepositoryNameWithOwner: "pperanich/herdr-sessionizer",
+      previewPath: "/repo",
+    });
+
+    const fields = row.split(WORKTREE_CANDIDATE_ROW_DELIMITER);
+    expect(fields[6]).toBe(
+      "author: pperanich | fork: pperanich/herdr-sessionizer"
+    );
+    // meta lives outside the visible list columns
+    expect(worktreeCandidateVisibleRow(row)).toBe(
+      "open pr  #29  [fork]  title  pperanich:head"
+    );
+  });
+});
+
+// ── fetchPullRequestHead (real git in a sandbox) ─────────────
+
+describe("fetchPullRequestHead", () => {
+  // Unique per-process sandbox: real git operations in tmpdir must never
+  // share state (e.g. a leftover registered worktree) across runs.
+  const sandbox = mkdtempSync(
+    join(tmpdir(), "herdr-sessionizer-test-pr-fetch-")
+  );
+  const origin = join(sandbox, "origin.git");
+  const repo = join(sandbox, "repo");
+  const worktree = join(sandbox, "wt");
+
+  function git(dir: string, args: string[]): string {
+    const result = spawnSync("git", ["-C", dir, ...args], {
+      encoding: "utf8",
+      // Hermetic: never inherit git env (e.g. GIT_DIR exported by the husky
+      // pre-commit hook), or sandbox commands would operate on the parent
+      // repository instead of the tmpdir fixtures.
+      env: {
+        PATH: process.env.PATH ?? "",
+        HOME: process.env.HOME ?? "",
+        LANG: process.env.LANG,
+      },
+    });
+    if (result.status !== 0) {
+      throw new Error(
+        `git ${args.join(" ")} failed in ${dir}: ${result.stderr}`
+      );
+    }
+    return result.stdout.trim();
+  }
+
+  function commit(path: string, file: string, contents: string): string {
+    writeFileSync(join(path, file), contents);
+    git(path, ["add", file]);
+    git(path, ["commit", "-qm", file]);
+    return git(path, ["rev-parse", "HEAD"]);
+  }
+
+  /** Simulates a GitHub origin with a `refs/pull/29/head` PR head ref. */
+  function setup(): string {
+    rmSync(sandbox, { recursive: true, force: true });
+    mkdirSync(origin, { recursive: true });
+    mkdirSync(repo, { recursive: true });
+    git(origin, ["init", "--bare", "-q"]);
+    git(repo, ["init", "-q"]);
+    git(repo, ["config", "user.email", "test@example.com"]);
+    git(repo, ["config", "user.name", "Test"]);
+    git(repo, ["branch", "-M", "main"]);
+    const base = commit(repo, "a.txt", "a\n");
+    git(repo, ["remote", "add", "origin", origin]);
+    git(repo, ["push", "-q", "origin", "main"]);
+    // PR head = one commit ahead of main (a contributor push)
+    const tip = commit(repo, "b.txt", "b\n");
+    git(repo, ["push", "-q", "origin", "HEAD:refs/pull/29/head"]);
+    expect(tip).not.toBe(base);
+    return tip;
+  }
+
+  it("materializes pr-N at the PR head tip and sets an upstream so git pull works", async () => {
+    const tip = setup();
+
+    await fetchPullRequestHead(repo, 29);
+
+    expect(git(repo, ["rev-parse", "refs/heads/pr-29"])).toBe(tip);
+    expect(git(repo, ["config", "branch.pr-29.remote"])).toBe("origin");
+    expect(git(repo, ["config", "branch.pr-29.merge"])).toBe(
+      "refs/pull/29/head"
+    );
+
+    // worktrees share the main repo config, so `git pull` works there
+    git(repo, ["worktree", "add", "-q", worktree, "pr-29"]);
+    git(worktree, ["pull", "--ff-only"]);
+    expect(git(worktree, ["rev-parse", "HEAD"])).toBe(tip);
+
+    // a later contributor push is picked up by a plain `git pull`
+    const tip2 = commit(repo, "c.txt", "c\n");
+    git(repo, ["push", "-q", "origin", "HEAD:refs/pull/29/head"]);
+    git(worktree, ["pull", "--ff-only"]);
+    expect(git(worktree, ["rev-parse", "HEAD"])).toBe(tip2);
+    expect(git(worktree, ["log", "--oneline", "-1"])).toContain("c.txt");
+  });
+
+  it("throws when the PR head ref is missing, without touching config", async () => {
+    setup();
+
+    expect(fetchPullRequestHead(repo, 404)).rejects.toThrow();
+    expect(git(repo, ["for-each-ref", "refs/heads/pr-404"])).toBe("");
   });
 });

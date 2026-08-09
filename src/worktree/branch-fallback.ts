@@ -154,6 +154,13 @@ async function runGit(cwd: string, args: string[]): Promise<GitCommandResult> {
   const proc = Bun.spawn(["git", "-C", cwd, ...args], {
     stdout: "pipe",
     stderr: "pipe",
+    // The project repo is always the one at `cwd`; ignore ambient git env
+    // (e.g. GIT_DIR exported by git hooks) that could redirect git elsewhere.
+    env: {
+      PATH: process.env.PATH ?? "",
+      HOME: process.env.HOME ?? "",
+      LANG: process.env.LANG,
+    },
   });
   const [stdout, stderr, exitCode] = await Promise.all([
     new Response(proc.stdout).text(),

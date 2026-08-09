@@ -16,6 +16,7 @@ import {
   WORKTREE_CANDIDATE_ROW_DELIMITER,
   discoverWorktreeCandidates,
   fetchPullRequestHead,
+  pullRequestWorkspaceLabel,
   worktreeCandidateFromRow,
   worktreeCandidateRow,
 } from "./candidates.ts";
@@ -111,6 +112,7 @@ type WorktreeIntent =
       project: string;
       branch: string;
       prNumber: number;
+      label: string;
     };
 
 export async function runWorktreeFlow(
@@ -170,6 +172,7 @@ export async function runWorktreeFlow(
     await openOrCreateWorktree(runtime, {
       project: intent.project,
       branch: intent.branch,
+      label: intent.label,
       command,
       repoWorkspaceId,
     });
@@ -273,6 +276,7 @@ export function intentFromCandidate(
       project,
       branch: candidate.branch,
       prNumber: candidate.prNumber,
+      label: pullRequestWorkspaceLabel(candidate.prNumber, candidate.title),
     };
   }
 
@@ -298,11 +302,19 @@ async function openOrCreateWorktree(
     project: string;
     branch: string;
     base?: string;
+    label?: string;
     command?: string;
     repoWorkspaceId?: string;
   }
 ): Promise<void> {
-  const { project, branch, base, command, repoWorkspaceId } = options;
+  const {
+    project,
+    branch,
+    base,
+    label: labelOverride,
+    command,
+    repoWorkspaceId,
+  } = options;
   if (!branch) {
     throw new Error("Branch name cannot be empty.");
   }
@@ -323,7 +335,7 @@ async function openOrCreateWorktree(
     if (!asHerdrError(error)) throw error;
   }
 
-  const label = sanitizeName(branch);
+  const label = labelOverride ?? sanitizeName(branch);
   let workspace: Workspace;
   try {
     workspace = await runtime.worktrees.create({

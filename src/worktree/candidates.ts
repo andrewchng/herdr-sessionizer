@@ -53,12 +53,12 @@ export type WorktreeCandidate =
       previewPath: string;
     };
 
-export interface GitWorktreeCandidate {
+interface GitWorktreeCandidate {
   path: string;
   branch?: string;
 }
 
-export interface GitBranchCandidates {
+interface GitBranchCandidates {
   local: string[];
   remote: string[];
 }
@@ -77,7 +77,7 @@ export interface OpenPullRequest {
   deletions?: number;
 }
 
-export interface WorktreeCandidateRuntime {
+interface WorktreeCandidateRuntime {
   listGitWorktrees(project: string): Promise<GitWorktreeCandidate[]>;
   listGitBranches(project: string): Promise<GitBranchCandidates>;
   listOpenPullRequests(project: string): Promise<OpenPullRequest[]>;
@@ -111,7 +111,7 @@ export async function discoverWorktreeCandidates({
   });
 }
 
-export interface BuildWorktreeCandidateOptions {
+interface BuildWorktreeCandidateOptions {
   project: string;
   repoWorkspaceId?: string;
   workspaces: readonly Workspace[];

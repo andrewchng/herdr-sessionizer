@@ -12,7 +12,7 @@ description: Sessionizer config edits. Use when the user wants project roots, gi
 | global     | `~/.config/herdr/plugins/config/sessionizer/config.toml` |
 | repo-local | `<repo>/.sessionizer/config.toml`                        |
 
-**Bootstrap** — layout changes (`[layout].focus`, `[tabs.*]`) apply only when Sessionizer or Worktree creates a **new** workspace, not on reopen. **Picker UI** (`[ui]`) applies every time a picker opens and is global-only.
+**Bootstrap** — layout changes (`[layout].focus`, `[tabs.*]`) apply when Sessionizer or Worktree creates a **new** workspace, or when it opens an existing worktree checkout (not when an existing Herdr workspace is only focused). **Picker UI** (`[ui]`) applies every time a picker opens and is global-only.
 
 ## Workflow
 

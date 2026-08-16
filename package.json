@@ -14,7 +14,8 @@
     "release": "bun run scripts/release/prep.ts",
     "release:tag": "bun run scripts/release/tag.ts",
     "release:notes": "bun run scripts/release/notes.ts",
-    "test": "bun test",
+    "test": "bun test --path-ignore-patterns='**/*.integration.test.ts'",
+    "test:integration": "bun test src/worktree/candidates.integration.test.ts",
     "typecheck": "tsc --noEmit",
     "prepare": "husky"
   },

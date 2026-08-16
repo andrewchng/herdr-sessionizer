@@ -84,13 +84,18 @@ Worktree (always starts at repo picker)
                                            └─ Esc ──> exit
 ```
 
-| Selection                     | Result                                            |
-| ----------------------------- | ------------------------------------------------- |
-| Existing workspace/checkout   | Reopen as-is                                      |
-| Local branch                  | Create a worktree workspace for that branch       |
-| Remote branch                 | Create a local worktree from that remote branch   |
-| <kbd>Esc</kbd> / no choices   | Prompt for a new branch, then create the worktree |
-| <kbd>Esc</kbd> at branch name | Exit the worktree flow without creating anything  |
+| Selection                     | Result                                                                                |
+| ----------------------------- | ------------------------------------------------------------------------------------- |
+| Existing workspace/checkout   | Reopen as-is                                                                          |
+| Open PR                       | Fetch `pull/<n>/head` into local `pr-<n>`, create worktree + layout (first open only) |
+| Local branch                  | Create a worktree workspace for that branch                                           |
+| Remote branch                 | Create a local worktree from that remote branch                                       |
+| <kbd>Esc</kbd> / no choices   | Prompt for a new branch, then create the worktree                                     |
+| <kbd>Esc</kbd> at branch name | Exit the worktree flow without creating anything                                      |
+
+Open PRs appear when [`gh`](https://cli.github.com/) is installed and authenticated for the selected repo (including draft and cross-fork heads). If `gh` is missing or fails, the picker still works — PR rows are simply omitted. Rows are labeled `open pr  #<n>  <title>  <owner>:<head>` with `[draft]` / `[fork]` badges. The preview pane shows the workspace it will create and identifies who opened the PR (e.g. `author: pperanich | fork: pperanich/herdr-sessionizer`). After a PR is opened once, the picker shows the existing `pr-<n>` workspace/checkout/branch instead of the open-PR row; reopening does not re-fetch the PR tip or re-apply layout.
+
+The git branch is always named `pr-<n>` (1:1 with the PR), but the herdr workspace is labeled `pr-<n>-<short-title>` (e.g. `pr-29-fix_worktree_gate`) so it is recognizable in Herdr. Opening a PR also configures `branch.pr-<n>.merge = refs/pull/<n>/head` (upstream = `origin`), so `git pull` inside the worktree pulls the latest PR head — including pushes from cross-fork contributors, since GitHub serves `refs/pull/<n>/head` on `origin`. A same-repo PR can also appear as a plain `remote branch origin/<head>` row — both are shown by design (different branch identities); fork PRs appear only as `open pr` rows.
 
 See [Layout configuration](#layout-configuration) for when layout is applied.
 
@@ -227,6 +232,17 @@ Rules for `ratio`:
 - if omitted, Herdr's default split sizing is used
 - it applies only when the workspace is first bootstrapped, never when an existing workspace is reopened
 
+### Worktree refresh (optional)
+
+By default the worktree picker reads your local `refs/remotes/*`, which only changes when you run `git fetch` — so a brand-new remote branch can be missing from the list until you fetch manually. Set this to fetch on every picker open (soft-fail: offline or slow networks fall back to the stale refs):
+
+```toml
+[worktree]
+fetch_on_open = true
+```
+
+Default is `false`; enabling it adds a network call (`git fetch --prune origin`) to each worktree picker open, so only turn it on if stale remote branches are a regular annoyance.
+
 ### Glob roots (optional)
 
 Globs in `roots` help when clones follow a nested layout — e.g. [ghq](https://github.com/motemen/ghq)'s `host/owner/repo` tree — and you do not want to list every owner folder:
@@ -345,11 +361,14 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 ```sh
 bun run typecheck
 bun run test
+bun run test:integration
 bun run release -- <version> --dry-run
 bun run release:tag -- <version> --dry-run
 bun run release:notes -- <version>
 bun run sessionizer
 ```
+
+`bun run test` runs the unit suite only; `bun run test:integration` runs the real-git sandbox tests for `fetchPullRequestHead` (a tmpdir fake GitHub, no network). The integration suite is excluded from `bun test` and CI runs both — the pre-commit hook exports `GIT_DIR`, which would redirect the sandbox's git commands into the parent repository, so the sandbox suite only ever runs in CI's clean environment.
 
 Use `bun run release -- <version>` on the release-prep branch to update version files, then run `bun run release:tag -- <version>` from merged `main` to create and push the annotated `v<version>` release tag.
 

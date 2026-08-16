@@ -12,6 +12,12 @@ Thanks @nilp0inter ([#31](https://github.com/andrewchng/herdr-sessionizer/pull/3
 
 ## [Unreleased]
 
+### Added
+
+- Open GitHub pull requests as worktree candidates ([#43](https://github.com/andrewchng/herdr-sessionizer/pull/43)): open PRs (including drafts and cross-fork heads) appear in the worktree picker when [`gh`](https://cli.github.com/) is installed and authenticated. Selecting one fetches `pull/<n>/head` into a local `pr-<n>` branch, creates a worktree workspace named `pr-<n>-<short-title>` (layout on first create only), and configures `branch.pr-<n>` upstream so `git pull` inside the worktree tracks the live PR head — including pushes from cross-fork contributors. `gh` is a soft dependency: if it is missing or unauthenticated, PR rows are simply omitted and the git-only flow is unchanged ([#33](https://github.com/andrewchng/herdr-sessionizer/issues/33)).
+- PR rows carry `[draft]` / `[fork]` badges; the picker preview shows the PR author and head repo (e.g. `author: pperanich | fork: pperanich/herdr-sessionizer`).
+- Optional `[worktree] fetch_on_open = true` runs `git fetch --prune origin` before the worktree picker so new remote branches appear without a manual fetch (default `false`).
+
 ## [0.7.1] - 2026-08-01
 
 ### Fixed

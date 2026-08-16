@@ -12,6 +12,7 @@ import {
   attachExistingBranchWorktree,
   localBranchExists,
 } from "./branch-fallback.ts";
+import { fetchPullRequestHead } from "./candidates.ts";
 import {
   defaultDiscoverWorktreeCandidates,
   runWorktreeFlow,
@@ -73,6 +74,7 @@ function createRuntime(): WorktreeFlowRuntime {
     discoverCandidates: defaultDiscoverWorktreeCandidates,
     attachExistingBranch: attachExistingBranchWorktree,
     localBranchExists,
+    fetchPullRequestHead,
     logger: console,
     exit: (code) => process.exit(code),
   };

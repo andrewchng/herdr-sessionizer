@@ -5,7 +5,7 @@ Sessionizer is a [Herdr](https://herdr.dev/) plugin that uses fuzzy pickers to o
 ![Sessionizer demo — fuzzy workspace picker with README preview](docs/assets/demo.gif)
 
 - **Sessionizer** — focus an existing workspace or create a new project workspace
-- **Worktree** — create or reopen a Git worktree workspace
+- **Worktree** — create or reopen a Git worktree workspace, including from an open GitHub PR
 
 > **Platform:** macOS and Linux.
 
@@ -34,6 +34,7 @@ brew install fzf
 ```
 
 Optional: [bat](https://github.com/sharkdp/bat) for richer `README.md` previews (`brew install bat`).
+Optional: [`gh`](https://cli.github.com/) to list open GitHub PRs in the worktree picker (`brew install gh && gh auth login`).
 
 ## Setup
 
@@ -79,23 +80,29 @@ Sessionizer (workspace picker first; Esc → projects under projects.roots)
                     └──────────── Esc / none ──> exit
 
 Worktree (always starts at repo picker)
-  projects ──> branches? ──Enter──> reopen or create — see table
+  projects ──> branches / PRs? ──Enter──> reopen or create — see table
             └──────────── Esc / none ──> type new branch → create + layout
                                            └─ Esc ──> exit
 ```
 
-| Selection                     | Result                                                                                |
-| ----------------------------- | ------------------------------------------------------------------------------------- |
-| Existing workspace/checkout   | Reopen as-is                                                                          |
-| Open PR                       | Fetch `pull/<n>/head` into local `pr-<n>`, create worktree + layout (first open only) |
-| Local branch                  | Create a worktree workspace for that branch                                           |
-| Remote branch                 | Create a local worktree from that remote branch                                       |
-| <kbd>Esc</kbd> / no choices   | Prompt for a new branch, then create the worktree                                     |
-| <kbd>Esc</kbd> at branch name | Exit the worktree flow without creating anything                                      |
+| Selection                     | Result                                            |
+| ----------------------------- | ------------------------------------------------- |
+| Existing workspace/checkout   | Reopen as-is                                      |
+| Open PR                       | Create a `pr-<n>` worktree (layout on first open) |
+| Local branch                  | Create a worktree workspace for that branch       |
+| Remote branch                 | Create a local worktree from that remote branch   |
+| <kbd>Esc</kbd> / no choices   | Prompt for a new branch, then create the worktree |
+| <kbd>Esc</kbd> at branch name | Exit the worktree flow without creating anything  |
 
-Open PRs appear when [`gh`](https://cli.github.com/) is installed and authenticated for the selected repo (including draft and cross-fork heads). If `gh` is missing or fails, the picker still works — PR rows are simply omitted. Rows are labeled `open pr  #<n>  <title>  <owner>:<head>` with `[draft]` / `[fork]` badges. The preview pane shows the workspace it will create and identifies who opened the PR (e.g. `author: pperanich | fork: pperanich/herdr-sessionizer`). After a PR is opened once, the picker shows the existing `pr-<n>` workspace/checkout/branch instead of the open-PR row; reopening does not re-fetch the PR tip or re-apply layout.
+### Open pull requests
 
-The git branch is always named `pr-<n>` (1:1 with the PR), but the herdr workspace is labeled `pr-<n>-<short-title>` (e.g. `pr-29-fix_worktree_gate`) so it is recognizable in Herdr. Opening a PR also configures `branch.pr-<n>.merge = refs/pull/<n>/head` (upstream = `origin`), so `git pull` inside the worktree pulls the latest PR head — including pushes from cross-fork contributors, since GitHub serves `refs/pull/<n>/head` on `origin`. A same-repo PR can also appear as a plain `remote branch origin/<head>` row — both are shown by design (different branch identities); fork PRs appear only as `open pr` rows.
+Open PRs appear when [`gh`](https://cli.github.com/) is installed and authenticated. Drafts and fork heads are included; rows may show `[draft]` or `[fork]`. If `gh` is missing or fails, those rows are omitted and the rest of the picker is unchanged.
+
+The git branch is always `pr-<n>`. The Herdr workspace is named `pr-<n>-<short-title>` so it is recognizable (e.g. `pr-29-fix_worktree_gate`). `git pull` inside the worktree tracks the live PR head, including pushes from fork contributors.
+
+After the first open, the picker shows the existing `pr-<n>` workspace or checkout instead of the open-PR row. Reopening does not re-fetch or re-apply layout.
+
+A same-repo PR can also appear as `remote branch origin/<head>` — both rows are shown on purpose. Fork PRs appear only as `open pr`.
 
 See [Layout configuration](#layout-configuration) for when layout is applied.
 

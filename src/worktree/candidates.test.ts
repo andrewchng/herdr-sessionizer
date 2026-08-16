@@ -281,6 +281,7 @@ describe("discoverWorktreeCandidates", () => {
       workspaces: [],
       runtime: {
         listGitWorktrees: mock(async () => []),
+        refreshRemoteRefs: mock(async () => {}),
         listGitBranches: mock(async () => ({
           local: ["feature/local"],
           remote: [],
@@ -293,12 +294,54 @@ describe("discoverWorktreeCandidates", () => {
     expect(worktreeCandidateFromRow(row, candidates)).toEqual(candidates[0]);
   });
 
+  it("refreshes remote refs before listing branches when enabled, soft-skipping failures", async () => {
+    const refreshed = await discoverWorktreeCandidates({
+      project: "/repo",
+      workspaces: [],
+      fetchOnOpen: true,
+      runtime: {
+        listGitWorktrees: mock(async () => []),
+        refreshRemoteRefs: mock(async () => {}),
+        listGitBranches: mock(async () => ({
+          local: [],
+          remote: ["origin/new-branch"],
+        })),
+        listOpenPullRequests: mock(async () => []),
+      },
+    });
+    expect(refreshed.map((candidate) => candidate.kind)).toEqual([
+      "remote-branch",
+    ]);
+
+    // a throwing refresh still lists branches from the (stale) refs
+    const withFailure = await discoverWorktreeCandidates({
+      project: "/repo",
+      workspaces: [],
+      fetchOnOpen: true,
+      runtime: {
+        listGitWorktrees: mock(async () => []),
+        refreshRemoteRefs: mock(async () => {
+          throw new Error("offline");
+        }),
+        listGitBranches: mock(async () => ({
+          local: ["main"],
+          remote: [],
+        })),
+        listOpenPullRequests: mock(async () => []),
+      },
+    });
+    expect(withFailure.map((candidate) => candidate.kind)).toEqual([
+      "local-branch",
+    ]);
+  });
+
   it("merges injected open PRs and soft-skips when listOpenPullRequests throws", async () => {
     const withPrs = await discoverWorktreeCandidates({
       project: "/repo",
       workspaces: [],
       runtime: {
         listGitWorktrees: mock(async () => []),
+        refreshRemoteRefs: mock(async () => {}),
         listGitBranches: mock(async () => ({ local: [], remote: [] })),
         listOpenPullRequests: mock(async () => [
           {
@@ -323,6 +366,7 @@ describe("discoverWorktreeCandidates", () => {
       workspaces: [],
       runtime: {
         listGitWorktrees: mock(async () => []),
+        refreshRemoteRefs: mock(async () => {}),
         listGitBranches: mock(async () => ({
           local: ["main"],
           remote: [],

@@ -39,6 +39,9 @@ interface RawConfig {
   layout?: {
     focus?: string;
   };
+  worktree?: {
+    fetch_on_open?: boolean;
+  };
   tabs?: Record<string, RawTabConfig>;
 }
 
@@ -77,6 +80,10 @@ export interface SessionizerConfig {
   layout: {
     focus: string;
   };
+  worktree: {
+    /** Run `git fetch --prune origin` before listing worktree candidates (default false). */
+    fetch_on_open: boolean;
+  };
   tabs: TabConfig[];
 }
 
@@ -110,6 +117,7 @@ export function resolveLayoutConfig(
       layout: {
         focus,
       },
+      worktree: globalConfig.worktree,
       tabs: buildTabs(raw),
     };
   } catch (error) {
@@ -153,6 +161,9 @@ export function loadConfig(): SessionizerConfig {
     ui: resolveUiConfig(pluginConfig),
     layout: {
       focus: focus ?? "",
+    },
+    worktree: {
+      fetch_on_open: pluginConfig?.worktree?.fetch_on_open ?? false,
     },
     tabs,
   };
@@ -240,6 +251,11 @@ function defaultConfigToml(): string {
     "[layout]",
     "# Which pane or tab to focus after layout creation",
     'focus = "editor"',
+    "",
+    "[worktree]",
+    "# Fetch remote refs before listing worktree candidates (adds a network call)",
+    "# Use this if you regularly miss new remote branches in the picker",
+    "fetch_on_open = false",
     "",
     "[tabs.dev]",
     'label = "dev"',

@@ -80,6 +80,8 @@ export interface OpenPullRequest {
 interface WorktreeCandidateRuntime {
   listGitWorktrees(project: string): Promise<GitWorktreeCandidate[]>;
   listGitBranches(project: string): Promise<GitBranchCandidates>;
+  /** Refreshes remote refs (e.g. `git fetch --prune origin`) before listing branches. */
+  refreshRemoteRefs(project: string): Promise<void>;
   listOpenPullRequests(project: string): Promise<OpenPullRequest[]>;
 }
 
@@ -88,6 +90,8 @@ export interface DiscoverWorktreeCandidateOptions {
   repoWorkspaceId?: string;
   workspaces: readonly Workspace[];
   runtime?: WorktreeCandidateRuntime;
+  /** Run `git fetch --prune origin` before listing branches (default false). */
+  fetchOnOpen?: boolean;
 }
 
 export async function discoverWorktreeCandidates({
@@ -95,12 +99,17 @@ export async function discoverWorktreeCandidates({
   repoWorkspaceId,
   workspaces,
   runtime = defaultWorktreeCandidateRuntime,
+  fetchOnOpen = false,
 }: DiscoverWorktreeCandidateOptions): Promise<WorktreeCandidate[]> {
-  const [gitWorktrees, gitBranches, openPullRequests] = await Promise.all([
+  // When enabled, fetch runs in parallel with worktree + PR listing and must
+  // finish before branches are read so new/deleted remote branches show up.
+  const [gitWorktrees, openPullRequests, refresh] = await Promise.all([
     runtime.listGitWorktrees(project),
-    runtime.listGitBranches(project),
     listOpenPullRequestsSoft(runtime, project),
+    fetchOnOpen ? refreshRemoteRefsSoft(runtime, project) : Promise.resolve(),
   ]);
+  const gitBranches = await runtime.listGitBranches(project);
+  void refresh;
   return buildWorktreeCandidates({
     project,
     repoWorkspaceId,
@@ -377,6 +386,17 @@ async function listOpenPullRequestsSoft(
   }
 }
 
+async function refreshRemoteRefsSoft(
+  runtime: WorktreeCandidateRuntime,
+  project: string
+): Promise<void> {
+  try {
+    await runtime.refreshRemoteRefs(project);
+  } catch {
+    // Soft skip: stale refs are still usable (same policy as the gh PR list).
+  }
+}
+
 function loginFromJson(value: unknown): string | undefined {
   if (value && typeof value === "object") {
     const login = (value as Record<string, unknown>).login;
@@ -506,6 +526,11 @@ const defaultWorktreeCandidateRuntime: WorktreeCandidateRuntime = {
       local: local.exitCode === 0 ? parseGitBranchLines(local.stdout) : [],
       remote: remote.exitCode === 0 ? parseGitBranchLines(remote.stdout) : [],
     };
+  },
+  async refreshRemoteRefs(project) {
+    // Fetch before listing so new/deleted remote branches appear. Soft: any
+    // failure keeps the existing (possibly stale) refs.
+    await runGit(project, ["fetch", "--prune", "origin"]);
   },
   async listOpenPullRequests(project) {
     const result = await runGh(project, [

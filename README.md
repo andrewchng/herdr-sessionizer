@@ -232,6 +232,17 @@ Rules for `ratio`:
 - if omitted, Herdr's default split sizing is used
 - it applies only when the workspace is first bootstrapped, never when an existing workspace is reopened
 
+### Worktree refresh (optional)
+
+By default the worktree picker reads your local `refs/remotes/*`, which only changes when you run `git fetch` — so a brand-new remote branch can be missing from the list until you fetch manually. Set this to fetch on every picker open (soft-fail: offline or slow networks fall back to the stale refs):
+
+```toml
+[worktree]
+fetch_on_open = true
+```
+
+Default is `false`; enabling it adds a network call (`git fetch --prune origin`) to each worktree picker open, so only turn it on if stale remote branches are a regular annoyance.
+
 ### Glob roots (optional)
 
 Globs in `roots` help when clones follow a nested layout — e.g. [ghq](https://github.com/motemen/ghq)'s `host/owner/repo` tree — and you do not want to list every owner folder:

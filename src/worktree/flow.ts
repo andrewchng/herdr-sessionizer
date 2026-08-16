@@ -218,6 +218,7 @@ async function resolveInteractiveIntent(
     project,
     repoWorkspaceId,
     workspaces,
+    fetchOnOpen: runtime.config.worktree.fetch_on_open,
   });
   if (candidates.length > 0) {
     const rows = candidates.map(worktreeCandidateRow);

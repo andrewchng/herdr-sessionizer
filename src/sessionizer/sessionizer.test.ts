@@ -13,6 +13,7 @@ function testConfig(): SessionizerConfig {
     projects: { roots: ["/projects"], git_only: false, depth: 1 },
     ui: { placement: "overlay" },
     layout: { focus: "assistant" },
+    worktree: { fetch_on_open: false },
     tabs: [],
   };
 }

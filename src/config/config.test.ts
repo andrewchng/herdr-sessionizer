@@ -16,6 +16,7 @@ function globalConfig(): SessionizerConfig {
     projects: { roots: ["/projects"], git_only: false, depth: 1 },
     ui: { placement: "overlay" },
     layout: { focus: "editor" },
+    worktree: { fetch_on_open: false },
     tabs: [
       {
         id: "dev",
@@ -125,6 +126,40 @@ describe("loadConfig", () => {
 
       expect(config.projects.git_only).toBe(true);
       expect(config.projects.depth).toBe(3);
+    });
+  });
+
+  it("defaults worktree.fetch_on_open to false", () => {
+    withPluginConfigDir((dir) => {
+      writeFileSync(
+        join(dir, "config.toml"),
+        minimalGlobalConfig(['roots = ["/repo"]']),
+        "utf-8"
+      );
+
+      const config = loadConfig();
+
+      expect(config.worktree.fetch_on_open).toBe(false);
+    });
+  });
+
+  it("parses worktree.fetch_on_open = true", () => {
+    withPluginConfigDir((dir) => {
+      const contents = [
+        "[projects]",
+        'roots = ["/repo"]',
+        "",
+        "[layout]",
+        'focus = "editor"',
+        "",
+        "[worktree]",
+        "fetch_on_open = true",
+      ].join("\n");
+      writeFileSync(join(dir, "config.toml"), contents, "utf-8");
+
+      const config = loadConfig();
+
+      expect(config.worktree.fetch_on_open).toBe(true);
     });
   });
 });

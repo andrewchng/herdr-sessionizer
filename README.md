@@ -34,6 +34,7 @@ brew install fzf
 ```
 
 Optional: [bat](https://github.com/sharkdp/bat) for richer `README.md` previews (`brew install bat`).
+
 Optional: [`gh`](https://cli.github.com/) to list open GitHub PRs in the worktree picker (`brew install gh && gh auth login`).
 
 ## Setup

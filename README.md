@@ -359,7 +359,7 @@ bun run sessionizer
 
 `bun run test` runs the unit suite only; `bun run test:integration` runs the real-git sandbox tests for `fetchPullRequestHead` (a tmpdir fake GitHub, no network). The integration suite is excluded from `bun test` and CI runs both — the pre-commit hook exports `GIT_DIR`, which would redirect the sandbox's git commands into the parent repository, so the sandbox suite only ever runs in CI's clean environment.
 
-Use `bun run release -- <version>` on the release-prep branch to update version files, then run `bun run release:tag -- <version>` from merged `main` to create and push the annotated `v<version>` release tag.
+Create the release-prep branch from updated `main` (after the feature PRs merge) — never from a feature branch, or the release PR diff will include the whole feature. Use `bun run release -- <version>` on the release-prep branch to update version files, then run `bun run release:tag -- <version>` from merged `main` to create and push the annotated `v<version>` release tag.
 
 ## Support
 

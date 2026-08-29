@@ -58,13 +58,35 @@ bun run build
 herdr plugin link /path/to/herdr-sessionizer
 ```
 
-After TypeScript, manifest, or entrypoint changes, rebuild and re-link:
+After TypeScript changes, `bun run build` is enough — Herdr execs `./dist/sessionizer` on the next keypress. Relink only when `herdr-plugin.toml` changes:
 
 ```sh
 bun run build
 herdr plugin unlink sessionizer || true
 herdr plugin link /path/to/herdr-sessionizer
 ```
+
+To skip compile while iterating (keybinds run TypeScript via Bun), point the four manifest `command` arrays at `bun run` and relink. Bun must be on `PATH`. Restore the `./dist/sessionizer` commands before committing — `herdr plugin install` and the published plugin always use the compiled binary.
+
+```toml
+[[actions]]
+id = "open"
+command = ["bun", "run", "src/sessionizer/open-pane.ts"]
+
+[[actions]]
+id = "worktree-open"
+command = ["bun", "run", "src/worktree/open-worktree-pane.ts"]
+
+[[panes]]
+id = "sessionizer"
+command = ["bun", "run", "src/sessionizer/sessionizer-pane.ts"]
+
+[[panes]]
+id = "worktree"
+command = ["bun", "run", "src/worktree/worktree-pane.ts"]
+```
+
+`bun run sessionizer` still runs the Sessionizer flow without linking or compiling.
 
 ## Usage
 

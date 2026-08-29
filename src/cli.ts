@@ -69,9 +69,7 @@ export async function dispatch(
       await openWorktreePane();
       return;
     case "worktree":
-      await runWorktree(
-        args.length > 0 ? [...args] : buildWorktreeArgvFromEnv()
-      );
+      await runWorktree(args.length > 0 ? args : buildWorktreeArgvFromEnv());
       return;
   }
 }

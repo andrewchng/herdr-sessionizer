@@ -3,7 +3,6 @@ export {};
 import { Herdr } from "../client/herdr.ts";
 import { loadConfig } from "../config/config.ts";
 
-/** Action launcher: open the Sessionizer pane entrypoint. */
 export async function openSessionizerPane(): Promise<void> {
   const pluginId = process.env.HERDR_PLUGIN_ID;
   if (!pluginId) {

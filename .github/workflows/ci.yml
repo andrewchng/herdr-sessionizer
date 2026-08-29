@@ -34,3 +34,4 @@ jobs:
         run: |
           test -x dist/sessionizer
           ./dist/sessionizer --help
+          ! ./dist/sessionizer not-a-mode

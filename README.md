@@ -25,7 +25,7 @@ Inspired by [ThePrimeagen's tmux-sessionizer](https://github.com/ThePrimeagen/tm
 Sessionizer does not install system tools for you.
 
 - [Herdr](https://herdr.dev/) `>= 0.7.4`
-- [Bun](https://bun.sh/) — plugin build and runtime
+- [Bun](https://bun.sh/) — required for **install/build** (and maintainer workflows). After the plugin is built, Herdr launches compiled `dist/sessionizer` — Bun is **not** required merely to open already-built actions/panes.
 - [fzf](https://github.com/junegunn/fzf) — interactive pickers
 
 ```sh
@@ -44,21 +44,49 @@ herdr plugin install andrewchng/herdr-sessionizer --yes
 herdr plugin config-dir sessionizer
 ```
 
+Install runs `bun install` then compiles a host-local `dist/sessionizer` binary. Actions and panes invoke that binary with a mode (`open`, `sessionizer`, `worktree-open`, `worktree`).
+
 Wire keybindings in your Herdr config (see [Example keybindings](#example-keybindings)).
 
 ### Local development
 
+`herdr plugin link` does **not** run the plugin build steps. Compile first, then link:
+
 ```sh
 bun install
+bun run build
 herdr plugin link /path/to/herdr-sessionizer
 ```
 
-After manifest or pane/action changes:
+After TypeScript changes, `bun run build` is enough — Herdr execs `./dist/sessionizer` on the next keypress. Relink only when `herdr-plugin.toml` changes:
 
 ```sh
+bun run build
 herdr plugin unlink sessionizer || true
 herdr plugin link /path/to/herdr-sessionizer
 ```
+
+To skip compile while iterating (keybinds run TypeScript via Bun), point the four manifest `command` arrays at `bun run` and relink. Bun must be on `PATH`. Restore the `./dist/sessionizer` commands before committing — `herdr plugin install` and the published plugin always use the compiled binary.
+
+```toml
+[[actions]]
+id = "open"
+command = ["bun", "run", "src/sessionizer/open-pane.ts"]
+
+[[actions]]
+id = "worktree-open"
+command = ["bun", "run", "src/worktree/open-worktree-pane.ts"]
+
+[[panes]]
+id = "sessionizer"
+command = ["bun", "run", "src/sessionizer/sessionizer-pane.ts"]
+
+[[panes]]
+id = "worktree"
+command = ["bun", "run", "src/worktree/worktree-pane.ts"]
+```
+
+`bun run sessionizer` still runs the Sessionizer flow without linking or compiling.
 
 ## Usage
 
@@ -359,10 +387,12 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 bun run typecheck
 bun run test
 bun run test:integration
+bun run build          # produces dist/sessionizer (host-local executable)
 bun run release -- <version> --dry-run
 bun run release:tag -- <version> --dry-run
 bun run release:notes -- <version>
-bun run sessionizer
+bun run sessionizer    # dev: run Sessionizer flow via Bun without compiling
+./dist/sessionizer --help
 ```
 
 `bun run test` runs the unit suite only; `bun run test:integration` runs the real-git sandbox tests for `fetchPullRequestHead` (a tmpdir fake GitHub, no network). The integration suite is excluded from `bun test` and CI runs both — the pre-commit hook exports `GIT_DIR`, which would redirect the sandbox's git commands into the parent repository, so the sandbox suite only ever runs in CI's clean environment.

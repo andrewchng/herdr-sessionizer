@@ -3,7 +3,7 @@ export {};
 import { Herdr } from "../client/herdr.ts";
 import { loadConfig } from "../config/config.ts";
 
-async function run(): Promise<void> {
+export async function openSessionizerPane(): Promise<void> {
   const pluginId = process.env.HERDR_PLUGIN_ID;
   if (!pluginId) {
     throw new Error(
@@ -44,7 +44,9 @@ async function run(): Promise<void> {
   await herdr.run(args);
 }
 
-run().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
-});
+if (import.meta.main) {
+  openSessionizerPane().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  });
+}

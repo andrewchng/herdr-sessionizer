@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Plugin actions and panes launch a host-local compiled `dist/sessionizer` instead of `bun run` on TypeScript sources ([#38](https://github.com/andrewchng/herdr-sessionizer/pull/38), [#3](https://github.com/andrewchng/herdr-sessionizer/issues/3)). One binary, four modes: `open`, `sessionizer`, `worktree-open`, `worktree`. `herdr plugin install` compiles it after `bun install`; `herdr plugin link` does not — run `bun run build` first. Bun remains required for install/build, not to launch already-built entrypoints.
+
 ## [0.8.0] - 2026-08-16
 
 ### Added

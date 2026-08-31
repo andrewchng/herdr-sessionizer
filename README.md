@@ -157,6 +157,18 @@ command = "sessionizer.worktree-open"
 description = "open worktree workspace"
 ```
 
+### Remote use (`herdr --remote`)
+
+When you attach to a remote Herdr server, the Sessionizer keybindings above are read from the **remote** server's config, but Herdr's remote client may resolve keybindings from the machine you launched it from instead. If `sessionizer.open` / `sessionizer.worktree-open` do nothing under `herdr --remote`, attach with the server's keybindings:
+
+```sh
+herdr --remote <target> --remote-keybindings server
+```
+
+Bindings added to the machine that launches `herdr --remote` do **not** trigger the plugin in a remote session — they must come from the remote server's keybindings.
+
+> The plugin itself runs on the remote host — bun, fzf, and the plugin checkout must be present there. See [Requirements](#requirements) for the runtime prerequisites.
+
 ## Layout configuration
 
 When Sessionizer **creates** a new project or worktree workspace, or **opens** an existing worktree checkout, it applies the layout from `config.toml`. Focusing an existing Herdr workspace is unchanged — the layout is not reapplied.

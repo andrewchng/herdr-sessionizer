@@ -132,6 +132,129 @@ describe("runSessionizer", () => {
     expect(focus).toHaveBeenCalledWith("ws-project");
   });
 
+  it("focuses instead of duplicating when the picked project already has a workspace", async () => {
+    const create = mock(async (_options: unknown) => testWorkspace());
+    const focus = mock(async () => {});
+    const log = mock(() => {});
+    const open = testWorkspace({
+      path: "/projects/fieldnotes",
+      workspace_id: "ws-open",
+    });
+
+    await runSessionizer({
+      workspaces: {
+        list: mock(async () => [open]),
+        create,
+        focus,
+      },
+      tabs: testTabs(),
+      panes: testPanes(),
+      config: testConfig(),
+      pickRows: mock(
+        async (_rows: readonly string[], options?: { prompt?: string }) => {
+          if (options?.prompt === "Switch session (Esc for new): ") {
+            return null;
+          }
+
+          return ["/projects/fieldnotes"];
+        }
+      ),
+      listProjects: mock(() => ["/projects/fieldnotes"]),
+      createLayout: mock(async (workspace: Workspace) => workspace),
+      logger: { log, error: mock(() => {}) },
+      exit: (code) => {
+        throw new Error(`unexpected exit ${code}`);
+      },
+    });
+
+    expect(create).not.toHaveBeenCalled();
+    expect(focus).toHaveBeenCalledWith("ws-open");
+    expect(log).toHaveBeenCalledWith(
+      "✓ focused existing workspace for '/projects/fieldnotes' (ws-open)"
+    );
+  });
+
+  it("falls back to the legacy cwd field when matching existing workspaces", async () => {
+    const create = mock(async (_options: unknown) => testWorkspace());
+    const focus = mock(async () => {});
+    const open = testWorkspace({
+      cwd: "/projects/fieldnotes",
+      workspace_id: "ws-legacy",
+    });
+
+    await runSessionizer({
+      workspaces: {
+        list: mock(async () => [open]),
+        create,
+        focus,
+      },
+      tabs: testTabs(),
+      panes: testPanes(),
+      config: testConfig(),
+      pickRows: mock(
+        async (_rows: readonly string[], options?: { prompt?: string }) => {
+          if (options?.prompt === "Switch session (Esc for new): ") {
+            return null;
+          }
+
+          return ["/projects/fieldnotes"];
+        }
+      ),
+      listProjects: mock(() => ["/projects/fieldnotes"]),
+      createLayout: mock(async (workspace: Workspace) => workspace),
+      logger: { log: mock(() => {}), error: mock(() => {}) },
+      exit: (code) => {
+        throw new Error(`unexpected exit ${code}`);
+      },
+    });
+
+    expect(create).not.toHaveBeenCalled();
+    expect(focus).toHaveBeenCalledWith("ws-legacy");
+  });
+
+  it("still creates a workspace when only a worktree workspace matches the project path", async () => {
+    const workspace = testWorkspace({
+      cwd: "/projects/fieldnotes",
+      workspace_id: "ws-new",
+    });
+    const create = mock(async () => workspace);
+    const focus = mock(async () => {});
+    const worktreeMatch = testWorkspace({
+      cwd: "/projects/fieldnotes",
+      workspace_id: "ws-worktree",
+      worktree: { branch: "main" },
+    });
+
+    await runSessionizer({
+      workspaces: {
+        list: mock(async () => [worktreeMatch]),
+        create,
+        focus,
+      },
+      tabs: testTabs(),
+      panes: testPanes(),
+      config: testConfig(),
+      pickRows: mock(
+        async (_rows: readonly string[], options?: { prompt?: string }) => {
+          if (options?.prompt === "Switch session (Esc for new): ") {
+            return null;
+          }
+
+          return ["/projects/fieldnotes"];
+        }
+      ),
+      listProjects: mock(() => ["/projects/fieldnotes"]),
+      createLayout: mock(async (created: Workspace) => created),
+      logger: { log: mock(() => {}), error: mock(() => {}) },
+      exit: (code) => {
+        throw new Error(`unexpected exit ${code}`);
+      },
+    });
+
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(focus).toHaveBeenCalledWith("ws-new");
+  });
+
   it("exits with an error when no projects are found", async () => {
     const error = mock(() => {});
 

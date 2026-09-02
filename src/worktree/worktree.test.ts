@@ -230,6 +230,38 @@ describe("runWorktree", () => {
     expect(attachExistingBranch).not.toHaveBeenCalled();
   });
 
+  it("creates an explicit branch from an explicit base ref", async () => {
+    const create = mock(async () => testWorkspace());
+
+    await runWorktree(
+      [
+        "--project",
+        "/repo",
+        "--branch",
+        "review/feature/test-flow",
+        "--base",
+        "origin/feature/test-flow",
+      ],
+      testRuntime({
+        worktrees: {
+          open: mock(async () => {
+            throw new HerdrError(["worktree", "open"], 1, "not found");
+          }),
+          create,
+        },
+      })
+    );
+
+    expect(create).toHaveBeenCalledWith({
+      workspaceId: undefined,
+      cwd: "/repo",
+      branch: "review/feature/test-flow",
+      base: "origin/feature/test-flow",
+      label: "review_feature_test-flow",
+      focus: false,
+    });
+  });
+
   it("attaches an existing branch as a new worktree when no existing checkout can be resolved", async () => {
     const duplicateBranchError = new HerdrError(
       ["worktree", "create"],
@@ -1089,6 +1121,7 @@ describe("buildWorktreeArgvFromEnv", () => {
       buildWorktreeArgvFromEnv({
         WORKTREE_PROJECT: "/repo",
         WORKTREE_BRANCH: "feat/x",
+        WORKTREE_BASE: "origin/feat/x",
         WORKTREE_COMMAND: "echo hi",
       })
     ).toEqual([
@@ -1096,6 +1129,8 @@ describe("buildWorktreeArgvFromEnv", () => {
       "/repo",
       "--branch",
       "feat/x",
+      "--base",
+      "origin/feat/x",
       "--command",
       "echo hi",
     ]);

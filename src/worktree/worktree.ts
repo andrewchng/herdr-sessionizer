@@ -38,6 +38,9 @@ export function buildWorktreeArgvFromEnv(
   if (env.WORKTREE_BRANCH) {
     argv.push("--branch", env.WORKTREE_BRANCH);
   }
+  if (env.WORKTREE_BASE) {
+    argv.push("--base", env.WORKTREE_BASE);
+  }
   const command = env.WORKTREE_COMMAND ?? env.WORKTREE_CONTEXT;
   if (command) {
     argv.push("--command", command);

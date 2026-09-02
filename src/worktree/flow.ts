@@ -24,6 +24,7 @@ import {
 interface CliArgs {
   project?: string;
   branch?: string;
+  base?: string;
   command?: string;
 }
 
@@ -135,6 +136,7 @@ export async function runWorktreeFlow(
           kind: "create-branch" as const,
           project: args.project,
           branch: args.branch,
+          base: args.base,
         }
       : await resolveInteractiveIntent(runtime, workspaces);
 
@@ -470,6 +472,7 @@ async function bootstrapOpenedWorktree(
 function parseArgs(argv: readonly string[]): CliArgs {
   let project: string | undefined;
   let branch: string | undefined;
+  let base: string | undefined;
   let command: string | undefined;
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -484,13 +487,18 @@ function parseArgs(argv: readonly string[]): CliArgs {
       index += 1;
       continue;
     }
+    if (arg === "--base") {
+      base = argv[index + 1];
+      index += 1;
+      continue;
+    }
     if (arg === "--command" || arg === "-c" || arg === "--context") {
       command = argv[index + 1];
       index += 1;
     }
   }
 
-  return { project, branch, command };
+  return { project, branch, base, command };
 }
 
 function findRepoWorkspaceId(

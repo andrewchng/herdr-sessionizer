@@ -21,11 +21,15 @@ export const WORKSPACE_PREVIEW = [
   'summary="$2";',
   'cwd="$3";',
   'branch="$4";',
-  'tabs="$5";',
-  'panes="$6";',
+  'repo="$5";',
+  'provenance="$6";',
+  'tabs="$7";',
+  'panes="$8";',
   'printf \"label: %s\\n\" \"$label\";',
   'printf \"summary: %s\\n\" \"$summary\";',
   'if [ -n \"$branch\" ]; then printf \"branch: %s\\n\" \"$branch\"; fi;',
+  'if [ -n \"$repo\" ]; then printf \"repo: %s\\n\" \"$repo\"; fi;',
+  'if [ -n \"$provenance\" ]; then printf \"provenance: %s\\n\" \"$provenance\"; fi;',
   'if [ -n \"$cwd\" ]; then printf \"cwd: %s\\n\" \"$cwd\"; fi;',
   'printf \"tabs: %s\\npanes: %s\\n\\n\" \"$tabs\" \"$panes\";',
   'if [ -n \"$cwd\" ] && [ -f \"$cwd/README.md\" ]; then',
@@ -37,7 +41,86 @@ export const WORKSPACE_PREVIEW = [
   'elif [ -n \"$cwd\" ] && [ -d \"$cwd\" ]; then',
   '  command ls -la -- \"$cwd\" 2>/dev/null | head -50;',
   "fi",
-  "' sh {2} {3} {4} {5} {6} {7}",
+  "' sh {2} {3} {4} {5} {6} {7} {8} {9}",
+].join(" ");
+
+/**
+ * Close-mode (non-destructive) preview. Same positionals as WORKSPACE_PREVIEW
+ * (label, summary, branch, repo, provenance, tabs/panes, cwd) but no git
+ * status — closing a workspace leaves the worktree checkout intact.
+ */
+export const WORKSPACE_CLOSE_PREVIEW = [
+  "sh -c '",
+  'label="$1";',
+  'summary="$2";',
+  'cwd="$3";',
+  'branch="$4";',
+  'repo="$5";',
+  'provenance="$6";',
+  'tabs="$7";',
+  'panes="$8";',
+  'printf \"label: %s\\n\" \"$label\";',
+  'printf \"summary: %s\\n\" \"$summary\";',
+  'if [ -n \"$branch\" ]; then printf \"branch: %s\\n\" \"$branch\"; fi;',
+  'if [ -n \"$repo\" ]; then printf \"repo: %s\\n\" \"$repo\"; fi;',
+  'if [ -n \"$provenance\" ]; then printf \"provenance: %s\\n\" \"$provenance\"; fi;',
+  'if [ -n \"$cwd\" ]; then printf \"cwd: %s\\n\" \"$cwd\"; fi;',
+  'printf \"tabs: %s\\npanes: %s\\n\\n\" \"$tabs\" \"$panes\";',
+  'if [ -n \"$cwd\" ] && [ -f \"$cwd/README.md\" ]; then',
+  "  if command -v bat >/dev/null 2>&1; then",
+  '    bat --color=always -- \"$cwd/README.md\";',
+  "  else",
+  '    head -50 \"$cwd/README.md\";',
+  "  fi;",
+  'elif [ -n \"$cwd\" ] && [ -d \"$cwd\" ]; then',
+  '  command ls -la -- \"$cwd\" 2>/dev/null | head -50;',
+  "fi",
+  "' sh {2} {3} {4} {5} {6} {7} {8} {9}",
+].join(" ");
+
+/**
+ * Remove-mode (destructive) preview. Same positionals as WORKSPACE_PREVIEW
+ * plus the last commit and a dirty marker so the user can see what a
+ * destructive remove will take away.
+ */
+export const WORKTREE_CLOSE_PREVIEW = [
+  "sh -c '",
+  'label="$1";',
+  'summary="$2";',
+  'cwd="$3";',
+  'branch="$4";',
+  'repo="$5";',
+  'provenance="$6";',
+  'tabs="$7";',
+  'panes="$8";',
+  'printf \"label: %s\\n\" \"$label\";',
+  'printf \"summary: %s\\n\" \"$summary\";',
+  'if [ -n \"$branch\" ]; then printf \"branch: %s\\n\" \"$branch\"; fi;',
+  'if [ -n \"$repo\" ]; then printf \"repo: %s\\n\" \"$repo\"; fi;',
+  'if [ -n \"$provenance\" ]; then printf \"provenance: %s\\n\" \"$provenance\"; fi;',
+  'if [ -n \"$cwd\" ]; then printf \"cwd: %s\\n\" \"$cwd\"; fi;',
+  'printf \"tabs: %s\\npanes: %s\\n\" \"$tabs\" \"$panes\";',
+  'if [ -n \"$cwd\" ]; then',
+  '  printf \"last commit: \";',
+  '  git -C \"$cwd\" log -1 --pretty=format:\"%h %ad %s\" --date=short 2>/dev/null;',
+  '  printf \"\\n\";',
+  '  if [ -n \"$(git -C \"$cwd\" status --porcelain 2>/dev/null)\" ]; then',
+  '    printf \"dirty: yes\\n\";',
+  "  else",
+  '    printf \"dirty: no\\n\";',
+  "  fi;",
+  "fi;",
+  'printf \"\\n\";',
+  'if [ -n \"$cwd\" ] && [ -f \"$cwd/README.md\" ]; then',
+  "  if command -v bat >/dev/null 2>&1; then",
+  '    bat --color=always -- \"$cwd/README.md\";',
+  "  else",
+  '    head -50 \"$cwd/README.md\";',
+  "  fi;",
+  'elif [ -n \"$cwd\" ] && [ -d \"$cwd\" ]; then',
+  '  command ls -la -- \"$cwd\" 2>/dev/null | head -50;',
+  "fi",
+  "' sh {2} {3} {4} {5} {6} {7} {8} {9}",
 ].join(" ");
 
 export const WORKTREE_CANDIDATE_PREVIEW = [

@@ -1,5 +1,3 @@
-import { basename } from "node:path";
-
 import {
   listProjects,
   sanitizeName,
@@ -20,8 +18,11 @@ import { Tabs } from "../ops/tabs.ts";
 import { Workspaces } from "../ops/workspaces.ts";
 import { pick, type PickOptions } from "../ui/fzf.ts";
 import { PROJECT_PREVIEW, WORKSPACE_PREVIEW } from "../ui/previews.ts";
-
-const WORKSPACE_ROW_DELIMITER = "\t";
+import {
+  extractWorkspaceId,
+  workspaceRow,
+  WORKSPACE_ROW_DELIMITER,
+} from "../ui/workspace-row.ts";
 
 type LayoutApplier = (
   workspace: Workspace,
@@ -57,29 +58,6 @@ interface SessionizerRuntime {
   createLayout: LayoutApplier;
   logger: Pick<typeof console, "log" | "error">;
   exit: (code: number) => never;
-}
-
-function workspaceRow(workspace: Workspace): string {
-  const label = rowField(workspace.label || workspaceName(workspace));
-  const summary = rowField(workspaceSummary(workspace));
-  const cwd = rowField(workspacePath(workspace));
-  const branch = rowField(workspace.worktree?.branch);
-  const tabCount = String(workspace.tab_count ?? 0);
-  const paneCount = String(workspace.pane_count ?? 0);
-
-  return [
-    workspace.workspace_id,
-    label,
-    summary,
-    cwd,
-    branch,
-    tabCount,
-    paneCount,
-  ].join(WORKSPACE_ROW_DELIMITER);
-}
-
-function extractWorkspaceId(row: string): string {
-  return row.split(WORKSPACE_ROW_DELIMITER)[0] ?? row;
 }
 
 export async function runSessionizer(
@@ -135,49 +113,6 @@ export async function runSessionizer(
   runtime.logger.log(
     `✓ workspace '${label}' created and focused (${workspace.workspace_id})`
   );
-}
-
-function workspaceName(workspace: Workspace): string {
-  const path = workspacePath(workspace);
-  if (path) {
-    return basename(path);
-  }
-
-  return workspace.workspace_id;
-}
-
-function workspaceSummary(workspace: Workspace): string {
-  const path = workspacePath(workspace);
-  const location = path ? basename(path) : workspace.worktree?.repo_name;
-  const branch = workspace.worktree?.branch;
-  if (branch) {
-    return location ? `${branch} · ${location}` : branch;
-  }
-
-  if (location) {
-    return location;
-  }
-
-  const tabs = workspace.tab_count ?? 0;
-  const panes = workspace.pane_count ?? 0;
-  return `${tabs} tabs · ${panes} panes`;
-}
-
-function workspacePath(workspace: Workspace): string | undefined {
-  return (
-    workspace.cwd ??
-    workspace.worktree?.checkout_path ??
-    workspace.worktree?.repo_root ??
-    workspace.worktree?.path
-  );
-}
-
-function rowField(value: unknown): string {
-  if (typeof value !== "string") {
-    return "";
-  }
-
-  return value.replaceAll("\t", " ").replaceAll("\n", " ").trim();
 }
 
 function createRuntime(): SessionizerRuntime {

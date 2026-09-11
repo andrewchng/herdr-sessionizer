@@ -21,6 +21,11 @@ id = "worktree-open"
 title = "Open worktree"
 command = ["./dist/sessionizer", "worktree-open"]
 
+[[actions]]
+id = "close"
+title = "Close workspaces"
+command = ["./dist/sessionizer", "close"]
+
 [[panes]]
 id = "sessionizer"
 title = "Sessionizer"
@@ -32,3 +37,9 @@ id = "worktree"
 title = "Worktree"
 placement = "overlay"
 command = ["./dist/sessionizer", "worktree"]
+
+[[panes]]
+id = "close"
+title = "Close workspaces"
+placement = "overlay"
+command = ["./dist/sessionizer", "close-flow"]

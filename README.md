@@ -6,6 +6,7 @@ Sessionizer is a [Herdr](https://herdr.dev/) plugin that uses fuzzy pickers to o
 
 - **Sessionizer** — focus an existing workspace or create a new project workspace
 - **Worktree** — create or reopen a Git worktree workspace, including from an open GitHub PR
+- **Close** — close one or more open workspaces; choose between closing the session (keep worktrees) and removing the git worktree checkout (destructive)
 
 > **Platform:** macOS and Linux.
 
@@ -44,7 +45,7 @@ herdr plugin install andrewchng/herdr-sessionizer --yes
 herdr plugin config-dir sessionizer
 ```
 
-Install runs `bun install` then compiles a host-local `dist/sessionizer` binary. Actions and panes invoke that binary with a mode (`open`, `sessionizer`, `worktree-open`, `worktree`).
+Install runs `bun install` then compiles a host-local `dist/sessionizer` binary. Actions and panes invoke that binary with a mode (`open`, `sessionizer`, `worktree-open`, `worktree`, `close`, `close-flow`).
 
 Wire keybindings in your Herdr config (see [Example keybindings](#example-keybindings)).
 
@@ -66,7 +67,7 @@ herdr plugin unlink sessionizer || true
 herdr plugin link /path/to/herdr-sessionizer
 ```
 
-To skip compile while iterating (keybinds run TypeScript via Bun), point the four manifest `command` arrays at `bun run` and relink. Bun must be on `PATH`. Restore the `./dist/sessionizer` commands before committing — `herdr plugin install` and the published plugin always use the compiled binary.
+To skip compile while iterating (keybinds run TypeScript via Bun), point the manifest `command` arrays at `bun run` and relink. Bun must be on `PATH`. Restore the `./dist/sessionizer` commands before committing — `herdr plugin install` and the published plugin always use the compiled binary.
 
 ```toml
 [[actions]]
@@ -77,6 +78,10 @@ command = ["bun", "run", "src/sessionizer/open-pane.ts"]
 id = "worktree-open"
 command = ["bun", "run", "src/worktree/open-worktree-pane.ts"]
 
+[[actions]]
+id = "close"
+command = ["bun", "run", "src/worktree/open-close-pane.ts"]
+
 [[panes]]
 id = "sessionizer"
 command = ["bun", "run", "src/sessionizer/sessionizer-pane.ts"]
@@ -84,6 +89,10 @@ command = ["bun", "run", "src/sessionizer/sessionizer-pane.ts"]
 [[panes]]
 id = "worktree"
 command = ["bun", "run", "src/worktree/worktree-pane.ts"]
+
+[[panes]]
+id = "close"
+command = ["bun", "run", "src/worktree/close-pane.ts"]
 ```
 
 `bun run sessionizer` still runs the Sessionizer flow without linking or compiling.
@@ -94,10 +103,12 @@ command = ["bun", "run", "src/worktree/worktree-pane.ts"]
 | --------------- | --------------------------- |
 | Project picker  | `sessionizer.open`          |
 | Worktree picker | `sessionizer.worktree-open` |
+| Close picker    | `sessionizer.close`         |
 
 ```sh
 herdr plugin action invoke sessionizer.open
 herdr plugin action invoke sessionizer.worktree-open
+herdr plugin action invoke sessionizer.close
 ```
 
 ### UX flow
@@ -112,6 +123,10 @@ Worktree (always starts at repo picker)
   projects ──> branches / PRs? ──Enter──> reopen or create — see table
             └──────────── Esc / none ──> type new branch → create + layout
                                            └─ Esc ──> exit
+
+Close (mode menu first, then multi-select picker)
+  mode ──> close (keep worktrees) ──> workspaces ──Tab + Enter──> close sessions
+        └─> remove (destructive) ──> worktrees ──Tab + Enter──> close + delete checkout
 ```
 
 | Selection                     | Result                                            |
@@ -155,6 +170,12 @@ key = "prefix+up"
 type = "plugin_action"
 command = "sessionizer.worktree-open"
 description = "open worktree workspace"
+
+[[keys.command]]
+key = "prefix+d"
+type = "plugin_action"
+command = "sessionizer.close"
+description = "close or remove workspaces"
 ```
 
 ## Layout configuration

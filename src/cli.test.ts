@@ -10,7 +10,14 @@ describe("parseArgs", () => {
   });
 
   it("parses each known mode and forwards remaining args", () => {
-    const modes: Mode[] = ["open", "sessionizer", "worktree-open", "worktree"];
+    const modes: Mode[] = [
+      "open",
+      "sessionizer",
+      "worktree-open",
+      "worktree",
+      "close",
+      "close-flow",
+    ];
     for (const mode of modes) {
       expect(parseArgs([mode])).toEqual({
         ok: true,
@@ -36,23 +43,27 @@ describe("parseArgs", () => {
 });
 
 describe("isMode", () => {
-  it("accepts only the four plugin modes", () => {
+  it("accepts only the plugin modes", () => {
     expect(isMode("open")).toBe(true);
     expect(isMode("sessionizer")).toBe(true);
     expect(isMode("worktree-open")).toBe(true);
     expect(isMode("worktree")).toBe(true);
+    expect(isMode("close")).toBe(true);
+    expect(isMode("close-flow")).toBe(true);
     expect(isMode("help")).toBe(false);
     expect(isMode("")).toBe(false);
   });
 });
 
 describe("usage", () => {
-  it("lists all four modes", () => {
+  it("lists all modes", () => {
     const text = usage();
     expect(text).toContain("open");
     expect(text).toContain("sessionizer");
     expect(text).toContain("worktree-open");
     expect(text).toContain("worktree");
+    expect(text).toContain("close");
+    expect(text).toContain("close-flow");
   });
 });
 

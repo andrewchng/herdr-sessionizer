@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Sessionizer opens one picker instead of two: open workspaces (marked `●`) are listed first, followed by every project under `projects.roots`. <kbd>Enter</kbd> on a workspace focuses it, <kbd>Enter</kbd> on a project creates the workspace and applies the layout. No more <kbd>Esc</kbd> to reach projects, and <kbd>Esc</kbd> now simply closes the picker. A project that already has an open workspace appears only as that workspace (matched through its panes' cwd, since `workspace list` omits cwd for workspaces Sessionizer did not create), and nested projects display their root-relative path (`org/repo`).
+
 ## [0.8.4] - 2026-09-23
 
 ### Changed

@@ -28,6 +28,13 @@ function testWorkspace(overrides?: Partial<Workspace>): Workspace {
   };
 }
 
+/** The row fzf would print back when the user picks `project`. */
+function projectRowFor(rows: readonly string[], project: string): string {
+  const row = rows.find((candidate) => candidate.split("\t")[3] === project);
+  if (!row) throw new Error(`no row for ${project}`);
+  return row;
+}
+
 function testTabs(): LayoutTabs {
   return {
     create: mock(async () => ({ tab_id: "ws1:t1", workspace_id: "ws1" })),
@@ -65,6 +72,7 @@ describe("runSessionizer", () => {
       config: testConfig(),
       pickRows,
       listProjects: mock(() => ["/projects/fieldnotes"]),
+      listPanes: mock(async () => []),
       createLayout: mock(async (workspace: Workspace) => workspace),
       logger: { log: mock(() => {}), error: mock(() => {}) },
       exit: (code) => {
@@ -76,24 +84,62 @@ describe("runSessionizer", () => {
     expect(pickRows).toHaveBeenCalledTimes(1);
   });
 
-  it("falls through to the project picker when the existing-session picker is dismissed", async () => {
-    const tabs = testTabs();
-    const panes = testPanes();
-    const create = mock(
-      async ({ cwd, label }: { cwd: string; label: string }) =>
-        testWorkspace({ cwd, label, workspace_id: "ws-project" })
-    );
-    const focus = mock(async () => {});
-    const createLayout = mock(async (workspace: Workspace) => workspace);
-    const pickRows = mock(
-      async (_rows: readonly string[], options?: { prompt?: string }) => {
-        if (options?.prompt === "Switch session (Esc for new): ") {
-          return null;
-        }
+  it("lists open workspaces then projects in one picker", async () => {
+    const pickRows = mock(async () => null);
 
-        return ["/projects/fieldnotes"];
-      }
-    );
+    await runSessionizer({
+      workspaces: {
+        // Herdr omits cwd for workspaces Sessionizer did not create
+        list: mock(async () => [testWorkspace()]),
+        create: mock(async (_options) => testWorkspace()),
+        focus: mock(async () => {}),
+      },
+      tabs: testTabs(),
+      panes: testPanes(),
+      config: testConfig(),
+      pickRows,
+      listProjects: mock(() => [
+        "/projects/fieldnotes",
+        "/projects/herdr-sessionizer",
+        "/projects/org/api",
+        "/elsewhere/tools",
+      ]),
+      listPanes: mock(async () => [
+        {
+          pane_id: "ws1:p1",
+          terminal_id: "term-1",
+          workspace_id: "ws1",
+          tab_id: "ws1:t1",
+          cwd: "/projects/fieldnotes/src",
+        },
+      ]),
+      createLayout: mock(async (workspace: Workspace) => workspace),
+      logger: { log: mock(() => {}), error: mock(() => {}) },
+      exit: (code) => {
+        throw new Error(`unexpected exit ${code}`);
+      },
+    });
+
+    expect(pickRows).toHaveBeenCalledTimes(1);
+    const [rows, options] = pickRows.mock.calls[0] as unknown as [
+      string[],
+      { withNth?: string },
+    ];
+    // fieldnotes is open (a pane sits inside it), so only its workspace row is offered
+    expect(rows.map((row) => row.split("\t")[1])).toEqual([
+      "● fieldnotes",
+      "  herdr-sessionizer",
+      "  org/api",
+      "  tools",
+    ]);
+    expect(options.withNth).toBe("2");
+    // the workspace row borrows its pane's cwd so the preview can show the repo
+    expect(rows[0]!.split("\t")[3]).toBe("/projects/fieldnotes/src");
+  });
+
+  it("does nothing when the picker is dismissed", async () => {
+    const create = mock(async (_options) => testWorkspace());
+    const focus = mock(async () => {});
 
     await runSessionizer({
       workspaces: {
@@ -101,35 +147,55 @@ describe("runSessionizer", () => {
         create,
         focus,
       },
-      tabs,
-      panes,
+      tabs: testTabs(),
+      panes: testPanes(),
       config: testConfig(),
-      pickRows,
+      pickRows: mock(async () => null),
       listProjects: mock(() => ["/projects/fieldnotes"]),
-      createLayout,
+      listPanes: mock(async () => []),
+      createLayout: mock(async (workspace: Workspace) => workspace),
       logger: { log: mock(() => {}), error: mock(() => {}) },
       exit: (code) => {
         throw new Error(`unexpected exit ${code}`);
       },
     });
 
-    expect(pickRows).toHaveBeenCalledTimes(2);
+    expect(create).not.toHaveBeenCalled();
+    expect(focus).not.toHaveBeenCalled();
+  });
+
+  it("opens a project in a new workspace when there are no workspaces yet", async () => {
+    const create = mock(async (_options) =>
+      testWorkspace({ workspace_id: "ws-project" })
+    );
+    const focus = mock(async () => {});
+
+    await runSessionizer({
+      workspaces: {
+        list: mock(async () => []),
+        create,
+        focus,
+      },
+      tabs: testTabs(),
+      panes: testPanes(),
+      config: testConfig(),
+      pickRows: mock(async (rows: readonly string[]) => [
+        projectRowFor(rows, "/projects/fieldnotes"),
+      ]),
+      listProjects: mock(() => ["/projects/fieldnotes"]),
+      listPanes: mock(async () => []),
+      createLayout: mock(async (workspace: Workspace) => workspace),
+      logger: { log: mock(() => {}), error: mock(() => {}) },
+      exit: (code) => {
+        throw new Error(`unexpected exit ${code}`);
+      },
+    });
+
     expect(create).toHaveBeenCalledWith({
       cwd: "/projects/fieldnotes",
       label: "fieldnotes",
       focus: false,
     });
-    expect(createLayout).toHaveBeenCalledWith(
-      testWorkspace({
-        cwd: "/projects/fieldnotes",
-        label: "fieldnotes",
-        workspace_id: "ws-project",
-      }),
-      "/projects/fieldnotes",
-      testConfig(),
-      tabs,
-      panes
-    );
     expect(focus).toHaveBeenCalledWith("ws-project");
   });
 
@@ -148,6 +214,7 @@ describe("runSessionizer", () => {
         config: testConfig(),
         pickRows: mock(async () => null),
         listProjects: mock(() => []),
+        listPanes: mock(async () => []),
         createLayout: mock(async (workspace: Workspace) => workspace),
         logger: { log: mock(() => {}), error },
         exit: (code) => {
@@ -185,16 +252,11 @@ describe("runSessionizer", () => {
       tabs,
       panes,
       config: testConfig(),
-      pickRows: mock(
-        async (_rows: readonly string[], options?: { prompt?: string }) => {
-          if (options?.prompt === "Switch session (Esc for new): ") {
-            return null;
-          }
-
-          return ["/projects/herdr-sessionizer"];
-        }
-      ),
+      pickRows: mock(async (rows: readonly string[]) => [
+        projectRowFor(rows, "/projects/herdr-sessionizer"),
+      ]),
       listProjects: mock(() => ["/projects/herdr-sessionizer"]),
+      listPanes: mock(async () => []),
       createLayout,
       logger: { log, error: mock(() => {}) },
       exit: (code) => {
@@ -262,16 +324,11 @@ describe("runSessionizer", () => {
       tabs,
       panes,
       config,
-      pickRows: mock(
-        async (_rows: readonly string[], options?: { prompt?: string }) => {
-          if (options?.prompt === "Switch session (Esc for new): ") {
-            return null;
-          }
-
-          return [projectRoot];
-        }
-      ),
+      pickRows: mock(async (rows: readonly string[]) => [
+        projectRowFor(rows, projectRoot),
+      ]),
       listProjects: mock(() => [projectRoot]),
+      listPanes: mock(async () => []),
       createLayout,
       logger: { log: mock(() => {}), error: mock(() => {}) },
       exit: (code) => {

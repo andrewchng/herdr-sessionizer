@@ -23,6 +23,14 @@ export class Panes {
     return response.result.pane;
   }
 
+  async list(): Promise<Pane[]> {
+    const response = await this.herdr.json<{ result: { panes: Pane[] } }>([
+      "pane",
+      "list",
+    ]);
+    return response.result.panes;
+  }
+
   async run(paneId: string, command: string): Promise<void> {
     await this.herdr.run(["pane", "run", paneId, command]);
   }

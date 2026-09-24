@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- `[ui].preview_window` sets the fzf `--preview-window` spec for every picker (default `"right:50%"`, unchanged). Use `"down:40%"` to give long project names the full width, or `"hidden"` to turn the preview off ([#35](https://github.com/andrewchng/herdr-sessionizer/issues/35)).
+
 ## [0.8.4] - 2026-09-23
 
 ### Changed

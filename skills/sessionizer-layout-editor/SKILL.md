@@ -28,6 +28,7 @@ description: Sessionizer config edits. Use when the user wants project roots, gi
 4. **Picker UI** edits (global only):
    - `[ui].placement` is `overlay` | `split` | `popup` (popup needs Herdr `>= 0.7.4`)
    - optional `[ui].width` / `[ui].height` only with `popup` (cells or `"80%"`)
+   - optional `[ui].preview_window`: fzf `--preview-window` spec for all pickers (default `"right:50%"`, `"hidden"` turns the preview off)
    - **do not** put placement under `[layout]`
    - if the file still has legacy `[layout].placement`, **move it to `[ui].placement` and remove the old key** (no dual-write)
    - new seeded configs default to `placement = "overlay"`; omitted `[ui]` also falls back to `overlay` at runtime
@@ -42,6 +43,7 @@ description: Sessionizer config edits. Use when the user wants project roots, gi
 - "Set `git_only = false`" → global discovery; see reference
 - "Open pickers as a popup" → global `[ui].placement = "popup"` (optional width/height; default size is Herdr half-size if omitted)
 - "Use a large popup" → `placement = "popup"`, `width = "90%"`, `height = "90%"`
+- "Names get cut off" / "no preview" → `[ui].preview_window = "down:40%"` or `"hidden"`
 - "Add a repo-local override with lazygit + copilot" → repo-local file
 - "Make the right pane 30% with `ratio = 0.3`" → layout pane edit in the active **scope**
 

@@ -9,7 +9,11 @@ import {
 import type { Workspace } from "../client/types.ts";
 import { Herdr } from "../client/herdr.ts";
 import type { SessionizerConfig } from "../config/config.ts";
-import { loadConfig, resolveLayoutConfig } from "../config/config.ts";
+import {
+  loadConfig,
+  previewWindow,
+  resolveLayoutConfig,
+} from "../config/config.ts";
 import {
   createProjectLayout,
   type LayoutPanes,
@@ -95,7 +99,7 @@ export async function runSessionizer(
       delimiter: WORKSPACE_ROW_DELIMITER,
       withNth: "2",
       preview: WORKSPACE_PREVIEW,
-      previewWindow: "right:50%",
+      previewWindow: previewWindow(config.ui),
     }
   );
 
@@ -114,7 +118,7 @@ export async function runSessionizer(
     prompt: "Project: ",
     header: "Select a project to create a workspace",
     preview: PROJECT_PREVIEW,
-    previewWindow: "right:50%",
+    previewWindow: previewWindow(config.ui),
   });
 
   if (!selected || selected.length === 0) return;

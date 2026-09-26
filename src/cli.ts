@@ -1,5 +1,3 @@
-export {};
-
 import { openSessionizerPane } from "./sessionizer/open-pane.ts";
 import { runSessionizer } from "./sessionizer/sessionizer.ts";
 import { openWorktreePane } from "./worktree/open-worktree-pane.ts";

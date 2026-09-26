@@ -63,7 +63,7 @@ export async function createProjectLayout(
     errorPolicy
   );
   nextPaneIndex = initial.nextPaneIndex;
-  if (matchesFocus(config.layout.focus, firstTab!, initial.firstPaneId)) {
+  if (matchesFocus(config.layout.focus, firstTab!)) {
     focusedTabId = initial.tabId;
   }
 
@@ -80,7 +80,7 @@ export async function createProjectLayout(
       errorPolicy
     );
     nextPaneIndex = created.nextPaneIndex;
-    if (matchesFocus(config.layout.focus, tab, created.firstPaneId)) {
+    if (matchesFocus(config.layout.focus, tab)) {
       focusedTabId = created.tabId;
     }
   }
@@ -136,11 +136,7 @@ async function createAndConfigureTab(
         workspace_id: workspaceId,
         cwd,
         label: tab.label,
-        focus: matchesFocus(
-          focusTarget,
-          tab,
-          `${workspaceId}-${nextPaneIndex}`
-        ),
+        focus: matchesFocus(focusTarget, tab),
       })
   );
 
@@ -235,11 +231,7 @@ async function configurePane(
   }
 }
 
-function matchesFocus(
-  focusTarget: string,
-  tab: TabConfig,
-  firstPaneId: string
-): boolean {
+function matchesFocus(focusTarget: string, tab: TabConfig): boolean {
   if (focusTarget === tab.label) return true;
   return tab.panes.some((pane) => matchesFocusTarget(focusTarget, pane));
 }

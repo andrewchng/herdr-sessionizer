@@ -13,6 +13,7 @@ function testConfig(overrides?: Partial<SessionizerConfig>): SessionizerConfig {
     projects: { roots: ["/tmp"], git_only: false, depth: 1 },
     ui: { placement: "overlay" },
     layout: { focus: "assistant" },
+    worktree: { github_prs: false },
     tabs: [
       {
         id: "terminal",
@@ -41,26 +42,22 @@ function testWorkspace(): Workspace {
 describe("createProjectLayout", () => {
   it("continues through tab rename failures with the lenient error policy", async () => {
     const tabs: LayoutTabs = {
-      create: mock(
-        async (_options): Promise<Tab> => ({
-          tab_id: "ws1:t2",
-          workspace_id: "ws1",
-        })
-      ),
+      create: mock(async (_options): Promise<Tab> => ({
+        tab_id: "ws1:t2",
+        workspace_id: "ws1",
+      })),
       rename: mock(async () => {
         throw new Error("rename failed");
       }),
       focus: mock(async () => {}),
     };
     const panes: LayoutPanes = {
-      split: mock(
-        async (): Promise<Pane> => ({
-          pane_id: "ws1-2",
-          terminal_id: "term-2",
-          workspace_id: "ws1",
-          tab_id: "ws1:t1",
-        })
-      ),
+      split: mock(async (): Promise<Pane> => ({
+        pane_id: "ws1-2",
+        terminal_id: "term-2",
+        workspace_id: "ws1",
+        tab_id: "ws1:t1",
+      })),
       run: mock(async () => {}),
       rename: mock(async () => {}),
     };
@@ -91,12 +88,10 @@ describe("createProjectLayout", () => {
 
   it("uses fallback pane ids when pane splitting fails", async () => {
     const tabs: LayoutTabs = {
-      create: mock(
-        async (_options): Promise<Tab> => ({
-          tab_id: "ws1:t2",
-          workspace_id: "ws1",
-        })
-      ),
+      create: mock(async (_options): Promise<Tab> => ({
+        tab_id: "ws1:t2",
+        workspace_id: "ws1",
+      })),
       rename: mock(async () => {}),
       focus: mock(async () => {}),
     };
@@ -125,24 +120,20 @@ describe("createProjectLayout", () => {
 
   it("passes pane ratios through to split creation", async () => {
     const tabs: LayoutTabs = {
-      create: mock(
-        async (_options): Promise<Tab> => ({
-          tab_id: "ws1:t2",
-          workspace_id: "ws1",
-        })
-      ),
+      create: mock(async (_options): Promise<Tab> => ({
+        tab_id: "ws1:t2",
+        workspace_id: "ws1",
+      })),
       rename: mock(async () => {}),
       focus: mock(async () => {}),
     };
     const panes: LayoutPanes = {
-      split: mock(
-        async (): Promise<Pane> => ({
-          pane_id: "ws1-2",
-          terminal_id: "term-2",
-          workspace_id: "ws1",
-          tab_id: "ws1:t1",
-        })
-      ),
+      split: mock(async (): Promise<Pane> => ({
+        pane_id: "ws1-2",
+        terminal_id: "term-2",
+        workspace_id: "ws1",
+        tab_id: "ws1:t1",
+      })),
       run: mock(async () => {}),
       rename: mock(async () => {}),
     };
@@ -197,24 +188,20 @@ describe("createProjectLayout", () => {
 
   it("uses each nested pane's own ratio for later splits", async () => {
     const tabs: LayoutTabs = {
-      create: mock(
-        async (_options): Promise<Tab> => ({
-          tab_id: "ws1:t2",
-          workspace_id: "ws1",
-        })
-      ),
+      create: mock(async (_options): Promise<Tab> => ({
+        tab_id: "ws1:t2",
+        workspace_id: "ws1",
+      })),
       rename: mock(async () => {}),
       focus: mock(async () => {}),
     };
     const panes: LayoutPanes = {
-      split: mock(
-        async (): Promise<Pane> => ({
-          pane_id: "ws1-2",
-          terminal_id: "term-2",
-          workspace_id: "ws1",
-          tab_id: "ws1:t1",
-        })
-      ),
+      split: mock(async (): Promise<Pane> => ({
+        pane_id: "ws1-2",
+        terminal_id: "term-2",
+        workspace_id: "ws1",
+        tab_id: "ws1:t1",
+      })),
       run: mock(async () => {}),
       rename: mock(async () => {}),
     };
@@ -269,24 +256,20 @@ describe("createProjectLayout", () => {
 
   it("leaves split ratio unset when a pane omits it", async () => {
     const tabs: LayoutTabs = {
-      create: mock(
-        async (_options): Promise<Tab> => ({
-          tab_id: "ws1:t2",
-          workspace_id: "ws1",
-        })
-      ),
+      create: mock(async (_options): Promise<Tab> => ({
+        tab_id: "ws1:t2",
+        workspace_id: "ws1",
+      })),
       rename: mock(async () => {}),
       focus: mock(async () => {}),
     };
     const panes: LayoutPanes = {
-      split: mock(
-        async (): Promise<Pane> => ({
-          pane_id: "ws1-2",
-          terminal_id: "term-2",
-          workspace_id: "ws1",
-          tab_id: "ws1:t1",
-        })
-      ),
+      split: mock(async (): Promise<Pane> => ({
+        pane_id: "ws1-2",
+        terminal_id: "term-2",
+        workspace_id: "ws1",
+        tab_id: "ws1:t1",
+      })),
       run: mock(async () => {}),
       rename: mock(async () => {}),
     };
@@ -331,24 +314,20 @@ describe("createProjectLayout", () => {
           ],
         }),
         {
-          create: mock(
-            async (_options): Promise<Tab> => ({
-              tab_id: "ws1:t2",
-              workspace_id: "ws1",
-            })
-          ),
+          create: mock(async (_options): Promise<Tab> => ({
+            tab_id: "ws1:t2",
+            workspace_id: "ws1",
+          })),
           rename: mock(async () => {}),
           focus: mock(async () => {}),
         },
         {
-          split: mock(
-            async (): Promise<Pane> => ({
-              pane_id: "ws1-2",
-              terminal_id: "term-2",
-              workspace_id: "ws1",
-              tab_id: "ws1:t1",
-            })
-          ),
+          split: mock(async (): Promise<Pane> => ({
+            pane_id: "ws1-2",
+            terminal_id: "term-2",
+            workspace_id: "ws1",
+            tab_id: "ws1:t1",
+          })),
           run: mock(async () => {}),
           rename: mock(async () => {}),
         },
@@ -389,24 +368,20 @@ describe("createProjectLayout", () => {
           ],
         }),
         {
-          create: mock(
-            async (_options): Promise<Tab> => ({
-              tab_id: "ws1:t2",
-              workspace_id: "ws1",
-            })
-          ),
+          create: mock(async (_options): Promise<Tab> => ({
+            tab_id: "ws1:t2",
+            workspace_id: "ws1",
+          })),
           rename: mock(async () => {}),
           focus: mock(async () => {}),
         },
         {
-          split: mock(
-            async (): Promise<Pane> => ({
-              pane_id: "ws1-2",
-              terminal_id: "term-2",
-              workspace_id: "ws1",
-              tab_id: "ws1:t1",
-            })
-          ),
+          split: mock(async (): Promise<Pane> => ({
+            pane_id: "ws1-2",
+            terminal_id: "term-2",
+            workspace_id: "ws1",
+            tab_id: "ws1:t1",
+          })),
           run: mock(async () => {}),
           rename: mock(async () => {}),
         },

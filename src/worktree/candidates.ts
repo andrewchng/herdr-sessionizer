@@ -88,6 +88,8 @@ export interface DiscoverWorktreeCandidateOptions {
   repoWorkspaceId?: string;
   workspaces: readonly Workspace[];
   runtime?: WorktreeCandidateRuntime;
+  /** Opt-in toggle for GitHub PR candidates (`[worktree].github_prs`). Default: false. */
+  githubPrs?: boolean;
 }
 
 export async function discoverWorktreeCandidates({
@@ -95,11 +97,14 @@ export async function discoverWorktreeCandidates({
   repoWorkspaceId,
   workspaces,
   runtime = defaultWorktreeCandidateRuntime,
+  githubPrs = false,
 }: DiscoverWorktreeCandidateOptions): Promise<WorktreeCandidate[]> {
   const [gitWorktrees, gitBranches, openPullRequests] = await Promise.all([
     runtime.listGitWorktrees(project),
     runtime.listGitBranches(project),
-    listOpenPullRequestsSoft(runtime, project),
+    githubPrs
+      ? listOpenPullRequestsSoft(runtime, project)
+      : Promise.resolve([]),
   ]);
   return buildWorktreeCandidates({
     project,

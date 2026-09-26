@@ -293,10 +293,11 @@ describe("discoverWorktreeCandidates", () => {
     expect(worktreeCandidateFromRow(row, candidates)).toEqual(candidates[0]);
   });
 
-  it("merges injected open PRs and soft-skips when listOpenPullRequests throws", async () => {
+  it("merges injected open PRs when githubPrs is enabled and soft-skips when listOpenPullRequests throws", async () => {
     const withPrs = await discoverWorktreeCandidates({
       project: "/repo",
       workspaces: [],
+      githubPrs: true,
       runtime: {
         listGitWorktrees: mock(async () => []),
         listGitBranches: mock(async () => ({ local: [], remote: [] })),
@@ -321,6 +322,7 @@ describe("discoverWorktreeCandidates", () => {
     const skipped = await discoverWorktreeCandidates({
       project: "/repo",
       workspaces: [],
+      githubPrs: true,
       runtime: {
         listGitWorktrees: mock(async () => []),
         listGitBranches: mock(async () => ({
@@ -335,6 +337,50 @@ describe("discoverWorktreeCandidates", () => {
     expect(skipped.map((candidate) => candidate.kind)).toEqual([
       "local-branch",
     ]);
+  });
+
+  it("skips listOpenPullRequests entirely when githubPrs is off (default)", async () => {
+    const listOpenPullRequests = mock(async () => [
+      {
+        number: 7,
+        title: "would appear only when opted in",
+        headRefName: "feature/draft",
+        headOwner: "dev",
+      },
+    ]);
+
+    const absent = await discoverWorktreeCandidates({
+      project: "/repo",
+      workspaces: [],
+      runtime: {
+        listGitWorktrees: mock(async () => []),
+        listGitBranches: mock(async () => ({
+          local: ["feature/local"],
+          remote: [],
+        })),
+        listOpenPullRequests,
+      },
+    });
+    expect(absent.map((candidate) => candidate.kind)).toEqual(["local-branch"]);
+    expect(listOpenPullRequests.mock.calls.length).toBe(0);
+
+    const explicitOff = await discoverWorktreeCandidates({
+      project: "/repo",
+      workspaces: [],
+      githubPrs: false,
+      runtime: {
+        listGitWorktrees: mock(async () => []),
+        listGitBranches: mock(async () => ({
+          local: ["feature/local"],
+          remote: [],
+        })),
+        listOpenPullRequests,
+      },
+    });
+    expect(explicitOff.map((candidate) => candidate.kind)).toEqual([
+      "local-branch",
+    ]);
+    expect(listOpenPullRequests.mock.calls.length).toBe(0);
   });
 });
 

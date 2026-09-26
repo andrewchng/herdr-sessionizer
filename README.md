@@ -36,7 +36,7 @@ brew install fzf
 
 Optional: [bat](https://github.com/sharkdp/bat) for richer `README.md` previews (`brew install bat`).
 
-Optional: [`gh`](https://cli.github.com/) to list open GitHub PRs in the worktree picker (`brew install gh && gh auth login`).
+Optional: [`gh`](https://cli.github.com/) to list open GitHub PRs in the worktree picker (`brew install gh && gh auth login`) — opt in with `[worktree].github_prs = true`.
 
 ## Setup
 
@@ -140,7 +140,9 @@ Close (mode menu first, then multi-select picker)
 
 ### Open pull requests
 
-Open PRs appear when [`gh`](https://cli.github.com/) is installed and authenticated. Drafts and fork heads are included; rows may show `[draft]` or `[fork]`. If `gh` is missing or fails, those rows are omitted and the rest of the picker is unchanged.
+Open PRs appear in the worktree picker only when you **opt in** with `[worktree].github_prs = true` (default `false`). When enabled, open PRs (including drafts and fork heads) are listed via [`gh`](https://cli.github.com/); rows may show `[draft]` or `[fork]`. If `gh` is missing, unauthenticated, or fails, those rows are omitted and the rest of the picker is unchanged.
+
+When disabled (the default, or the key is absent), the worktree picker skips the `gh pr list` call entirely — no `gh` spawn, no PR rows, git-only flow unchanged. Configs created before this feature default to `false`, so set `github_prs = true` to restore PR candidates after upgrading.
 
 The git branch is always `pr-<n>`. The Herdr workspace is named `pr-<n>-<short-title>` so it is recognizable (e.g. `pr-29-fix_worktree_gate`). `git pull` inside the worktree tracks the live PR head, including pushes from fork contributors.
 
@@ -188,14 +190,15 @@ When Sessionizer **creates** a new project or worktree workspace, or **opens** a
 
 Created automatically on first run if missing.
 
-`[ui]`, `[layout]`, and `[tabs]` are optional. A config with only `[projects]` is
+`[ui]`, `[worktree]`, `[layout]`, and `[tabs]` are optional. A config with only `[projects]` is
 valid: new workspaces then open with a plain shell and no layout is applied.
 When `[tabs]` sections exist, `[layout].focus` is required.
 
 `[ui]` controls how Sessionizer / Worktree **pickers** open inside Herdr (not
-workspace bootstrap). New configs default to `overlay`. You can switch to `split`
-or `popup` (Herdr `>= 0.7.4`, session-modal at `90%` width/height), or omit
-`[ui]` entirely to fall back to `overlay`.
+workspace bootstrap). New configs default to `popup` at `100%` width/height, so
+the picker fills the workspace. You can switch to `split` or `overlay`
+(`overlay` only covers a single pane since Herdr `0.9`), or omit `[ui]` entirely
+to fall back to `overlay`.
 
 If you want an agent to help edit either the global config or a repo-local override, see [Agent skills](#agent-skills).
 
@@ -208,7 +211,12 @@ git_only = true
 depth = 1
 
 [ui]
-placement = "overlay"   # overlay | split | popup (popup needs Herdr >= 0.7.4)
+placement = "popup"    # overlay | split | popup (popup needs Herdr >= 0.7.4)
+width = "100%"         # popup outer width (cells or percentage; popup only)
+height = "100%"        # popup outer height (cells or percentage; popup only)
+
+[worktree]
+github_prs = false   # true: list open GitHub PRs as worktree candidates (needs gh + auth)
 
 [layout]
 focus = "editor"
@@ -273,8 +281,8 @@ Second tab shape:
 - `[projects].roots` — parent folders scanned by both pickers (plain paths; optional globs — see [Glob roots](#glob-roots-optional) below)
 - `[projects].git_only` — `true` returns only directories with `.git` metadata; `false` lists all immediate child folders
 - `[projects].depth` — maximum levels below each root to scan when `git_only = true`; `1` means immediate children
-- `[ui].placement` — how Sessionizer / Worktree pickers open in Herdr (`overlay`, `split`, or `popup`; new configs default to `overlay`, `popup` needs Herdr `>= 0.7.4`)
-- `[ui].width` / `[ui].height` — popup outer size (cells or `"90%"`); only with `placement = "popup"`
+- `[ui].placement` — how Sessionizer / Worktree pickers open in Herdr (`overlay`, `split`, or `popup`; new configs default to `popup` at `100%`, `popup` needs Herdr `>= 0.7.4`)
+- `[ui].width` / `[ui].height` — popup outer size (cells or `"100%"`); only with `placement = "popup"`
 - `[layout].focus` — which tab or pane to focus after layout bootstrap
 - `[tabs.<name>]` — one Herdr tab to create per section
 - `[[tabs.<name>.panes]]` — panes inside the tab; `from` + `split` (`right` or `down`) define the split tree
@@ -415,6 +423,8 @@ bun run release:notes -- <version>
 bun run sessionizer    # dev: run Sessionizer flow via Bun without compiling
 ./dist/sessionizer --help
 ```
+
+On macOS, `bun run build` also re-signs `dist/sessionizer` with a fresh adhoc signature after compiling (`codesign --force --deep --sign - --timestamp=none`). Bun's linker-signed adhoc signature can be rejected by newer macOS builds (SIGKILL / "Code Signature Invalid"), so re-signing makes the host-local binary launch reliably. This step is macOS-only and a no-op on Linux.
 
 `bun run test` runs the unit suite only; `bun run test:integration` runs the real-git sandbox tests for `fetchPullRequestHead` (a tmpdir fake GitHub, no network). The integration suite is excluded from `bun test` and CI runs both — the pre-commit hook exports `GIT_DIR`, which would redirect the sandbox's git commands into the parent repository, so the sandbox suite only ever runs in CI's clean environment.
 

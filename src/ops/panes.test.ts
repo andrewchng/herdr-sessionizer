@@ -6,7 +6,7 @@ import { Panes } from "./panes.ts";
 describe("Panes", () => {
   it("passes --ratio to herdr when a split ratio is provided", async () => {
     const herdr = {
-      json: mock(async (args: readonly string[]) => ({
+      json: mock(async (_args: readonly string[]) => ({
         result: {
           pane: {
             pane_id: "ws1-2",

@@ -45,7 +45,7 @@ export async function pick<T extends string>(
 
   const input = new TextEncoder().encode(rows.join("\n") + "\n");
   const writeDone = (async () => {
-    proc.stdin.write(input);
+    await proc.stdin.write(input);
     await proc.stdin.flush();
     await proc.stdin.end();
   })();

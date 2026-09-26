@@ -1,5 +1,3 @@
-export {};
-
 import { runSessionizer } from "./sessionizer.ts";
 
 runSessionizer().catch((error: unknown) => {

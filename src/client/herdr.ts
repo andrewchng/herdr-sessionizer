@@ -1,9 +1,9 @@
-import { HerdrError } from './errors.ts';
+import { HerdrError } from "./errors.ts";
 
 export class Herdr {
   private readonly bin: string;
 
-  constructor(bin: string = process.env.HERDR_BIN_PATH ?? 'herdr') {
+  constructor(bin: string = process.env.HERDR_BIN_PATH ?? "herdr") {
     this.bin = bin;
   }
 
@@ -18,8 +18,8 @@ export class Herdr {
 
   async #exec(args: readonly string[]): Promise<string> {
     const proc = Bun.spawn([this.bin, ...args], {
-      stdout: 'pipe',
-      stderr: 'pipe',
+      stdout: "pipe",
+      stderr: "pipe",
     });
 
     const [stdout, stderr, exitCode] = await Promise.all([

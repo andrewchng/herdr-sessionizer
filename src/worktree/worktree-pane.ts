@@ -1,5 +1,3 @@
-export {};
-
 import { buildWorktreeArgvFromEnv, runWorktree } from "./worktree.ts";
 
 runWorktree(buildWorktreeArgvFromEnv()).catch((error: unknown) => {

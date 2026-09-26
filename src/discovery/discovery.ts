@@ -56,7 +56,7 @@ export function listProjects(
       }
     } catch (err) {
       console.error(
-        `[sessionizer] glob pattern "${pattern}" failed: ${err instanceof Error ? err.message : err}`
+        `[sessionizer] glob pattern "${pattern}" failed: ${err instanceof Error ? err.message : String(err)}`
       );
     }
   }

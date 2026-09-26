@@ -16,6 +16,7 @@ function globalConfig(): SessionizerConfig {
     projects: { roots: ["/projects"], git_only: false, depth: 1 },
     ui: { placement: "overlay" },
     layout: { focus: "editor" },
+    worktree: { github_prs: false },
     tabs: [
       {
         id: "dev",
@@ -104,7 +105,9 @@ describe("loadConfig", () => {
       expect(config.projects.git_only).toBe(true);
       expect(config.projects.depth).toBe(1);
       expect(config.ui).toEqual({
-        placement: "overlay",
+        placement: "popup",
+        width: "100%",
+        height: "100%",
       });
     });
   });
@@ -125,6 +128,86 @@ describe("loadConfig", () => {
 
       expect(config.projects.git_only).toBe(true);
       expect(config.projects.depth).toBe(3);
+    });
+  });
+
+  it("defaults [worktree].github_prs to false when the key is absent", () => {
+    withPluginConfigDir((dir) => {
+      writeFileSync(
+        join(dir, "config.toml"),
+        minimalGlobalConfig(['roots = ["~/Projects"]']),
+        "utf-8"
+      );
+
+      expect(loadConfig().worktree.github_prs).toBe(false);
+    });
+  });
+
+  it("defaults [worktree].github_prs to false for a newly generated global config", () => {
+    withPluginConfigDir(() => {
+      expect(loadConfig().worktree.github_prs).toBe(false);
+    });
+  });
+
+  it("reads [worktree].github_prs = true", () => {
+    withPluginConfigDir((dir) => {
+      writeFileSync(
+        join(dir, "config.toml"),
+        [
+          "[projects]",
+          'roots = ["~/Projects"]',
+          "",
+          "[worktree]",
+          "github_prs = true",
+          "",
+          "[layout]",
+          'focus = "editor"',
+          "",
+          "[tabs.dev]",
+          'label = "dev"',
+          "",
+          "[[tabs.dev.panes]]",
+          'id = "editor"',
+          'title = "nvim"',
+          'command = "nvim"',
+          "",
+        ].join("\n"),
+        "utf-8"
+      );
+
+      expect(loadConfig().worktree.github_prs).toBe(true);
+    });
+  });
+
+  it("throws a clear error when [worktree].github_prs is not a boolean", () => {
+    withPluginConfigDir((dir) => {
+      writeFileSync(
+        join(dir, "config.toml"),
+        [
+          "[projects]",
+          'roots = ["~/Projects"]',
+          "",
+          "[worktree]",
+          'github_prs = "yes"',
+          "",
+          "[layout]",
+          'focus = "editor"',
+          "",
+          "[tabs.dev]",
+          'label = "dev"',
+          "",
+          "[[tabs.dev.panes]]",
+          'id = "editor"',
+          'title = "nvim"',
+          'command = "nvim"',
+          "",
+        ].join("\n"),
+        "utf-8"
+      );
+
+      expect(() => loadConfig()).toThrow(
+        "Config [worktree].github_prs must be a boolean (true or false)."
+      );
     });
   });
 });

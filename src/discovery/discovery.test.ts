@@ -1,10 +1,4 @@
-import {
-  mkdirSync,
-  rmSync,
-  rmdirSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, expect, it } from "bun:test";

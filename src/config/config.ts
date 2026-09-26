@@ -39,6 +39,9 @@ interface RawConfig {
   layout?: {
     focus?: string;
   };
+  worktree?: {
+    github_prs?: boolean;
+  };
   tabs?: Record<string, RawTabConfig>;
 }
 
@@ -61,9 +64,9 @@ export interface TabConfig {
 interface UiConfig {
   /** How Sessionizer / Worktree pickers open inside Herdr. */
   placement: PanePlacement;
-  /** Outer popup width (cells or `"90%"`). Only used when placement is `popup`. */
+  /** Outer popup width (cells or `"100%"`). Only used when placement is `popup`. */
   width?: number | string;
-  /** Outer popup height (cells or `"90%"`). Only used when placement is `popup`. */
+  /** Outer popup height (cells or `"100%"`). Only used when placement is `popup`. */
   height?: number | string;
 }
 
@@ -76,6 +79,9 @@ export interface SessionizerConfig {
   ui: UiConfig;
   layout: {
     focus: string;
+  };
+  worktree: {
+    github_prs: boolean;
   };
   tabs: TabConfig[];
 }
@@ -110,6 +116,7 @@ export function resolveLayoutConfig(
       layout: {
         focus,
       },
+      worktree: globalConfig.worktree,
       tabs: buildTabs(raw),
     };
   } catch (error) {
@@ -153,6 +160,9 @@ export function loadConfig(): SessionizerConfig {
     ui: resolveUiConfig(pluginConfig),
     layout: {
       focus: focus ?? "",
+    },
+    worktree: {
+      github_prs: asWorktreeGithubPrs(pluginConfig?.worktree?.github_prs),
     },
     tabs,
   };
@@ -235,7 +245,14 @@ function defaultConfigToml(): string {
     "[ui]",
     "# How Sessionizer / Worktree pickers open in Herdr: overlay | split | popup",
     "# popup requires Herdr >= 0.7.4 (width/height only apply to popup)",
-    'placement = "overlay"',
+    'placement = "popup"',
+    'width = "100%"',
+    'height = "100%"',
+    "",
+    "[worktree]",
+    "# true: list open GitHub PRs as worktree candidates (requires gh + auth)",
+    "# false (default): git-only flow, no gh spawn",
+    "github_prs = false",
     "",
     "[layout]",
     "# Which pane or tab to focus after layout creation",
@@ -328,6 +345,20 @@ function asOptionalPopupSize(
   throw new Error(
     `Config [ui].${field} must be an integer cell count from 0 to 65535, or a percentage like "80%".`
   );
+}
+
+function asWorktreeGithubPrs(value: unknown): boolean {
+  if (value === undefined) {
+    return false;
+  }
+
+  if (typeof value !== "boolean") {
+    throw new Error(
+      "Config [worktree].github_prs must be a boolean (true or false)."
+    );
+  }
+
+  return value;
 }
 
 function asProjectDepth(value: unknown): number {

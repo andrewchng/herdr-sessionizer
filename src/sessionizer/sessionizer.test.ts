@@ -13,6 +13,7 @@ function testConfig(): SessionizerConfig {
     projects: { roots: ["/projects"], git_only: false, depth: 1 },
     ui: { placement: "overlay" },
     layout: { focus: "assistant" },
+    worktree: { github_prs: false },
     tabs: [],
   };
 }
@@ -285,6 +286,7 @@ describe("runSessionizer", () => {
         ...config,
         ui: { placement: "overlay" },
         layout: { focus: "wiki" },
+        worktree: { github_prs: false },
         tabs: [
           {
             id: "wiki",

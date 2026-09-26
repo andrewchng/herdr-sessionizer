@@ -7,11 +7,12 @@ const argv = process.argv.slice(2);
 if (argv.includes("--help") || argv.includes("-h")) {
   console.log(`Usage:
   herdr-worktree
-  herdr-worktree --project <path> --branch <name> [--command <raw-shell-command>]
+  herdr-worktree --project <path> --branch <name> [--base <ref>] [--command <raw-shell-command>]
 
 Examples:
   herdr-worktree
   herdr-worktree --project ~/Projects/my-repo --branch feat/new-flow
+  herdr-worktree --project ~/Projects/my-repo --branch review/feat/new-flow --base origin/feat/new-flow
   herdr-worktree --project ~/Projects/my-repo --branch feat/new-flow --command 'kiro-cli chat "Fix the failing form validation and summarize changes"'
 `);
   process.exit(0);

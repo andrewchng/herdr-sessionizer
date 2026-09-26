@@ -1,6 +1,9 @@
 export interface LayoutErrorPolicy {
   ignore(action: string, operation: () => Promise<void>): Promise<void>;
-  optional<T>(action: string, operation: () => Promise<T>): Promise<T | undefined>;
+  optional<T>(
+    action: string,
+    operation: () => Promise<T>
+  ): Promise<T | undefined>;
 }
 
 export function createLenientLayoutErrorPolicy(): LayoutErrorPolicy {

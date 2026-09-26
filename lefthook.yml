@@ -1,0 +1,18 @@
+pre-commit:
+  parallel: true
+  commands:
+    format:
+      glob: "*.{ts,tsx,js,json,md,toml,yml,yaml}"
+      run: bunx oxfmt {staged_files}
+      stage_fixed: true
+    lint:
+      glob: "*.{ts,tsx,js}"
+      run: bunx oxlint --type-aware --fix {staged_files}
+      stage_fixed: true
+    typecheck:
+      run: bun run typecheck
+
+pre-push:
+  commands:
+    tests:
+      run: bun run test

@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.8.4] - 2026-09-23
+
+### Changed
+
+- The build script now re-signs `dist/sessionizer` with a fresh adhoc signature on macOS after compiling (`codesign --force --deep --sign - --timestamp=none`). Bun's `--compile` emits a linker-signed adhoc signature (`flags=0x20002`) that newer macOS builds (26.5+/27) reject with SIGKILL / "Code Signature Invalid", killing the plugin binary on launch — even `--help`. Re-signing produces `flags=0x2(adhoc)` that macOS accepts, so plugin actions/panes launch reliably ([#64](https://github.com/andrewchng/herdr-sessionizer/issues/64)). The step is macOS-only and a no-op on Linux.
+
+## [0.8.3] - 2026-09-15
+
+### Changed
+
+- Generated default `config.toml` now seeds `[ui].placement = "popup"` with `width` / `height` = `"100%"` (previously `overlay`), so the picker fills the workspace. Since Herdr `0.9` overlay only covers a single pane, first-time users get a full-screen picker instead ([#56](https://github.com/andrewchng/herdr-sessionizer/issues/56)). Existing configs keep their placement and can switch to `popup` at `100%` manually.
+
+## [0.8.2] - 2026-09-13
+
+### Added
+
+- `[worktree].github_prs` opt-in toggle (default `false`) for GitHub PR candidates in the worktree picker. Set `true` to list open PRs via [`gh`](https://cli.github.com/); when off or absent, the picker skips the `gh pr list` call entirely — no `gh` spawn, no PR rows, git-only flow unchanged ([#52](https://github.com/andrewchng/herdr-sessionizer/issues/52)).
+
+### Changed
+
+- Worktree PR candidates are now off by default: configs created before this feature lack the key, so they default to `false` and PR rows disappear after upgrade. Set `[worktree].github_prs = true` to restore PR candidates.
+
 ## [0.8.1] - 2026-08-29
 
 ### Changed

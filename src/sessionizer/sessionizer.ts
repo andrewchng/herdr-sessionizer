@@ -60,7 +60,16 @@ interface SessionizerRuntime {
 }
 
 function workspaceRow(workspace: Workspace): string {
-  const label = rowField(workspace.label || workspaceName(workspace));
+  const baseLabel = rowField(workspace.label || workspaceName(workspace));
+  // Linked worktree checkouts are shown as "repo / label" so the user can
+  // tell which repo a worktree belongs to at a glance.
+  const linkedRepoName =
+    workspace.worktree?.is_linked_worktree === true
+      ? workspace.worktree.repo_name
+      : undefined;
+  const label = linkedRepoName
+    ? rowField(`${linkedRepoName} / ${baseLabel}`)
+    : baseLabel;
   const summary = rowField(workspaceSummary(workspace));
   const cwd = rowField(workspacePath(workspace));
   const branch = rowField(workspace.worktree?.branch);
@@ -87,17 +96,26 @@ export async function runSessionizer(
 ): Promise<void> {
   const { workspaces, tabs, panes, config } = runtime;
 
-  const existing = await runtime.pickRows(
-    (await workspaces.list()).map(workspaceRow),
-    {
-      prompt: "Switch session (Esc for new): ",
-      header: "↑↓ navigate, Enter select, Esc → new project",
-      delimiter: WORKSPACE_ROW_DELIMITER,
-      withNth: "2",
-      preview: WORKSPACE_PREVIEW,
-      previewWindow: "right:50%",
-    }
-  );
+  // Group rows by repo so a repo's parent/main workspace and its linked
+  // worktrees sit next to each other in the picker (fzf keeps input order
+  // until a query re-sorts by score). The sort is stable, so Herdr's list
+  // order is preserved within a repo cluster; rows without worktree
+  // provenance have an empty key and keep their original relative order,
+  // appearing before the repo clusters (empty string sorts first).
+  const workspaceRows = (await workspaces.list())
+    .sort((a, b) =>
+      (a.worktree?.repo_name ?? "").localeCompare(b.worktree?.repo_name ?? "")
+    )
+    .map(workspaceRow);
+
+  const existing = await runtime.pickRows(workspaceRows, {
+    prompt: "Switch session (Esc for new): ",
+    header: "↑↓ navigate, Enter select, Esc → new project",
+    delimiter: WORKSPACE_ROW_DELIMITER,
+    withNth: "2",
+    preview: WORKSPACE_PREVIEW,
+    previewWindow: "right:50%",
+  });
 
   if (existing && existing.length > 0) {
     await workspaces.focus(extractWorkspaceId(existing[0]!));

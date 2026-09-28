@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- Sessionizer creates a project from what you type. <kbd>Enter</kbd> when nothing matches (the prompt turns into `Create:`), or <kbd>Ctrl-N</kbd> even when something fuzzy-matches, makes `<first root>/<query>`, runs `git init` in it (so `git_only` discovery lists it next time), then opens it like any project. Nested names (`org/repo`) work, spaces become `-`, and names escaping the root (`..`, `/…`, `~…`) are refused. A name that is already open just focuses its workspace.
+
+### Changed
+
+- Sessionizer opens one picker instead of two: open workspaces (marked `●`) are listed first, followed by every project under `projects.roots`. <kbd>Enter</kbd> on a workspace focuses it, <kbd>Enter</kbd> on a project creates the workspace and applies the layout. No more <kbd>Esc</kbd> to reach projects, and <kbd>Esc</kbd> now simply closes the picker. A project that already has an open workspace appears only as that workspace (matched through its panes' cwd, since `workspace list` omits cwd for workspaces Sessionizer did not create), and nested projects display their root-relative path (`org/repo`).
+
 ## [0.9.0] - 2026-09-26
 
 ### Added

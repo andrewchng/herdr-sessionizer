@@ -35,5 +35,6 @@ export interface Pane {
   terminal_id: string;
   workspace_id: string;
   tab_id: string;
+  cwd?: string;
   [key: string]: unknown;
 }

@@ -102,12 +102,14 @@ herdr plugin action invoke sessionizer.worktree-open
 
 ### UX flow
 
-In Sessionizer, a project that already has an open workspace appears only as its `●` workspace row, so picking it focuses that workspace instead of creating a second one. Nested projects show their path relative to the root (`org/repo`), so either part matches.
+In Sessionizer, a project that already has an open workspace appears only as its `●` workspace row, so picking it focuses that workspace instead of creating a second one. Nested projects show their path relative to the root (`org/repo`), so either part matches. Typing a name that matches nothing turns the prompt into `Create:`, and <kbd>Enter</kbd> creates that project under the first root (<kbd>Ctrl-N</kbd> does it even when the name fuzzy-matches another project).
 
 ```text
 Sessionizer (one list: ● open workspaces, then projects under projects.roots)
   ● workspace ──Enter──> focus
   project     ──Enter──> new workspace + layout + focus
+  no match    ──Enter──> mkdir + git init under the first root, then as project
+  any query   ──Ctrl-N─> same, even when something matches
   Esc / none  ─────────> exit
 
 Worktree (always starts at repo picker)

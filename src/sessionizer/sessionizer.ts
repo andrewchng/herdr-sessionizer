@@ -1,6 +1,9 @@
-import { basename } from "node:path";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync } from "node:fs";
+import { basename, join } from "node:path";
 
 import {
+  expandHome,
   listProjects,
   normalizePath,
   sanitizeName,
@@ -19,10 +22,16 @@ import {
 import { Panes } from "../ops/panes.ts";
 import { Tabs } from "../ops/tabs.ts";
 import { Workspaces } from "../ops/workspaces.ts";
-import { pick, type PickOptions } from "../ui/fzf.ts";
+import {
+  pickOrCreate,
+  type PickOptions,
+  type PickOrCreateResult,
+} from "../ui/fzf.ts";
 import { WORKSPACE_PREVIEW } from "../ui/previews.ts";
 
 const WORKSPACE_ROW_DELIMITER = "\t";
+/** Creates `<first root>/<query>` even when the query fuzzy-matches rows. */
+const CREATE_KEY = "ctrl-n";
 
 type LayoutApplier = (
   workspace: Workspace,
@@ -47,15 +56,19 @@ interface SessionizerRuntime {
   tabs: LayoutTabs;
   panes: LayoutPanes;
   config: SessionizerConfig;
-  pickRows: (
+  pick: (
     rows: readonly string[],
-    options?: PickOptions
-  ) => Promise<string[] | null>;
+    options: PickOptions & { createKey: string; createPrompt?: string }
+  ) => Promise<PickOrCreateResult | null>;
   listProjects: (
     roots: string[],
     options?: ProjectDiscoveryOptions
   ) => string[];
   listPanes: () => Promise<Pane[]>;
+  /** mkdir -p; returns true when the directory did not exist before. */
+  makeProjectDir: (path: string) => boolean;
+  /** Runs `git init` so the new project shows up in git_only discovery. */
+  initRepo: (path: string) => void;
   createLayout: LayoutApplier;
   logger: Pick<typeof console, "log" | "error">;
   exit: (code: number) => never;
@@ -180,29 +193,47 @@ export async function runSessionizer(
     ...openWorkspaces.map(workspaceRow),
     ...projects.map((project) => projectRow(project, config.projects.roots)),
   ];
-  if (rows.length === 0) {
-    runtime.logger.error("No projects found in configured directories.");
-    runtime.exit(1);
-  }
 
-  const selected = await runtime.pickRows(rows, {
+  const picked = await runtime.pick(rows, {
     prompt: "Open: ",
     delimiter: WORKSPACE_ROW_DELIMITER,
     withNth: "2",
     preview: WORKSPACE_PREVIEW,
     previewWindow: "right:50%",
+    createKey: CREATE_KEY,
+    createPrompt: "Create: ",
   });
 
-  if (!selected || selected.length === 0) return;
+  if (!picked) return;
 
-  const row = selected[0]!;
-  const workspaceId = extractWorkspaceId(row);
-  if (workspaceId) {
-    await workspaces.focus(workspaceId);
-    return;
+  let project: string;
+  if (picked.kind === "create") {
+    const root = config.projects.roots[0];
+    const path = root ? newProjectPath(expandHome(root), picked.query) : null;
+    if (!path) {
+      runtime.logger.error(`Invalid project name: ${picked.query}`);
+      runtime.exit(1);
+    }
+    if (runtime.makeProjectDir(path)) runtime.initRepo(path);
+
+    // Typing the name of an open project focuses it (ADR-0001).
+    const open = openWorkspaces.find(
+      (workspace) => normalizePath(workspacePath(workspace)) === path
+    );
+    if (open) {
+      await workspaces.focus(open.workspace_id);
+      return;
+    }
+    project = path;
+  } else {
+    const workspaceId = extractWorkspaceId(picked.row);
+    if (workspaceId) {
+      await workspaces.focus(workspaceId);
+      return;
+    }
+    project = picked.row.split(WORKSPACE_ROW_DELIMITER)[3] ?? "";
   }
 
-  const project = row.split(WORKSPACE_ROW_DELIMITER)[3] ?? "";
   const projectName = project.split("/").pop() ?? project;
   const label = sanitizeName(projectName);
   const workspace = await workspaces.create({
@@ -218,6 +249,26 @@ export async function runSessionizer(
   runtime.logger.log(
     `✓ workspace '${label}' created and focused (${workspace.workspace_id})`
   );
+}
+
+/**
+ * `<root>/<query>` for a typed project name. Spaces become `-`; nested
+ * names (`org/repo`) are kept; anything escaping the root (absolute
+ * paths, `~`, `.` or `..` segments) is refused with null.
+ */
+export function newProjectPath(root: string, query: string): string | null {
+  if (query.startsWith("/") || query.startsWith("~")) return null;
+  const segments = query
+    .split("/")
+    .map((segment) => segment.trim().replace(/\s+/g, "-"))
+    .filter(Boolean);
+  if (
+    segments.length === 0 ||
+    segments.some((segment) => segment === "." || segment === "..")
+  ) {
+    return null;
+  }
+  return join(normalizePath(root), ...segments);
 }
 
 function workspaceName(workspace: Workspace): string {
@@ -272,9 +323,17 @@ function createRuntime(): SessionizerRuntime {
     tabs: new Tabs(herdr),
     panes,
     config: loadConfig(),
-    pickRows: pick,
+    pick: pickOrCreate,
     listProjects,
     listPanes: () => panes.list(),
+    makeProjectDir: (path) => {
+      if (existsSync(path)) return false;
+      mkdirSync(path, { recursive: true });
+      return true;
+    },
+    initRepo: (path) => {
+      spawnSync("git", ["init", "--quiet"], { cwd: path, stdio: "ignore" });
+    },
     createLayout: createProjectLayout,
     logger: console,
     exit: (code) => process.exit(code),

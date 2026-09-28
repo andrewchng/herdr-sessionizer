@@ -7,7 +7,7 @@ import type { SessionizerConfig } from "../config/config.ts";
 import type { Workspace } from "../client/types.ts";
 import type { LayoutPanes, LayoutTabs } from "../layouts/project.ts";
 import type { PickOptions } from "../ui/fzf.ts";
-import { runSessionizer } from "./sessionizer.ts";
+import { newProjectPath, runSessionizer } from "./sessionizer.ts";
 
 function testConfig(): SessionizerConfig {
   return {
@@ -60,7 +60,10 @@ function testPanes(): LayoutPanes {
 describe("runSessionizer", () => {
   it("focuses an existing workspace when selected from the first picker", async () => {
     const focus = mock(async () => {});
-    const pickRows = mock(async (rows: readonly string[]) => [rows[0]!]);
+    const pick = mock(async (rows: readonly string[]) => ({
+      kind: "row" as const,
+      row: rows[0]!,
+    }));
 
     await runSessionizer({
       workspaces: {
@@ -71,9 +74,11 @@ describe("runSessionizer", () => {
       tabs: testTabs(),
       panes: testPanes(),
       config: testConfig(),
-      pickRows,
+      pick,
       listProjects: mock(() => ["/projects/fieldnotes"]),
       listPanes: mock(async () => []),
+      makeProjectDir: mock(() => false),
+      initRepo: mock(() => {}),
       createLayout: mock(async (workspace: Workspace) => workspace),
       logger: { log: mock(() => {}), error: mock(() => {}) },
       exit: (code) => {
@@ -82,11 +87,11 @@ describe("runSessionizer", () => {
     });
 
     expect(focus).toHaveBeenCalledWith("ws1");
-    expect(pickRows).toHaveBeenCalledTimes(1);
+    expect(pick).toHaveBeenCalledTimes(1);
   });
 
   it("lists open workspaces then projects in one picker", async () => {
-    const pickRows = mock(async () => null);
+    const pick = mock(async () => null);
 
     await runSessionizer({
       workspaces: {
@@ -98,7 +103,7 @@ describe("runSessionizer", () => {
       tabs: testTabs(),
       panes: testPanes(),
       config: testConfig(),
-      pickRows,
+      pick,
       listProjects: mock(() => [
         "/projects/fieldnotes",
         "/projects/herdr-sessionizer",
@@ -114,6 +119,8 @@ describe("runSessionizer", () => {
           cwd: "/projects/fieldnotes/src",
         },
       ]),
+      makeProjectDir: mock(() => false),
+      initRepo: mock(() => {}),
       createLayout: mock(async (workspace: Workspace) => workspace),
       logger: { log: mock(() => {}), error: mock(() => {}) },
       exit: (code) => {
@@ -121,8 +128,8 @@ describe("runSessionizer", () => {
       },
     });
 
-    expect(pickRows).toHaveBeenCalledTimes(1);
-    const [rows, options] = pickRows.mock.calls[0] as unknown as [
+    expect(pick).toHaveBeenCalledTimes(1);
+    const [rows, options] = pick.mock.calls[0] as unknown as [
       string[],
       { withNth?: string },
     ];
@@ -151,9 +158,11 @@ describe("runSessionizer", () => {
       tabs: testTabs(),
       panes: testPanes(),
       config: testConfig(),
-      pickRows: mock(async () => null),
+      pick: mock(async () => null),
       listProjects: mock(() => ["/projects/fieldnotes"]),
       listPanes: mock(async () => []),
+      makeProjectDir: mock(() => false),
+      initRepo: mock(() => {}),
       createLayout: mock(async (workspace: Workspace) => workspace),
       logger: { log: mock(() => {}), error: mock(() => {}) },
       exit: (code) => {
@@ -180,11 +189,14 @@ describe("runSessionizer", () => {
       tabs: testTabs(),
       panes: testPanes(),
       config: testConfig(),
-      pickRows: mock(async (rows: readonly string[]) => [
-        projectRowFor(rows, "/projects/fieldnotes"),
-      ]),
+      pick: mock(async (rows: readonly string[]) => ({
+        kind: "row" as const,
+        row: projectRowFor(rows, "/projects/fieldnotes"),
+      })),
       listProjects: mock(() => ["/projects/fieldnotes"]),
       listPanes: mock(async () => []),
+      makeProjectDir: mock(() => false),
+      initRepo: mock(() => {}),
       createLayout: mock(async (workspace: Workspace) => workspace),
       logger: { log: mock(() => {}), error: mock(() => {}) },
       exit: (code) => {
@@ -200,8 +212,147 @@ describe("runSessionizer", () => {
     expect(focus).toHaveBeenCalledWith("ws-project");
   });
 
-  it("exits with an error when no projects are found", async () => {
+  it("still opens the picker with no projects, so a name can be typed", async () => {
+    const pick = mock(async () => null);
+
+    await runSessionizer({
+      workspaces: {
+        list: mock(async () => []),
+        create: mock(async (_options) => testWorkspace()),
+        focus: mock(async () => {}),
+      },
+      tabs: testTabs(),
+      panes: testPanes(),
+      config: testConfig(),
+      pick,
+      listProjects: mock(() => []),
+      listPanes: mock(async () => []),
+      makeProjectDir: mock(() => false),
+      initRepo: mock(() => {}),
+      createLayout: mock(async (workspace: Workspace) => workspace),
+      logger: { log: mock(() => {}), error: mock(() => {}) },
+      exit: (code) => {
+        throw new Error(`unexpected exit ${code}`);
+      },
+    });
+
+    expect(pick).toHaveBeenCalledTimes(1);
+    const [, options] = pick.mock.calls[0] as unknown as [
+      string[],
+      { createKey?: string },
+    ];
+    expect(options.createKey).toBe("ctrl-n");
+  });
+
+  it("creates a typed project under the first root, git inits it, and opens it", async () => {
+    const create = mock(async (_options) =>
+      testWorkspace({ workspace_id: "ws-new" })
+    );
+    const focus = mock(async () => {});
+    const makeProjectDir = mock(() => true);
+    const initRepo = mock(() => {});
+    const createLayout = mock(async (workspace: Workspace) => workspace);
+
+    await runSessionizer({
+      workspaces: { list: mock(async () => []), create, focus },
+      tabs: testTabs(),
+      panes: testPanes(),
+      config: testConfig(),
+      pick: mock(async () => ({
+        kind: "create" as const,
+        query: "org/my app",
+      })),
+      listProjects: mock(() => ["/projects/fieldnotes"]),
+      listPanes: mock(async () => []),
+      makeProjectDir,
+      initRepo,
+      createLayout,
+      logger: { log: mock(() => {}), error: mock(() => {}) },
+      exit: (code) => {
+        throw new Error(`unexpected exit ${code}`);
+      },
+    });
+
+    expect(makeProjectDir).toHaveBeenCalledWith("/projects/org/my-app");
+    expect(initRepo).toHaveBeenCalledWith("/projects/org/my-app");
+    expect(create).toHaveBeenCalledWith({
+      cwd: "/projects/org/my-app",
+      label: "my-app",
+      focus: false,
+    });
+    expect(createLayout).toHaveBeenCalledTimes(1);
+    expect(focus).toHaveBeenCalledWith("ws-new");
+  });
+
+  it("does not git init a typed project that already exists", async () => {
+    const initRepo = mock(() => {});
+    const create = mock(async (_options) => testWorkspace());
+
+    await runSessionizer({
+      workspaces: {
+        list: mock(async () => []),
+        create,
+        focus: mock(async () => {}),
+      },
+      tabs: testTabs(),
+      panes: testPanes(),
+      config: testConfig(),
+      pick: mock(async () => ({ kind: "create" as const, query: "notes" })),
+      listProjects: mock(() => []),
+      listPanes: mock(async () => []),
+      makeProjectDir: mock(() => false),
+      initRepo,
+      createLayout: mock(async (workspace: Workspace) => workspace),
+      logger: { log: mock(() => {}), error: mock(() => {}) },
+      exit: (code) => {
+        throw new Error(`unexpected exit ${code}`);
+      },
+    });
+
+    expect(initRepo).not.toHaveBeenCalled();
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it("focuses the open workspace when the typed name is already open", async () => {
+    const create = mock(async (_options) => testWorkspace());
+    const focus = mock(async () => {});
+
+    await runSessionizer({
+      workspaces: {
+        list: mock(async () => [
+          testWorkspace({
+            workspace_id: "ws-open",
+            cwd: "/projects/fieldnotes",
+          }),
+        ]),
+        create,
+        focus,
+      },
+      tabs: testTabs(),
+      panes: testPanes(),
+      config: testConfig(),
+      pick: mock(async () => ({
+        kind: "create" as const,
+        query: "fieldnotes",
+      })),
+      listProjects: mock(() => ["/projects/fieldnotes"]),
+      listPanes: mock(async () => []),
+      makeProjectDir: mock(() => false),
+      initRepo: mock(() => {}),
+      createLayout: mock(async (workspace: Workspace) => workspace),
+      logger: { log: mock(() => {}), error: mock(() => {}) },
+      exit: (code) => {
+        throw new Error(`unexpected exit ${code}`);
+      },
+    });
+
+    expect(create).not.toHaveBeenCalled();
+    expect(focus).toHaveBeenCalledWith("ws-open");
+  });
+
+  it("refuses a typed name that escapes the root", async () => {
     const error = mock(() => {});
+    const makeProjectDir = mock(() => true);
 
     await expect(
       runSessionizer({
@@ -213,9 +364,11 @@ describe("runSessionizer", () => {
         tabs: testTabs(),
         panes: testPanes(),
         config: testConfig(),
-        pickRows: mock(async () => null),
+        pick: mock(async () => ({ kind: "create" as const, query: "../x" })),
         listProjects: mock(() => []),
         listPanes: mock(async () => []),
+        makeProjectDir,
+        initRepo: mock(() => {}),
         createLayout: mock(async (workspace: Workspace) => workspace),
         logger: { log: mock(() => {}), error },
         exit: (code) => {
@@ -224,9 +377,8 @@ describe("runSessionizer", () => {
       })
     ).rejects.toThrow("exit 1");
 
-    expect(error).toHaveBeenCalledWith(
-      "No projects found in configured directories."
-    );
+    expect(error).toHaveBeenCalledWith("Invalid project name: ../x");
+    expect(makeProjectDir).not.toHaveBeenCalled();
   });
 
   it("creates, lays out, and focuses a new workspace from the project picker", async () => {
@@ -253,11 +405,14 @@ describe("runSessionizer", () => {
       tabs,
       panes,
       config: testConfig(),
-      pickRows: mock(async (rows: readonly string[]) => [
-        projectRowFor(rows, "/projects/herdr-sessionizer"),
-      ]),
+      pick: mock(async (rows: readonly string[]) => ({
+        kind: "row" as const,
+        row: projectRowFor(rows, "/projects/herdr-sessionizer"),
+      })),
       listProjects: mock(() => ["/projects/herdr-sessionizer"]),
       listPanes: mock(async () => []),
+      makeProjectDir: mock(() => false),
+      initRepo: mock(() => {}),
       createLayout,
       logger: { log, error: mock(() => {}) },
       exit: (code) => {
@@ -325,11 +480,14 @@ describe("runSessionizer", () => {
       tabs,
       panes,
       config,
-      pickRows: mock(async (rows: readonly string[]) => [
-        projectRowFor(rows, projectRoot),
-      ]),
+      pick: mock(async (rows: readonly string[]) => ({
+        kind: "row" as const,
+        row: projectRowFor(rows, projectRoot),
+      })),
       listProjects: mock(() => [projectRoot]),
       listPanes: mock(async () => []),
+      makeProjectDir: mock(() => false),
+      initRepo: mock(() => {}),
       createLayout,
       logger: { log: mock(() => {}), error: mock(() => {}) },
       exit: (code) => {
@@ -368,7 +526,7 @@ describe("runSessionizer", () => {
   });
 
   it("prefixes linked-worktree labels with the parent repo name", async () => {
-    const pickRows = mock(
+    const pick = mock(
       async (_rows: readonly string[], _options?: PickOptions) => null
     );
 
@@ -401,9 +559,11 @@ describe("runSessionizer", () => {
       tabs: testTabs(),
       panes: testPanes(),
       config: testConfig(),
-      pickRows,
+      pick,
       listProjects: mock(() => ["/projects/fieldnotes"]),
       listPanes: mock(async () => []),
+      makeProjectDir: mock(() => false),
+      initRepo: mock(() => {}),
       createLayout: mock(async (workspace: Workspace) => workspace),
       logger: { log: mock(() => {}), error: mock(() => {}) },
       exit: (code) => {
@@ -411,7 +571,7 @@ describe("runSessionizer", () => {
       },
     });
 
-    const rows = pickRows.mock.calls[0]?.[0] ?? [];
+    const rows = pick.mock.calls[0]?.[0] ?? [];
     const worktreeRow = rows.find((row) => row.startsWith("ws-worktree\t"));
     const mainRow = rows.find((row) => row.startsWith("ws-main\t"));
     const plainRow = rows.find((row) => row.startsWith("ws-plain\t"));
@@ -423,7 +583,7 @@ describe("runSessionizer", () => {
   });
 
   it("clusters rows by repo with plain workspaces first", async () => {
-    const pickRows = mock(
+    const pick = mock(
       async (_rows: readonly string[], _options?: PickOptions) => null
     );
 
@@ -453,9 +613,11 @@ describe("runSessionizer", () => {
       tabs: testTabs(),
       panes: testPanes(),
       config: testConfig(),
-      pickRows,
+      pick,
       listProjects: mock(() => ["/projects/fieldnotes"]),
       listPanes: mock(async () => []),
+      makeProjectDir: mock(() => false),
+      initRepo: mock(() => {}),
       createLayout: mock(async (workspace: Workspace) => workspace),
       logger: { log: mock(() => {}), error: mock(() => {}) },
       exit: (code) => {
@@ -463,10 +625,25 @@ describe("runSessionizer", () => {
       },
     });
 
-    const rows = pickRows.mock.calls[0]?.[0] ?? [];
+    const rows = pick.mock.calls[0]?.[0] ?? [];
     expect(rows[0]).toContain("ws-plain"); // empty key sorts first
     expect(rows[1]).toContain("ws-repo-a"); // "repo-a" before "repo-b"
     expect(rows[2]).toContain("ws-repo-b"); // stable within the cluster
     expect(rows[3]).toContain("ws-repo-b-parent");
+  });
+});
+
+describe("newProjectPath", () => {
+  it("joins the query under the root, dashing spaces", () => {
+    expect(newProjectPath("/code/", "my app")).toBe("/code/my-app");
+    expect(newProjectPath("/code", " org / repo ")).toBe("/code/org/repo");
+  });
+
+  it("refuses names that escape the root", () => {
+    expect(newProjectPath("/code", "/etc")).toBeNull();
+    expect(newProjectPath("/code", "~/x")).toBeNull();
+    expect(newProjectPath("/code", "a/../../x")).toBeNull();
+    expect(newProjectPath("/code", "./x")).toBeNull();
+    expect(newProjectPath("/code", "//")).toBeNull();
   });
 });

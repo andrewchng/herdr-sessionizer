@@ -193,6 +193,7 @@ depth = 1
 placement = "popup"    # overlay | split | popup (popup needs Herdr >= 0.7.4)
 width = "100%"         # popup outer width (cells or percentage; popup only)
 height = "100%"        # popup outer height (cells or percentage; popup only)
+preview_window = "right:50%"  # fzf --preview-window spec for every picker; "hidden" for a full-width list
 
 [worktree]
 github_prs = false   # true: list open GitHub PRs as worktree candidates (needs gh + auth)
@@ -262,6 +263,7 @@ Second tab shape:
 - `[projects].depth` — maximum levels below each root to scan when `git_only = true`; `1` means immediate children
 - `[ui].placement` — how Sessionizer / Worktree pickers open in Herdr (`overlay`, `split`, or `popup`; new configs default to `popup` at `100%`, `popup` needs Herdr `>= 0.7.4`)
 - `[ui].width` / `[ui].height` — popup outer size (cells or `"100%"`); only with `placement = "popup"`
+- `[ui].preview_window`: any fzf [`--preview-window`](https://junegunn.github.io/fzf/reference/#preview-window) spec, applied to every picker (default `"right:50%"`). Use `"down:40%"` to give the list the full width, or `"hidden"` to drop the preview
 - `[layout].focus` — which tab or pane to focus after layout bootstrap
 - `[tabs.<name>]` — one Herdr tab to create per section
 - `[[tabs.<name>.panes]]` — panes inside the tab; `from` + `split` (`right` or `down`) define the split tree

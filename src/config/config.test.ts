@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 
 import {
   loadConfig,
+  previewWindow,
   REPO_LAYOUT_CONFIG_RELATIVE,
   resolveLayoutConfig,
   resolveRepoLayoutPath,
@@ -344,6 +345,52 @@ describe("resolveLayoutConfig", () => {
 
       // Unknown keys under [layout] are ignored; placement only lives under [ui].
       expect(loadConfig().ui.placement).toBe("overlay");
+    });
+  });
+
+  it("reads [ui].preview_window", () => {
+    withPluginConfigDir((dir) => {
+      writeFileSync(
+        join(dir, "config.toml"),
+        [
+          "[projects]",
+          'roots = ["~/Projects"]',
+          "",
+          "[ui]",
+          'preview_window = "hidden"',
+          "",
+        ].join("\n"),
+        "utf-8"
+      );
+
+      const { ui } = loadConfig();
+      expect(ui).toEqual({ placement: "overlay", preview_window: "hidden" });
+      expect(previewWindow(ui)).toBe("hidden");
+    });
+  });
+
+  it("defaults the preview window to right:50%", () => {
+    expect(previewWindow({ placement: "overlay" })).toBe("right:50%");
+  });
+
+  it("rejects an empty [ui].preview_window", () => {
+    withPluginConfigDir((dir) => {
+      writeFileSync(
+        join(dir, "config.toml"),
+        [
+          "[projects]",
+          'roots = ["~/Projects"]',
+          "",
+          "[ui]",
+          'preview_window = " "',
+          "",
+        ].join("\n"),
+        "utf-8"
+      );
+
+      expect(() => loadConfig()).toThrow(
+        'Config [ui].preview_window must be an fzf --preview-window spec, like "down:40%" or "hidden".'
+      );
     });
   });
 

@@ -99,6 +99,14 @@ export async function runClosePicker(
 
   if (!selected || selected.length === 0) return;
 
+  // Remove deletes the git checkout. Show the chosen rows again and wait for
+  // Enter. Esc leaves every checkout in place. Any accepted row confirms the
+  // whole list; this screen is not a second selection.
+  if (selectedMode === "remove") {
+    const confirmed = await confirmRemove(runtime, selected);
+    if (!confirmed) return;
+  }
+
   const verb = selectedMode === "remove" ? "removed" : "closed";
   const summaryVerb = selectedMode === "remove" ? "Removed" : "Closed";
   const noun = selectedMode === "remove" ? "worktree(s)" : "workspace(s)";
@@ -156,6 +164,26 @@ export async function runClosePicker(
 
   runtime.logger.log(`${summaryVerb} ${succeeded} ${noun}, ${failed} failed.`);
   if (failed > 0) runtime.exit(1);
+}
+
+/**
+ * Confirmation list for destructive remove. Enter accepts the whole set.
+ */
+async function confirmRemove(
+  runtime: CloseRuntime,
+  selected: readonly string[]
+): Promise<boolean> {
+  const count = selected.length;
+  const noun = count === 1 ? "worktree" : "worktrees";
+  const confirmed = await runtime.pickRows(selected, {
+    prompt: "Confirm remove: ",
+    header: `Delete ${count} ${noun} · Enter confirm · Esc cancel`,
+    delimiter: WORKSPACE_ROW_DELIMITER,
+    withNth: "2,4",
+    preview: WORKTREE_CLOSE_PREVIEW,
+    previewWindow: "right:50%",
+  });
+  return confirmed !== null && confirmed.length > 0;
 }
 
 /** Step 1 — explicit in-flow mode selection (close vs destructive remove). */

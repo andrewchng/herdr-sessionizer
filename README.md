@@ -126,7 +126,8 @@ Worktree (always starts at repo picker)
 
 Close (mode menu first, then multi-select picker)
   mode ──> close (keep worktrees) ──> workspaces ──Tab + Enter──> close sessions
-        └─> remove (destructive) ──> worktrees ──Tab + Enter──> close + delete checkout
+        └─> remove (destructive) ──> worktrees ──Tab + Enter──> confirm list ──Enter──> close + delete checkout
+                                                                              └─ Esc ──> exit
 ```
 
 | Selection                     | Result                                            |

@@ -304,6 +304,76 @@ describe("runClosePicker", () => {
     expect(options?.multi).toBe(true);
   });
 
+  it("lists the selected worktrees in a confirmation picker before removing them", async () => {
+    const remove = mock(async (_workspaceId: string) => {});
+    const pickRows = mock(
+      async (rows: readonly string[], options?: PickOptions) => {
+        if (options?.prompt === "Confirm remove: ") return [rows[0]!];
+        return [rows[0]!, rows[1]!];
+      }
+    );
+
+    await runClosePicker(
+      "remove",
+      testRuntime({
+        workspaces: {
+          list: mock(async () => [
+            worktreeWorkspace(),
+            {
+              ...worktreeWorkspace(),
+              workspace_id: "ws-other",
+              label: "feature/other",
+            },
+          ]),
+        },
+        remove,
+        pickRows,
+      })
+    );
+
+    expect(pickRows).toHaveBeenCalledTimes(2);
+    const confirmRows = pickRows.mock.calls[1]?.[0];
+    expect(confirmRows).toHaveLength(2);
+    expect(confirmRows?.[0]).toContain("ws-worktree");
+    expect(confirmRows?.[1]).toContain("ws-other");
+    const confirmOptions = pickRows.mock.calls[1]?.[1];
+    expect(confirmOptions?.prompt).toBe("Confirm remove: ");
+    expect(confirmOptions?.header).toBe(
+      "Delete 2 worktrees · Enter confirm · Esc cancel"
+    );
+    expect(confirmOptions?.multi).toBeUndefined();
+    expect(confirmOptions?.withNth).toBe("2,4");
+    expect(confirmOptions?.preview).toBe(WORKTREE_CLOSE_PREVIEW);
+    expect(remove).toHaveBeenCalledTimes(2);
+    expect(remove.mock.calls[0]?.[0]).toBe("ws-worktree");
+    expect(remove.mock.calls[1]?.[0]).toBe("ws-other");
+  });
+
+  it("does not remove worktrees when the confirmation picker is cancelled", async () => {
+    const remove = mock(async (_workspaceId: string) => {});
+    const pickRows = mock(
+      async (rows: readonly string[], options?: PickOptions) => {
+        if (options?.prompt === "Confirm remove: ") return null;
+        return [rows[0]!];
+      }
+    );
+
+    await runClosePicker(
+      "remove",
+      testRuntime({
+        workspaces: { list: mock(async () => [worktreeWorkspace()]) },
+        remove,
+        pickRows,
+      })
+    );
+
+    expect(pickRows).toHaveBeenCalledTimes(2);
+    expect(pickRows.mock.calls[1]?.[1]?.header).toBe(
+      "Delete 1 worktree · Enter confirm · Esc cancel"
+    );
+    expect(remove).not.toHaveBeenCalled();
+  });
+
   it("removes multiple worktrees and reports per-row failures without aborting the batch", async () => {
     const removeError = new HerdrError(
       ["worktree", "remove"],

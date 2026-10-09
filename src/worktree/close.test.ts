@@ -259,6 +259,61 @@ describe("runClosePicker", () => {
     expect(log).toHaveBeenCalledWith("Closed 2 workspace(s), 0 failed.");
   });
 
+  it("closes a selected child when its parent group close fails", async () => {
+    const close = mock(async (workspaceId: string) => {
+      if (workspaceId === "ws-parent") {
+        throw new Error("group close refused");
+      }
+    });
+    const log = mock(() => {});
+    const error = mock(() => {});
+    const pickRows = mock(async (rows: readonly string[]) => [
+      rows[0]!,
+      rows[1]!,
+    ]);
+
+    await expect(
+      runClosePicker(
+        "close",
+        testRuntime({
+          workspaces: {
+            list: mock(async () => [
+              worktreeWorkspace(),
+              {
+                workspace_id: "ws-parent",
+                label: "repo",
+                cwd: "/repo",
+                worktree: {
+                  repo_name: "repo",
+                  checkout_path: "/repo",
+                  is_linked_worktree: false,
+                },
+              },
+            ]),
+          },
+          close,
+          pickRows,
+          logger: { log, error },
+          exit: (code) => {
+            throw new Error(`exit ${code}`);
+          },
+        })
+      )
+    ).rejects.toThrow("exit 1");
+
+    expect(close).toHaveBeenCalledTimes(2);
+    expect(close).toHaveBeenNthCalledWith(1, "ws-parent", { group: true });
+    expect(close).toHaveBeenNthCalledWith(2, "ws-worktree");
+    expect(log).toHaveBeenCalledWith("✓ closed ws-worktree");
+    expect(log).not.toHaveBeenCalledWith(
+      "✓ closed ws-worktree (covered by group close)"
+    );
+    expect(error).toHaveBeenCalledWith(
+      "✗ failed to close ws-parent: group close refused"
+    );
+    expect(log).toHaveBeenCalledWith("Closed 1 workspace(s), 1 failed.");
+  });
+
   it("passes multi-select and close preview options in close mode", async () => {
     const pickRows = mock(
       async (_rows: readonly string[], _options?: PickOptions) => null
@@ -275,6 +330,9 @@ describe("runClosePicker", () => {
     const options = pickRows.mock.calls[0]?.[1];
     expect(options?.multi).toBe(true);
     expect(options?.prompt).toBe("Close workspace: ");
+    expect(options?.header).toBe(
+      "Tab - select multiple, Enter - Close workspace(s), Esc - cancel"
+    );
     expect(options?.preview).toBe(WORKSPACE_CLOSE_PREVIEW);
     expect(options?.withNth).toBe("2");
   });
@@ -339,7 +397,7 @@ describe("runClosePicker", () => {
     const confirmOptions = pickRows.mock.calls[1]?.[1];
     expect(confirmOptions?.prompt).toBe("Confirm remove: ");
     expect(confirmOptions?.header).toBe(
-      "Delete 2 worktrees · Enter confirm · Esc cancel"
+      "Delete 2 worktrees · Enter deletes all listed · Esc cancel"
     );
     expect(confirmOptions?.multi).toBeUndefined();
     expect(confirmOptions?.withNth).toBe("2,4");
@@ -369,7 +427,7 @@ describe("runClosePicker", () => {
 
     expect(pickRows).toHaveBeenCalledTimes(2);
     expect(pickRows.mock.calls[1]?.[1]?.header).toBe(
-      "Delete 1 worktree · Enter confirm · Esc cancel"
+      "Delete 1 worktree · Enter deletes all listed · Esc cancel"
     );
     expect(remove).not.toHaveBeenCalled();
   });
@@ -414,9 +472,7 @@ describe("runClosePicker", () => {
     expect(remove.mock.calls[0]?.[0]).toBe("ws-worktree");
     expect(remove.mock.calls[1]?.[0]).toBe("ws-project");
     expect(log).toHaveBeenCalledWith("✓ removed ws-worktree");
-    expect(error.mock.calls[0]?.[0]).toContain(
-      "✗ failed to removed ws-project"
-    );
+    expect(error.mock.calls[0]?.[0]).toContain("✗ failed to remove ws-project");
     expect(error.mock.calls[0]?.[0]).toContain("dirty worktree");
     expect(log).toHaveBeenCalledWith("Removed 1 worktree(s), 1 failed.");
   });

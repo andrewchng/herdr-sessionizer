@@ -83,7 +83,7 @@ export async function runClosePicker(
   const prompt =
     selectedMode === "remove" ? "Remove worktree: " : "Close workspace: ";
   const action =
-    selectedMode === "remove" ? "Remove worktree(s)" : "Close workspace(S)";
+    selectedMode === "remove" ? "Remove worktree(s)" : "Close workspace(s)";
   const selected = await runtime.pickRows(rows, {
     prompt: prompt,
     header: `Tab - select multiple, Enter - ${action}, Esc - cancel`,
@@ -108,17 +108,25 @@ export async function runClosePicker(
   }
 
   const verb = selectedMode === "remove" ? "removed" : "closed";
+  const failureVerb = selectedMode === "remove" ? "remove" : "close";
   const summaryVerb = selectedMode === "remove" ? "Removed" : "Closed";
   const noun = selectedMode === "remove" ? "worktree(s)" : "workspace(s)";
   let succeeded = 0;
   let failed = 0;
+
+  const reportFailure = (id: string, error: unknown) => {
+    failed += 1;
+    const message = error instanceof Error ? error.message : String(error);
+    runtime.logger.error(`✗ failed to ${failureVerb} ${id}: ${message}`);
+  };
 
   const workspaceById = new Map<string, Workspace>(
     workspaces.map((workspace) => [workspace.workspace_id, workspace])
   );
   // In close mode, a parent/main workspace (a repo that has open worktrees)
   // must be closed with --group. A group close also closes that repo's child
-  // worktrees, so a child selected alongside its parent is redundant — skip it.
+  // worktrees, so a child selected alongside its parent is redundant once the
+  // parent close succeeds. If the parent close fails, close the child itself.
   const parentRepos = new Set<string>();
   if (selectedMode === "close") {
     for (const row of selected) {
@@ -132,6 +140,9 @@ export async function runClosePicker(
     }
   }
 
+  const coveredRows: string[] = [];
+  const closedGroupRepos = new Set<string>();
+
   for (const row of selected) {
     const id = extractWorkspaceId(row);
     const workspace = workspaceById.get(id);
@@ -140,8 +151,7 @@ export async function runClosePicker(
     const repo = workspace?.worktree?.repo_name;
 
     if (selectedMode === "close" && isChild && repo && parentRepos.has(repo)) {
-      runtime.logger.log(`✓ ${verb} ${id} (covered by group close)`);
-      succeeded += 1;
+      coveredRows.push(row);
       continue;
     }
 
@@ -150,15 +160,32 @@ export async function runClosePicker(
         await runtime.remove(id);
       } else if (isParent) {
         await runtime.close(id, { group: true });
+        if (repo) closedGroupRepos.add(repo);
       } else {
         await runtime.close(id);
       }
       succeeded += 1;
       runtime.logger.log(`✓ ${verb} ${id}`);
     } catch (error) {
-      failed += 1;
-      const message = error instanceof Error ? error.message : String(error);
-      runtime.logger.error(`✗ failed to ${verb} ${id}: ${message}`);
+      reportFailure(id, error);
+    }
+  }
+
+  for (const row of coveredRows) {
+    const id = extractWorkspaceId(row);
+    const repo = workspaceById.get(id)?.worktree?.repo_name;
+    if (repo && closedGroupRepos.has(repo)) {
+      runtime.logger.log(`✓ ${verb} ${id} (covered by group close)`);
+      succeeded += 1;
+      continue;
+    }
+
+    try {
+      await runtime.close(id);
+      succeeded += 1;
+      runtime.logger.log(`✓ ${verb} ${id}`);
+    } catch (error) {
+      reportFailure(id, error);
     }
   }
 
@@ -177,7 +204,7 @@ async function confirmRemove(
   const noun = count === 1 ? "worktree" : "worktrees";
   const confirmed = await runtime.pickRows(selected, {
     prompt: "Confirm remove: ",
-    header: `Delete ${count} ${noun} · Enter confirm · Esc cancel`,
+    header: `Delete ${count} ${noun} · Enter deletes all listed · Esc cancel`,
     delimiter: WORKSPACE_ROW_DELIMITER,
     withNth: "2,4",
     preview: WORKTREE_CLOSE_PREVIEW,

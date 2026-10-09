@@ -64,9 +64,11 @@ export async function runClosePicker(
       : workspaces;
   // Group rows by repo so worktrees of the same repo sit together in the
   // picker (fzf keeps input order until a query re-sorts by score).
-  const rows = [...candidates].sort((a, b) =>
-    (a.worktree?.repo_name ?? "").localeCompare(b.worktree?.repo_name ?? "")
-  ).map(workspaceRow);
+  const rows = [...candidates]
+    .sort((a, b) =>
+      (a.worktree?.repo_name ?? "").localeCompare(b.worktree?.repo_name ?? "")
+    )
+    .map(workspaceRow);
 
   if (rows.length === 0) {
     const hint =
@@ -78,10 +80,13 @@ export async function runClosePicker(
     return;
   }
 
+  const prompt =
+    selectedMode === "remove" ? "Remove worktree: " : "Close workspace: ";
+  const action =
+    selectedMode === "remove" ? "Remove worktree(s)" : "Close workspace(S)";
   const selected = await runtime.pickRows(rows, {
-    prompt:
-      selectedMode === "remove" ? "Remove worktree: " : "Close workspace: ",
-    header: "Tab mark, Enter act, Esc cancel",
+    prompt: prompt,
+    header: `Tab - select multiple, Enter - ${action}, Esc - cancel`,
     multi: true,
     delimiter: WORKSPACE_ROW_DELIMITER,
     withNth: "2",

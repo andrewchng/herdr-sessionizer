@@ -4,7 +4,10 @@ import { HerdrError } from "../client/errors.ts";
 import type { Workspace } from "../client/types.ts";
 import type { WorktreeFlowRuntime } from "./flow.ts";
 import { intentFromCandidate } from "./flow.ts";
-import { WORKTREE_CANDIDATE_PREVIEW } from "../ui/previews.ts";
+import {
+  PROJECT_ROW_PREVIEW,
+  WORKTREE_CANDIDATE_PREVIEW,
+} from "../ui/previews.ts";
 import {
   type WorktreeCandidate,
   WORKTREE_CANDIDATE_ROW_DELIMITER,
@@ -561,6 +564,42 @@ describe("runWorktree", () => {
         preview: WORKTREE_CANDIDATE_PREVIEW,
         previewWindow: "right:50%",
       }
+    );
+  });
+
+  it("shows root-relative project names and resolves the selected row to its path", async () => {
+    const project = "/code/org/repo";
+    const row = `${project}\torg/repo`;
+    const pickProject = mock(async () => [row]);
+    const discoverCandidates = mock(async () => []);
+
+    await runWorktree(
+      [],
+      testRuntime({
+        config: {
+          projects: { roots: ["/code"], git_only: true, depth: 2 },
+          ui: { placement: "overlay" },
+          layout: { focus: "terminal" },
+          worktree: { github_prs: false },
+          tabs: [],
+        },
+        listProjects: mock(() => [project]),
+        pickProject,
+        discoverCandidates,
+        promptBranch: mock(async () => null),
+      })
+    );
+
+    expect(pickProject).toHaveBeenCalledWith([row], {
+      prompt: "Base project for worktree: ",
+      header: "Select a repo to spin off a worktree workspace",
+      delimiter: "\t",
+      withNth: "2",
+      preview: PROJECT_ROW_PREVIEW,
+      previewWindow: "right:50%",
+    });
+    expect(discoverCandidates).toHaveBeenCalledWith(
+      expect.objectContaining({ project })
     );
   });
 

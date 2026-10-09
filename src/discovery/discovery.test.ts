@@ -1,16 +1,58 @@
 import { mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { describe, expect, it } from "bun:test";
 
 import {
   expandHome,
   listProjects,
   normalizePath,
+  projectDisplayName,
   sanitizeName,
   shellQuote,
   worktreeSlug,
 } from "./discovery.ts";
+
+// ── projectDisplayName ────────────────────────────────────────
+
+describe("projectDisplayName", () => {
+  it("strips the root a project was found under", () => {
+    expect(projectDisplayName("/code/repo", ["/code"])).toBe("repo");
+  });
+
+  it("keeps nested paths below the root", () => {
+    expect(projectDisplayName("/code/org/repo", ["/code"])).toBe("org/repo");
+  });
+
+  it("ignores trailing slashes on roots", () => {
+    expect(projectDisplayName("/code/repo", ["/code/"])).toBe("repo");
+  });
+
+  it("expands ~ in roots", () => {
+    expect(projectDisplayName(join(homedir(), "code/repo"), ["~/code"])).toBe(
+      "repo"
+    );
+  });
+
+  it("prefers the most specific matching root", () => {
+    expect(projectDisplayName("/code/org/repo", ["/code", "/code/org"])).toBe(
+      "repo"
+    );
+  });
+
+  it("matches glob roots on their static prefix", () => {
+    expect(projectDisplayName("/code/org/repo", ["/code/*"])).toBe("org/repo");
+  });
+
+  it("does not match a sibling directory sharing a prefix", () => {
+    expect(projectDisplayName("/code-old/repo", ["/code"])).toBe("repo");
+    expect(projectDisplayName("/code-old/org/repo", ["/code"])).toBe("repo");
+  });
+
+  it("falls back to the basename when no root contains the project", () => {
+    expect(projectDisplayName("/elsewhere/org/repo", ["/code"])).toBe("repo");
+  });
+});
 
 // ── sanitizeName ──────────────────────────────────────────────
 

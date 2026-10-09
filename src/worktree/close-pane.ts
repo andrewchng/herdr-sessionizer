@@ -1,5 +1,3 @@
-export {};
-
 import { runClosePicker } from "./close.ts";
 
 runClosePicker().catch((error: unknown) => {

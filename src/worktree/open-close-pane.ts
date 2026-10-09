@@ -1,5 +1,3 @@
-export {};
-
 import { Herdr } from "../client/herdr.ts";
 import { loadConfig } from "../config/config.ts";
 

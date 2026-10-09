@@ -175,7 +175,7 @@ command = "sessionizer.worktree-open"
 description = "open worktree workspace"
 
 [[keys.command]]
-key = "prefix+d"
+key = "prefix+down"
 type = "plugin_action"
 command = "sessionizer.close"
 description = "close or remove workspaces"

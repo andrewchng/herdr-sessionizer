@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.10.0] - 2026-10-09
+
+### Added
+
+- Workspace close picker (`sessionizer.close`). The first screen chooses **Close workspace** or **Remove worktrees**. Close keeps the git checkout (`herdr workspace close`). A parent workspace is closed with `--group`, which also closes that repo's linked worktree sessions. A child selected with its parent counts as covered only after the group close succeeds; if it fails, the picker closes the child on its own. Remove deletes linked worktree checkouts (`herdr worktree remove --workspace <id>`) and does not pass `--force`. After the selection, a confirmation list shows every chosen worktree: Enter deletes that whole list, and Esc cancels. The remove preview shows the last commit and whether the checkout is dirty. Rows are grouped by repo, and linked worktrees are labeled `<repo> / <label>`. The README example binding is `prefix+down` ([#1](https://github.com/andrewchng/herdr-sessionizer/issues/1), [#53](https://github.com/andrewchng/herdr-sessionizer/pull/53)).
+
 ## [0.9.0] - 2026-09-26
 
 ### Added

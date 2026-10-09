@@ -22,6 +22,10 @@ function herdrWithResult(result: Record<string, unknown>): Herdr {
   } as unknown as Herdr;
 }
 
+function herdrWithRun(run: ReturnType<typeof mock>): Herdr {
+  return { run } as unknown as Herdr;
+}
+
 describe("Worktrees.open", () => {
   it("maps already_open false to alreadyOpen false for a fresh open", async () => {
     const herdr = herdrWithResult({
@@ -55,5 +59,34 @@ describe("Worktrees.open", () => {
 
     expect(opened.alreadyOpen).toBe(true);
     expect(opened.workspace?.workspace_id).toBe("ws-feature");
+  });
+});
+
+describe("Worktrees.remove", () => {
+  it("removes a workspace worktree with the workspace flag", async () => {
+    const run = mock(async () => {});
+    await new Worktrees(herdrWithRun(run)).remove("ws-feature");
+
+    expect(run).toHaveBeenCalledWith([
+      "worktree",
+      "remove",
+      "--workspace",
+      "ws-feature",
+    ]);
+  });
+
+  it("passes --force when requested", async () => {
+    const run = mock(async () => {});
+    await new Worktrees(herdrWithRun(run)).remove("ws-feature", {
+      force: true,
+    });
+
+    expect(run).toHaveBeenCalledWith([
+      "worktree",
+      "remove",
+      "--workspace",
+      "ws-feature",
+      "--force",
+    ]);
   });
 });

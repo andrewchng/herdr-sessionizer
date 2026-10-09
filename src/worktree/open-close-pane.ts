@@ -1,0 +1,45 @@
+export {};
+
+import { Herdr } from "../client/herdr.ts";
+import { loadConfig } from "../config/config.ts";
+
+export async function openClosePane(): Promise<void> {
+  const pluginId = process.env.HERDR_PLUGIN_ID;
+  if (!pluginId) {
+    throw new Error("HERDR_PLUGIN_ID is required to open the close pane.");
+  }
+
+  const herdr = new Herdr();
+  const config = loadConfig();
+  const placement = config.ui.placement;
+  const args = [
+    "plugin",
+    "pane",
+    "open",
+    "--plugin",
+    pluginId,
+    "--entrypoint",
+    "close",
+    "--placement",
+    placement,
+    "--focus",
+  ];
+
+  if (placement === "popup") {
+    if (config.ui.width !== undefined) {
+      args.push("--width", String(config.ui.width));
+    }
+    if (config.ui.height !== undefined) {
+      args.push("--height", String(config.ui.height));
+    }
+  }
+
+  await herdr.run(args);
+}
+
+if (import.meta.main) {
+  openClosePane().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  });
+}

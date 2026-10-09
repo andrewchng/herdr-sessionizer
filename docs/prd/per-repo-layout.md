@@ -40,7 +40,7 @@ $HERDR_PLUGIN_CONFIG_DIR/config.toml
 Required global fields (unchanged):
 
 - `[projects].roots`
-- `[ui].placement` (optional; defaults to `overlay`)
+- `[ui].placement` (optional; defaults to `popup` at `100%` width/height for newly generated configs)
 - `[layout].focus` and `[tabs.*]` — used as **default layout** when no repo override exists
 
 ### Repo-local override

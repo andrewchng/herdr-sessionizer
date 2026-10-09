@@ -64,9 +64,9 @@ export interface TabConfig {
 interface UiConfig {
   /** How Sessionizer / Worktree pickers open inside Herdr. */
   placement: PanePlacement;
-  /** Outer popup width (cells or `"90%"`). Only used when placement is `popup`. */
+  /** Outer popup width (cells or `"100%"`). Only used when placement is `popup`. */
   width?: number | string;
-  /** Outer popup height (cells or `"90%"`). Only used when placement is `popup`. */
+  /** Outer popup height (cells or `"100%"`). Only used when placement is `popup`. */
   height?: number | string;
 }
 
@@ -245,7 +245,9 @@ function defaultConfigToml(): string {
     "[ui]",
     "# How Sessionizer / Worktree pickers open in Herdr: overlay | split | popup",
     "# popup requires Herdr >= 0.7.4 (width/height only apply to popup)",
-    'placement = "overlay"',
+    'placement = "popup"',
+    'width = "100%"',
+    'height = "100%"',
     "",
     "[worktree]",
     "# true: list open GitHub PRs as worktree candidates (requires gh + auth)",

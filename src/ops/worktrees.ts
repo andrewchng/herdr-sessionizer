@@ -31,6 +31,10 @@ interface WorktreeEnvelope {
   };
 }
 
+interface WorktreeRemoveOptions {
+  force?: boolean;
+}
+
 export interface WorktreeOpenResult {
   workspace?: Workspace;
   worktreePath?: string;
@@ -86,5 +90,18 @@ export class Worktrees {
         response.result?.worktree?.path,
       alreadyOpen: response.result?.already_open ?? false,
     };
+  }
+
+  /**
+   * Close a workspace and delete its git worktree checkout. Throws
+   * `HerdrError` on non-zero exit (e.g. a dirty checkout without `--force`).
+   */
+  async remove(
+    workspaceId: string,
+    options?: WorktreeRemoveOptions
+  ): Promise<void> {
+    const args = ["worktree", "remove", "--workspace", workspaceId];
+    if (options?.force) args.push("--force");
+    await this.herdr.run(args);
   }
 }

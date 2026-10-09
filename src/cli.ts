@@ -2,12 +2,16 @@ import { openSessionizerPane } from "./sessionizer/open-pane.ts";
 import { runSessionizer } from "./sessionizer/sessionizer.ts";
 import { openWorktreePane } from "./worktree/open-worktree-pane.ts";
 import { buildWorktreeArgvFromEnv, runWorktree } from "./worktree/worktree.ts";
+import { openClosePane } from "./worktree/open-close-pane.ts";
+import { runClosePicker } from "./worktree/close.ts";
 
 export const MODES = [
   "open",
   "sessionizer",
   "worktree-open",
   "worktree",
+  "close",
+  "close-flow",
 ] as const;
 
 export type Mode = (typeof MODES)[number];
@@ -30,12 +34,16 @@ Modes:
   sessionizer     Run the Sessionizer flow (pane body)
   worktree-open   Open the Worktree pane (action launcher)
   worktree        Run the Worktree flow (pane body)
+  close           Open the Close pane (action launcher)
+  close-flow      Run the Close flow (pane body)
 
 Examples:
   sessionizer open
   sessionizer sessionizer
   sessionizer worktree-open
   sessionizer worktree --project ~/Projects/my-repo --branch feat/x
+  sessionizer close
+  sessionizer close-flow
 `;
 }
 
@@ -68,6 +76,12 @@ export async function dispatch(
       return;
     case "worktree":
       await runWorktree(args.length > 0 ? args : buildWorktreeArgvFromEnv());
+      return;
+    case "close":
+      await openClosePane();
+      return;
+    case "close-flow":
+      await runClosePicker();
       return;
   }
 }

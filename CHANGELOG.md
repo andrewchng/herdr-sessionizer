@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.9.0] - 2026-09-26
+
+### Added
+
+- The Sessionizer switch picker (`sessionizer.open`) now shows the parent repo for linked-worktree workspaces, rendered as `<repo_name> / <label>` (e.g. `herdr-sessionizer / feature-x`), so two worktrees of different repos with the same branch name are distinguishable. The fzf preview `label:` line shows the same text. Non-worktree workspaces and the main repo workspace keep their existing label ([#69](https://github.com/andrewchng/herdr-sessionizer/issues/69)).
+- Switch-picker rows are now clustered by repo: a repo's parent/main workspace and its linked worktrees sit next to each other in the picker, and workspaces without worktree provenance appear first (in their original relative order). The sort is stable, so Herdr's list order is preserved within a repo cluster ([#69](https://github.com/andrewchng/herdr-sessionizer/issues/69)).
+
+## [0.8.4] - 2026-09-23
+
+### Changed
+
+- The build script now re-signs `dist/sessionizer` with a fresh adhoc signature on macOS after compiling (`codesign --force --deep --sign - --timestamp=none`). Bun's `--compile` emits a linker-signed adhoc signature (`flags=0x20002`) that newer macOS builds (26.5+/27) reject with SIGKILL / "Code Signature Invalid", killing the plugin binary on launch — even `--help`. Re-signing produces `flags=0x2(adhoc)` that macOS accepts, so plugin actions/panes launch reliably ([#64](https://github.com/andrewchng/herdr-sessionizer/issues/64)). The step is macOS-only and a no-op on Linux.
+
+## [0.8.3] - 2026-09-15
+
+### Changed
+
+- Generated default `config.toml` now seeds `[ui].placement = "popup"` with `width` / `height` = `"100%"` (previously `overlay`), so the picker fills the workspace. Since Herdr `0.9` overlay only covers a single pane, first-time users get a full-screen picker instead ([#56](https://github.com/andrewchng/herdr-sessionizer/issues/56)). Existing configs keep their placement and can switch to `popup` at `100%` manually.
+
 ## [0.8.2] - 2026-09-13
 
 ### Added

@@ -6,6 +6,7 @@ Sessionizer is a [Herdr](https://herdr.dev/) plugin that uses fuzzy pickers to o
 
 - **Sessionizer** — focus an existing workspace or create a new project workspace
 - **Worktree** — create or reopen a Git worktree workspace, including from an open GitHub PR
+- **Close** — close one or more open workspaces; choose between closing the session (keep worktrees) and removing the git worktree checkout (destructive)
 
 > **Platform:** macOS and Linux.
 
@@ -44,7 +45,7 @@ herdr plugin install andrewchng/herdr-sessionizer --yes
 herdr plugin config-dir sessionizer
 ```
 
-Install runs `bun install` then compiles a host-local `dist/sessionizer` binary. Actions and panes invoke that binary with a mode (`open`, `sessionizer`, `worktree-open`, `worktree`).
+Install runs `bun install` then compiles a host-local `dist/sessionizer` binary. Actions and panes invoke that binary with a mode (`open`, `sessionizer`, `worktree-open`, `worktree`, `close`, `close-flow`).
 
 Wire keybindings in your Herdr config (see [Example keybindings](#example-keybindings)).
 
@@ -66,7 +67,7 @@ herdr plugin unlink sessionizer || true
 herdr plugin link /path/to/herdr-sessionizer
 ```
 
-To skip compile while iterating (keybinds run TypeScript via Bun), point the four manifest `command` arrays at `bun run` and relink. Bun must be on `PATH`. Restore the `./dist/sessionizer` commands before committing — `herdr plugin install` and the published plugin always use the compiled binary.
+To skip compile while iterating (keybinds run TypeScript via Bun), point the manifest `command` arrays at `bun run` and relink. Bun must be on `PATH`. Restore the `./dist/sessionizer` commands before committing — `herdr plugin install` and the published plugin always use the compiled binary.
 
 ```toml
 [[actions]]
@@ -77,6 +78,10 @@ command = ["bun", "run", "src/sessionizer/open-pane.ts"]
 id = "worktree-open"
 command = ["bun", "run", "src/worktree/open-worktree-pane.ts"]
 
+[[actions]]
+id = "close"
+command = ["bun", "run", "src/worktree/open-close-pane.ts"]
+
 [[panes]]
 id = "sessionizer"
 command = ["bun", "run", "src/sessionizer/sessionizer-pane.ts"]
@@ -84,6 +89,10 @@ command = ["bun", "run", "src/sessionizer/sessionizer-pane.ts"]
 [[panes]]
 id = "worktree"
 command = ["bun", "run", "src/worktree/worktree-pane.ts"]
+
+[[panes]]
+id = "close"
+command = ["bun", "run", "src/worktree/close-pane.ts"]
 ```
 
 `bun run sessionizer` still runs the Sessionizer flow without linking or compiling.
@@ -94,10 +103,12 @@ command = ["bun", "run", "src/worktree/worktree-pane.ts"]
 | --------------- | --------------------------- |
 | Project picker  | `sessionizer.open`          |
 | Worktree picker | `sessionizer.worktree-open` |
+| Close picker    | `sessionizer.close`         |
 
 ```sh
 herdr plugin action invoke sessionizer.open
 herdr plugin action invoke sessionizer.worktree-open
+herdr plugin action invoke sessionizer.close
 ```
 
 ### UX flow
@@ -112,6 +123,11 @@ Worktree (always starts at repo picker)
   projects ──> branches / PRs? ──Enter──> reopen or create — see table
             └──────────── Esc / none ──> type new branch → create + layout
                                            └─ Esc ──> exit
+
+Close (mode menu first, then multi-select picker)
+  mode ──> close (keep worktrees) ──> workspaces ──Tab + Enter──> close sessions
+        └─> remove (destructive) ──> worktrees ──Tab + Enter──> confirm list ──Enter──> close + delete checkout
+                                                                              └─ Esc ──> exit
 ```
 
 | Selection                     | Result                                            |
@@ -157,6 +173,12 @@ key = "prefix+up"
 type = "plugin_action"
 command = "sessionizer.worktree-open"
 description = "open worktree workspace"
+
+[[keys.command]]
+key = "prefix+down"
+type = "plugin_action"
+command = "sessionizer.close"
+description = "close or remove workspaces"
 ```
 
 ## Layout configuration
@@ -174,9 +196,10 @@ valid: new workspaces then open with a plain shell and no layout is applied.
 When `[tabs]` sections exist, `[layout].focus` is required.
 
 `[ui]` controls how Sessionizer / Worktree **pickers** open inside Herdr (not
-workspace bootstrap). New configs default to `overlay`. You can switch to `split`
-or `popup` (Herdr `>= 0.7.4`, session-modal at `90%` width/height), or omit
-`[ui]` entirely to fall back to `overlay`.
+workspace bootstrap). New configs default to `popup` at `100%` width/height, so
+the picker fills the workspace. You can switch to `split` or `overlay`
+(`overlay` only covers a single pane since Herdr `0.9`), or omit `[ui]` entirely
+to fall back to `overlay`.
 
 If you want an agent to help edit either the global config or a repo-local override, see [Agent skills](#agent-skills).
 
@@ -189,7 +212,9 @@ git_only = true
 depth = 1
 
 [ui]
-placement = "overlay"   # overlay | split | popup (popup needs Herdr >= 0.7.4)
+placement = "popup"    # overlay | split | popup (popup needs Herdr >= 0.7.4)
+width = "100%"         # popup outer width (cells or percentage; popup only)
+height = "100%"        # popup outer height (cells or percentage; popup only)
 
 [worktree]
 github_prs = false   # true: list open GitHub PRs as worktree candidates (needs gh + auth)
@@ -257,8 +282,8 @@ Second tab shape:
 - `[projects].roots` — parent folders scanned by both pickers (plain paths; optional globs — see [Glob roots](#glob-roots-optional) below)
 - `[projects].git_only` — `true` returns only directories with `.git` metadata; `false` lists all immediate child folders
 - `[projects].depth` — maximum levels below each root to scan when `git_only = true`; `1` means immediate children
-- `[ui].placement` — how Sessionizer / Worktree pickers open in Herdr (`overlay`, `split`, or `popup`; new configs default to `overlay`, `popup` needs Herdr `>= 0.7.4`)
-- `[ui].width` / `[ui].height` — popup outer size (cells or `"90%"`); only with `placement = "popup"`
+- `[ui].placement` — how Sessionizer / Worktree pickers open in Herdr (`overlay`, `split`, or `popup`; new configs default to `popup` at `100%`, `popup` needs Herdr `>= 0.7.4`)
+- `[ui].width` / `[ui].height` — popup outer size (cells or `"100%"`); only with `placement = "popup"`
 - `[layout].focus` — which tab or pane to focus after layout bootstrap
 - `[tabs.<name>]` — one Herdr tab to create per section
 - `[[tabs.<name>.panes]]` — panes inside the tab; `from` + `split` (`right` or `down`) define the split tree
@@ -399,6 +424,8 @@ bun run release:notes -- <version>
 bun run sessionizer    # dev: run Sessionizer flow via Bun without compiling
 ./dist/sessionizer --help
 ```
+
+On macOS, `bun run build` also re-signs `dist/sessionizer` with a fresh adhoc signature after compiling (`codesign --force --deep --sign - --timestamp=none`). Bun's linker-signed adhoc signature can be rejected by newer macOS builds (SIGKILL / "Code Signature Invalid"), so re-signing makes the host-local binary launch reliably. This step is macOS-only and a no-op on Linux.
 
 `bun run test` runs the unit suite only; `bun run test:integration` runs the real-git sandbox tests for `fetchPullRequestHead` (a tmpdir fake GitHub, no network). The integration suite is excluded from `bun test` and CI runs both — the pre-commit hook exports `GIT_DIR`, which would redirect the sandbox's git commands into the parent repository, so the sandbox suite only ever runs in CI's clean environment.
 

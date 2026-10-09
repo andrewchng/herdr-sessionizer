@@ -1,6 +1,6 @@
 {
   "name": "herdr-plugin-sessionizer",
-  "version": "0.8.2",
+  "version": "0.9.0",
   "private": true,
   "type": "module",
   "description": "Herdr plugin inspired by ThePrimeagen's tmux-sessionizer for fuzzy project and worktree picking",
@@ -9,7 +9,7 @@
     "herdr-worktree": "./src/bin/herdr-worktree.ts"
   },
   "scripts": {
-    "build": "mkdir -p dist && bun build ./src/cli.ts --compile --outfile dist/sessionizer",
+    "build": "mkdir -p dist && bun build ./src/cli.ts --compile --outfile dist/sessionizer && if uname | grep -q Darwin; then codesign --force --deep --sign - --timestamp=none dist/sessionizer; fi",
     "sessionizer": "bun run src/sessionizer/sessionizer.ts",
     "worktree": "bun run src/bin/herdr-worktree.ts",
     "release": "bun run scripts/release/prep.ts",

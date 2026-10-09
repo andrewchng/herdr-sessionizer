@@ -1,5 +1,3 @@
-import { basename } from "node:path";
-
 import {
   listProjects,
   sanitizeName,
@@ -20,8 +18,11 @@ import { Tabs } from "../ops/tabs.ts";
 import { Workspaces } from "../ops/workspaces.ts";
 import { pick, type PickOptions } from "../ui/fzf.ts";
 import { PROJECT_PREVIEW, WORKSPACE_PREVIEW } from "../ui/previews.ts";
-
-const WORKSPACE_ROW_DELIMITER = "\t";
+import {
+  extractWorkspaceId,
+  workspaceRow,
+  WORKSPACE_ROW_DELIMITER,
+} from "../ui/workspace-row.ts";
 
 type LayoutApplier = (
   workspace: Workspace,
@@ -59,45 +60,31 @@ interface SessionizerRuntime {
   exit: (code: number) => never;
 }
 
-function workspaceRow(workspace: Workspace): string {
-  const label = rowField(workspace.label || workspaceName(workspace));
-  const summary = rowField(workspaceSummary(workspace));
-  const cwd = rowField(workspacePath(workspace));
-  const branch = rowField(workspace.worktree?.branch);
-  const tabCount = String(workspace.tab_count ?? 0);
-  const paneCount = String(workspace.pane_count ?? 0);
-
-  return [
-    workspace.workspace_id,
-    label,
-    summary,
-    cwd,
-    branch,
-    tabCount,
-    paneCount,
-  ].join(WORKSPACE_ROW_DELIMITER);
-}
-
-function extractWorkspaceId(row: string): string {
-  return row.split(WORKSPACE_ROW_DELIMITER)[0] ?? row;
-}
-
 export async function runSessionizer(
   runtime: SessionizerRuntime = createRuntime()
 ): Promise<void> {
   const { workspaces, tabs, panes, config } = runtime;
 
-  const existing = await runtime.pickRows(
-    (await workspaces.list()).map(workspaceRow),
-    {
-      prompt: "Switch session (Esc for new): ",
-      header: "↑↓ navigate, Enter select, Esc → new project",
-      delimiter: WORKSPACE_ROW_DELIMITER,
-      withNth: "2",
-      preview: WORKSPACE_PREVIEW,
-      previewWindow: "right:50%",
-    }
-  );
+  // Group rows by repo so a repo's parent/main workspace and its linked
+  // worktrees sit next to each other in the picker (fzf keeps input order
+  // until a query re-sorts by score). The sort is stable, so Herdr's list
+  // order is preserved within a repo cluster; rows without worktree
+  // provenance have an empty key and keep their original relative order,
+  // appearing before the repo clusters (empty string sorts first).
+  const workspaceRows = (await workspaces.list())
+    .sort((a, b) =>
+      (a.worktree?.repo_name ?? "").localeCompare(b.worktree?.repo_name ?? "")
+    )
+    .map(workspaceRow);
+
+  const existing = await runtime.pickRows(workspaceRows, {
+    prompt: "Switch session (Esc for new): ",
+    header: "↑↓ navigate, Enter select, Esc → new project",
+    delimiter: WORKSPACE_ROW_DELIMITER,
+    withNth: "2",
+    preview: WORKSPACE_PREVIEW,
+    previewWindow: "right:50%",
+  });
 
   if (existing && existing.length > 0) {
     await workspaces.focus(extractWorkspaceId(existing[0]!));
@@ -135,49 +122,6 @@ export async function runSessionizer(
   runtime.logger.log(
     `✓ workspace '${label}' created and focused (${workspace.workspace_id})`
   );
-}
-
-function workspaceName(workspace: Workspace): string {
-  const path = workspacePath(workspace);
-  if (path) {
-    return basename(path);
-  }
-
-  return workspace.workspace_id;
-}
-
-function workspaceSummary(workspace: Workspace): string {
-  const path = workspacePath(workspace);
-  const location = path ? basename(path) : workspace.worktree?.repo_name;
-  const branch = workspace.worktree?.branch;
-  if (branch) {
-    return location ? `${branch} · ${location}` : branch;
-  }
-
-  if (location) {
-    return location;
-  }
-
-  const tabs = workspace.tab_count ?? 0;
-  const panes = workspace.pane_count ?? 0;
-  return `${tabs} tabs · ${panes} panes`;
-}
-
-function workspacePath(workspace: Workspace): string | undefined {
-  return (
-    workspace.cwd ??
-    workspace.worktree?.checkout_path ??
-    workspace.worktree?.repo_root ??
-    workspace.worktree?.path
-  );
-}
-
-function rowField(value: unknown): string {
-  if (typeof value !== "string") {
-    return "";
-  }
-
-  return value.replaceAll("\t", " ").replaceAll("\n", " ").trim();
 }
 
 function createRuntime(): SessionizerRuntime {

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0] - 2026-09-26
+
+### Added
+
+- The Sessionizer switch picker (`sessionizer.open`) now shows the parent repo for linked-worktree workspaces, rendered as `<repo_name> / <label>` (e.g. `herdr-sessionizer / feature-x`), so two worktrees of different repos with the same branch name are distinguishable. The fzf preview `label:` line shows the same text. Non-worktree workspaces and the main repo workspace keep their existing label ([#69](https://github.com/andrewchng/herdr-sessionizer/issues/69)).
+- Switch-picker rows are now clustered by repo: a repo's parent/main workspace and its linked worktrees sit next to each other in the picker, and workspaces without worktree provenance appear first (in their original relative order). The sort is stable, so Herdr's list order is preserved within a repo cluster ([#69](https://github.com/andrewchng/herdr-sessionizer/issues/69)).
+
 ## [0.8.4] - 2026-09-23
 
 ### Changed

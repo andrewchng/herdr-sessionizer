@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import type { SessionizerConfig } from "../config/config.ts";
 import type { Workspace } from "../client/types.ts";
 import type { LayoutPanes, LayoutTabs } from "../layouts/project.ts";
+import type { PickOptions } from "../ui/fzf.ts";
 import { runSessionizer } from "./sessionizer.ts";
 
 function testConfig(): SessionizerConfig {
@@ -307,5 +308,106 @@ describe("runSessionizer", () => {
       tabs,
       panes
     );
+  });
+
+  it("prefixes linked-worktree labels with the parent repo name", async () => {
+    const pickRows = mock(
+      async (_rows: readonly string[], _options?: PickOptions) => null
+    );
+
+    await runSessionizer({
+      workspaces: {
+        list: mock(async () => [
+          {
+            workspace_id: "ws-worktree",
+            label: "feature-x",
+            worktree: {
+              repo_name: "herdr-sessionizer",
+              checkout_path: "/worktrees/herdr-sessionizer/feature-x",
+              is_linked_worktree: true,
+            },
+          },
+          {
+            workspace_id: "ws-main",
+            label: "repo",
+            worktree: {
+              repo_name: "repo",
+              checkout_path: "/repo",
+              is_linked_worktree: false,
+            },
+          },
+          testWorkspace({ workspace_id: "ws-plain", label: "fieldnotes" }),
+        ]),
+        create: mock(async (_options) => testWorkspace()),
+        focus: mock(async () => {}),
+      },
+      tabs: testTabs(),
+      panes: testPanes(),
+      config: testConfig(),
+      pickRows,
+      listProjects: mock(() => ["/projects/fieldnotes"]),
+      createLayout: mock(async (workspace: Workspace) => workspace),
+      logger: { log: mock(() => {}), error: mock(() => {}) },
+      exit: (code) => {
+        throw new Error(`unexpected exit ${code}`);
+      },
+    });
+
+    const rows = pickRows.mock.calls[0]?.[0] ?? [];
+    const worktreeRow = rows.find((row) => row.startsWith("ws-worktree\t"));
+    const mainRow = rows.find((row) => row.startsWith("ws-main\t"));
+    const plainRow = rows.find((row) => row.startsWith("ws-plain\t"));
+
+    // Column 2 is the label shown by `withNth: "2"` and the preview `label:`.
+    expect(worktreeRow?.split("\t")[1]).toBe("herdr-sessionizer / feature-x");
+    expect(mainRow?.split("\t")[1]).toBe("repo");
+    expect(plainRow?.split("\t")[1]).toBe("fieldnotes");
+  });
+
+  it("clusters rows by repo with plain workspaces first", async () => {
+    const pickRows = mock(
+      async (_rows: readonly string[], _options?: PickOptions) => null
+    );
+
+    await runSessionizer({
+      workspaces: {
+        list: mock(async () => [
+          {
+            workspace_id: "ws-repo-b",
+            label: "b",
+            worktree: { repo_name: "repo-b", is_linked_worktree: true },
+          },
+          testWorkspace({ workspace_id: "ws-plain", label: "plain" }),
+          {
+            workspace_id: "ws-repo-a",
+            label: "a",
+            worktree: { repo_name: "repo-a", is_linked_worktree: true },
+          },
+          {
+            workspace_id: "ws-repo-b-parent",
+            label: "repo-b",
+            worktree: { repo_name: "repo-b", is_linked_worktree: false },
+          },
+        ]),
+        create: mock(async (_options) => testWorkspace()),
+        focus: mock(async () => {}),
+      },
+      tabs: testTabs(),
+      panes: testPanes(),
+      config: testConfig(),
+      pickRows,
+      listProjects: mock(() => ["/projects/fieldnotes"]),
+      createLayout: mock(async (workspace: Workspace) => workspace),
+      logger: { log: mock(() => {}), error: mock(() => {}) },
+      exit: (code) => {
+        throw new Error(`unexpected exit ${code}`);
+      },
+    });
+
+    const rows = pickRows.mock.calls[0]?.[0] ?? [];
+    expect(rows[0]).toContain("ws-plain"); // empty key sorts first
+    expect(rows[1]).toContain("ws-repo-a"); // "repo-a" before "repo-b"
+    expect(rows[2]).toContain("ws-repo-b"); // stable within the cluster
+    expect(rows[3]).toContain("ws-repo-b-parent");
   });
 });

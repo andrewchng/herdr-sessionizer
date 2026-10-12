@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, realpathSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { homedir } from "node:os";
 
 export interface ProjectDiscoveryOptions {
@@ -137,6 +137,39 @@ function safeRealpath(path: string): string | undefined {
 /**
  * Replace characters that are invalid in Herdr workspace labels.
  */
+/**
+ * Name a project relative to the configured root it was found under, so
+ * `~/Projects/org/repo` reads `org/repo`. Glob roots match on their static
+ * prefix (`~/code/*` matches as `~/code`), and the most specific root wins.
+ * Falls back to the basename when no root contains the project.
+ */
+export function projectDisplayName(
+  project: string,
+  roots: readonly string[]
+): string {
+  let best = "";
+  for (const root of roots) {
+    const base = normalizePath(staticPrefix(expandHome(root)));
+    if (
+      base.length > best.length &&
+      project.startsWith(`${base}/`) &&
+      project.length > base.length + 1
+    ) {
+      best = base;
+    }
+  }
+
+  return best ? project.slice(best.length + 1) : basename(project);
+}
+
+/** The leading path segments of a root before its first glob segment. */
+function staticPrefix(root: string): string {
+  if (!hasGlobMeta(root)) return root;
+  const segments = root.split("/");
+  const firstGlob = segments.findIndex(hasGlobMeta);
+  return segments.slice(0, firstGlob).join("/");
+}
+
 export function sanitizeName(name: string): string {
   return name.replace(/[^a-zA-Z0-9_-]/g, "_");
 }

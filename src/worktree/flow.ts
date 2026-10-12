@@ -1,11 +1,18 @@
-import { normalizePath, sanitizeName } from "../discovery/discovery.ts";
+import {
+  normalizePath,
+  projectDisplayName,
+  sanitizeName,
+} from "../discovery/discovery.ts";
 
 import { HerdrError } from "../client/errors.ts";
 import type { Workspace } from "../client/types.ts";
 import type { SessionizerConfig } from "../config/config.ts";
 import { resolveLayoutConfig } from "../config/config.ts";
 import type { PickOptions } from "../ui/fzf.ts";
-import { PROJECT_PREVIEW, WORKTREE_CANDIDATE_PREVIEW } from "../ui/previews.ts";
+import {
+  PROJECT_ROW_PREVIEW,
+  WORKTREE_CANDIDATE_PREVIEW,
+} from "../ui/previews.ts";
 import type { WorktreeResolver } from "./resolver.ts";
 import type { Worktrees, WorktreeOpenResult } from "../ops/worktrees.ts";
 import type {
@@ -191,6 +198,25 @@ export async function runWorktreeFlow(
   });
 }
 
+const PROJECT_ROW_DELIMITER = "\t";
+
+/**
+ * A project picker row: the absolute path for selection and preview, then the
+ * root-relative name fzf displays and matches against.
+ */
+export function projectPickerRow(
+  project: string,
+  roots: readonly string[]
+): string {
+  return [project, projectDisplayName(project, roots)].join(
+    PROJECT_ROW_DELIMITER
+  );
+}
+
+export function projectFromPickerRow(row: string): string {
+  return row.split(PROJECT_ROW_DELIMITER)[0]!;
+}
+
 async function resolveInteractiveIntent(
   runtime: WorktreeFlowRuntime,
   workspaces: readonly Workspace[]
@@ -204,16 +230,22 @@ async function resolveInteractiveIntent(
     runtime.exit(1);
   }
 
-  const selected = await runtime.pickProject(projects, {
-    prompt: "Base project for worktree: ",
-    header: "Select a repo to spin off a worktree workspace",
-    preview: PROJECT_PREVIEW,
-    previewWindow: "right:50%",
-  });
+  const roots = runtime.config.projects.roots;
+  const selected = await runtime.pickProject(
+    projects.map((project) => projectPickerRow(project, roots)),
+    {
+      prompt: "Base project for worktree: ",
+      header: "Select a repo to spin off a worktree workspace",
+      delimiter: PROJECT_ROW_DELIMITER,
+      withNth: "2",
+      preview: PROJECT_ROW_PREVIEW,
+      previewWindow: "right:50%",
+    }
+  );
 
   if (!selected || selected.length === 0) return { kind: "cancelled" };
 
-  const project = selected[0]!;
+  const project = projectFromPickerRow(selected[0]!);
   const repoWorkspaceId = findRepoWorkspaceId(workspaces, project);
   const candidates = await runtime.discoverCandidates({
     project,

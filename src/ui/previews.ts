@@ -1,19 +1,26 @@
-export const PROJECT_PREVIEW = [
-  "sh -c '",
-  'path="$1";',
-  'if [ -f "$path/README.md" ]; then',
-  "  if command -v bat >/dev/null 2>&1; then",
-  '    bat --color=always -- "$path/README.md";',
-  "  else",
-  '    head -50 "$path/README.md";',
-  "  fi;",
-  'elif [ -d "$path" ]; then',
-  '  command ls -la -- "$path" 2>/dev/null | head -50;',
-  "else",
-  '  printf "%s\\n" "$path";',
-  "fi",
-  "' sh {}",
-].join(" ");
+function projectPreview(field: string): string {
+  return [
+    "sh -c '",
+    'path="$1";',
+    'if [ -f "$path/README.md" ]; then',
+    "  if command -v bat >/dev/null 2>&1; then",
+    '    bat --color=always -- "$path/README.md";',
+    "  else",
+    '    head -50 "$path/README.md";',
+    "  fi;",
+    'elif [ -d "$path" ]; then',
+    '  command ls -la -- "$path" 2>/dev/null | head -50;',
+    "else",
+    '  printf "%s\\n" "$path";',
+    "fi",
+    `' sh ${field}`,
+  ].join(" ");
+}
+
+export const PROJECT_PREVIEW = projectPreview("{}");
+
+/** Preview for `projectPickerRow` rows, whose first field is the path. */
+export const PROJECT_ROW_PREVIEW = projectPreview("{1}");
 
 export const WORKSPACE_PREVIEW = [
   "sh -c '",

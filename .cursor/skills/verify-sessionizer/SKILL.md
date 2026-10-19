@@ -71,7 +71,7 @@ Capture after each drive:
 | -------------------------------------------------- | -------------------------------------------------------------- |
 | `$VERIFY_ARTIFACTS/sessionizer-project-picker.png` | fzf project list (tmux pane render)                            |
 | `$VERIFY_ARTIFACTS/sessionizer-new-project.png`    | Success line (`✓ workspace 'demo-app' created…`) in scrollback |
-| `$VERIFY_ARTIFACTS/sessionizer-new-project.mp4`    | Optional Xvfb+xterm screen recording of the same flow          |
+| `$VERIFY_ARTIFACTS/sessionizer-new-project.mp4`    | Optional ~12s Xvfb+xterm+ffmpeg (env file + xwininfo crop)     |
 | `$VERIFY_ARTIFACTS/sessionizer-drive.log`          | Full tmux scrollback transcript                                |
 | `$VERIFY_ARTIFACTS/herdr-trace.log`                | Mock Herdr argv (must include `workspace create`, `pane run`)  |
 
@@ -91,19 +91,20 @@ Kills tmux session `sessionizer-verify` only; removes `VERIFY_ROOT` under `/tmp/
 
 All scripts in `helpers/` are executable.
 
-| Script                             | Role                          |
-| ---------------------------------- | ----------------------------- |
-| `lib.sh`                           | Shared paths, tmux wrapper    |
-| `launch-build.sh`                  | Build binary + fzf            |
-| `setup-fixtures.sh`                | Scratch repos + config        |
-| `mock-herdr.sh`                    | Stub Herdr JSON CLI           |
-| `doctor.sh`                        | Preflight                     |
-| `drive-sessionizer-new-project.sh` | PTY drive Sessionizer flow    |
-| `drive-worktree-scripted.sh`       | `worktree --project --branch` |
-| `wait-for-pane-text.sh`            | Poll tmux scrollback for text |
-| `capture-pane-png.sh`              | Terminal → PNG                |
-| `record-mp4.sh`                    | Xvfb + xterm + ffmpeg MP4     |
-| `cleanup.sh`                       | Tear down scratch             |
-| `run-e2e-smoke.sh`                 | End-to-end proof (+ MP4)      |
+| Script                             | Role                                |
+| ---------------------------------- | ----------------------------------- |
+| `lib.sh`                           | Shared paths, tmux wrapper          |
+| `launch-build.sh`                  | Build binary + fzf                  |
+| `setup-fixtures.sh`                | Scratch repos + config              |
+| `mock-herdr.sh`                    | Stub Herdr JSON CLI                 |
+| `doctor.sh`                        | Preflight                           |
+| `drive-sessionizer-new-project.sh` | PTY drive Sessionizer flow          |
+| `drive-worktree-scripted.sh`       | `worktree --project --branch`       |
+| `wait-for-pane-text.sh`            | Poll tmux scrollback for text       |
+| `capture-pane-png.sh`              | Terminal → PNG                      |
+| `write-record-env.sh`              | Sourceable env for MP4 (off-screen) |
+| `record-mp4.sh`                    | Xvfb + xterm + ffmpeg MP4 (10–20s)  |
+| `cleanup.sh`                       | Tear down scratch                   |
+| `run-e2e-smoke.sh`                 | End-to-end proof (+ MP4)            |
 
 Maintenance: run `/maintain-verification-skill` when UX or Herdr APIs change.

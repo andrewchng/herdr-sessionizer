@@ -16,7 +16,7 @@ export HERDR_BIN_PATH='${HERDR_BIN_PATH}'
 export VERIFY_ROOT='${VERIFY_ROOT}'
 export VERIFY_PROJECTS_DIR='${VERIFY_PROJECTS_DIR}'
 export VERIFY_STATE='${VERIFY_STATE}'
-export VERIFY_HERDR_TRACE='${VERIFY_HERDR_TRACE}'
+export VERIFY_HERDR_TRACE='${VERIFY_HERDR_TRACE:-${VERIFY_ARTIFACTS}/herdr-trace.log}'
 export PATH='/tmp/fzf/bin:${HOME}/.local/bin:/exec-daemon:${VERIFY_REPO_ROOT}/dist:/usr/local/bin:/usr/bin:/bin'
 cd '${VERIFY_REPO_ROOT}'
 EOF

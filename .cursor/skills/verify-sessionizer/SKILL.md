@@ -49,13 +49,17 @@ Confirms: executable `dist/sessionizer`, `fzf`, mock Herdr, fixture git repo, co
 
 **Harness:** `tmux` with `/exec-daemon/tmux.portal.conf` when present; **stable prompts** from `src/sessionizer/sessionizer.ts` and `src/ui/fzf.ts` (`Project:`, `Switch session (Esc for new):`, etc.).
 
-| Journey                                                      | Helper                                     |
-| ------------------------------------------------------------ | ------------------------------------------ |
-| Sessionizer → new project workspace                          | `helpers/drive-sessionizer-new-project.sh` |
-| Worktree non-interactive                                     | `helpers/drive-worktree-scripted.sh`       |
-| Full smoke (launch → setup → doctor → new project → cleanup) | `helpers/run-e2e-smoke.sh`                 |
+| Journey                                           | Helper                                     |
+| ------------------------------------------------- | ------------------------------------------ |
+| Sessionizer → new project workspace               | `helpers/drive-sessionizer-new-project.sh` |
+| Worktree scripted (`--project` / `--branch`)      | `helpers/drive-worktree-scripted.sh`       |
+| Worktree interactive (repo → branch fzf → create) | `helpers/drive-worktree-interactive.sh`    |
+| Close workspace (`close-flow`)                    | `helpers/drive-close-workspace.sh`         |
+| Full smoke (all flows + optional MP4)             | `helpers/run-e2e-smoke.sh`                 |
 
-Mock Herdr implements `workspace`, `worktree`, `tab`, and `pane` subcommands Sessionizer calls; argv log: `$VERIFY_ARTIFACTS/herdr-trace.log`.
+Mock Herdr implements `workspace`, `worktree`, `tab`, and `pane` subcommands Sessionizer calls. Per-flow argv logs: `$VERIFY_ARTIFACTS/herdr-trace-<flow>.log` (see `flow_herdr_trace` in `lib.sh`). Worktree create runs **real** `git worktree add` under `$VERIFY_ROOT/worktrees/`.
+
+Smoke flow toggles: `VERIFY_SMOKE_FLOWS`, `VERIFY_SKIP_FLOW_*`, `VERIFY_SKIP_MP4=1` (see `features/README.md`).
 
 **Real Herdr tier (optional, not in default smoke):** install `herdr` (`curl -fsSL https://herdr.dev/install.sh | sh`), start `herdr` server, `herdr plugin link` this repo after `bun run build`, invoke `herdr plugin action invoke sessionizer.open`. Requires a graphical/attachable terminal — not used in cloud smoke.
 
@@ -71,9 +75,16 @@ Capture after each drive:
 | -------------------------------------------------- | -------------------------------------------------------------- |
 | `$VERIFY_ARTIFACTS/sessionizer-project-picker.png` | fzf project list (tmux pane render)                            |
 | `$VERIFY_ARTIFACTS/sessionizer-new-project.png`    | Success line (`✓ workspace 'demo-app' created…`) in scrollback |
-| `$VERIFY_ARTIFACTS/sessionizer-new-project.mp4`    | Optional ~12s Xvfb+xterm+ffmpeg (env file + xwininfo crop)     |
-| `$VERIFY_ARTIFACTS/sessionizer-drive.log`          | Full tmux scrollback transcript                                |
-| `$VERIFY_ARTIFACTS/herdr-trace.log`                | Mock Herdr argv (must include `workspace create`, `pane run`)  |
+| `$VERIFY_ARTIFACTS/worktree-*-.png`                | Worktree flows — picker / prompt / success (≥2 PNGs each)      |
+| `$VERIFY_ARTIFACTS/close-*.png`                    | Close flow — mode picker, workspace picker, success            |
+| `$VERIFY_ARTIFACTS/*.mp4`                          | Optional 10–20s Xvfb+xterm+ffmpeg per flow (`record-mp4-*.sh`) |
+| `$VERIFY_ARTIFACTS/herdr-trace-<flow>.log`         | Mock Herdr argv for that flow                                  |
+
+Side effects to assert in smoke (helpers grep / python checks):
+
+- **Worktree flows:** `git -C $VERIFY_PROJECTS_DIR/demo-app worktree list` shows new branch checkout under `$VERIFY_ROOT/worktrees/…`
+- **Close flow:** seeded `ws-seed-close` absent from `$VERIFY_STATE` after drive
+- **Traces:** `worktree create`, `workspace focus` / `pane run`, or `workspace close` as appropriate
 
 `wait-for-pane-text.sh` polls tmux scrollback until required text appears (fails on timeout). `capture-pane-png.sh` refuses to render until `--require` matches; success shots use `--extract success-context` so the checkmark line is not scrolled off-screen.
 
@@ -100,10 +111,15 @@ All scripts in `helpers/` are executable.
 | `doctor.sh`                        | Preflight                           |
 | `drive-sessionizer-new-project.sh` | PTY drive Sessionizer flow          |
 | `drive-worktree-scripted.sh`       | `worktree --project --branch`       |
+| `drive-worktree-interactive.sh`    | Full repo → branch fzf worktree     |
+| `drive-close-workspace.sh`         | Seeded workspace → `close-flow`     |
 | `wait-for-pane-text.sh`            | Poll tmux scrollback for text       |
 | `capture-pane-png.sh`              | Terminal → PNG                      |
 | `write-record-env.sh`              | Sourceable env for MP4 (off-screen) |
-| `record-mp4.sh`                    | Xvfb + xterm + ffmpeg MP4 (10–20s)  |
+| `record-lib.sh`                    | Shared Xvfb/xterm/ffmpeg            |
+| `record-mp4.sh`                    | MP4 — sessionizer new project       |
+| `record-mp4-worktree-*.sh`         | MP4 — worktree flows                |
+| `record-mp4-close-workspace.sh`    | MP4 — close flow                    |
 | `cleanup.sh`                       | Tear down scratch                   |
 | `run-e2e-smoke.sh`                 | End-to-end proof (+ MP4)            |
 

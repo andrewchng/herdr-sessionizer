@@ -54,6 +54,23 @@ def find_ws(wid):
             return w
     return None
 
+def git_worktree_add(repo_root, branch, checkout):
+    import subprocess
+
+    os.makedirs(os.path.dirname(checkout) or ".", exist_ok=True)
+    has_branch = subprocess.run(
+        ["git", "-C", repo_root, "rev-parse", "--verify", "--quiet", f"refs/heads/{branch}"],
+        capture_output=True,
+    ).returncode == 0
+    if has_branch:
+        cmd = ["git", "-C", repo_root, "worktree", "add", checkout, branch]
+    else:
+        cmd = ["git", "-C", repo_root, "worktree", "add", "-b", branch, checkout]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        print(proc.stderr.strip() or proc.stdout.strip(), file=sys.stderr)
+        sys.exit(proc.returncode)
+
 cmd = argv[0] if argv else ""
 rest = argv[1:]
 
@@ -87,6 +104,27 @@ if cmd == "workspace":
     if sub == "focus":
         sys.exit(0)
     if sub == "close":
+        wid = None
+        group = False
+        for a in tail:
+            if a == "--group":
+                group = True
+            elif not a.startswith("--"):
+                wid = a
+        if wid:
+            repo = None
+            target = find_ws(wid)
+            if target:
+                repo = (target.get("worktree") or {}).get("repo_name")
+            keep = []
+            for w in state["workspaces"]:
+                if w.get("workspace_id") == wid:
+                    continue
+                if group and repo and (w.get("worktree") or {}).get("repo_name") == repo:
+                    continue
+                keep.append(w)
+            state["workspaces"] = keep
+            save()
         sys.exit(0)
 
 if cmd == "worktree":
@@ -118,6 +156,7 @@ if cmd == "worktree":
             "tab_count": 1,
             "pane_count": 1,
         }
+        git_worktree_add(cwd, branch, checkout)
         state["workspaces"].append(ws)
         save()
         print(json.dumps({"result": {"workspace": ws}}))
@@ -132,6 +171,10 @@ if cmd == "worktree":
             os.path.basename(cwd),
             branch,
         )
+        git_marker = os.path.join(checkout, ".git")
+        if not (os.path.isdir(checkout) and os.path.exists(git_marker)):
+            print(json.dumps({"error": {"message": f"no worktree checkout at {checkout}"}}), file=sys.stderr)
+            sys.exit(1)
         wid = next_ws_id()
         ws = {
             "workspace_id": wid,

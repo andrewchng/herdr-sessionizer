@@ -10,9 +10,13 @@ require_built_binary
 require_fzf
 require_tmux
 
-SESSION="sessionizer-verify"
+SESSION="${VERIFY_TMUX_SESSION:-sessionizer-verify}"
 LOG="$VERIFY_ARTIFACTS/sessionizer-drive.log"
+SUCCESS_RE="✓ workspace 'demo-app' created and focused"
+PICKER_RE="Select a project to create a workspace"
+
 : >"$VERIFY_HERDR_TRACE"
+reset_mock_herdr_state
 
 tmux_cmd kill-session -t "$SESSION" 2>/dev/null || true
 tmux_cmd new-session -d -s "$SESSION" -x 120 -y 40 -c "$VERIFY_REPO_ROOT"
@@ -21,27 +25,21 @@ DRIVE_CMD="export HOME='$VERIFY_HOME' HERDR_PLUGIN_CONFIG_DIR='$VERIFY_CONFIG_DI
 
 tmux_cmd send-keys -t "$SESSION" "$DRIVE_CMD" C-m
 
-for _ in $(seq 1 60); do
-  if tmux_cmd capture-pane -t "$SESSION" -p | grep -q "Project:"; then
-    break
-  fi
-  sleep 0.2
-done
+"$SCRIPT_DIR/wait-for-pane-text.sh" "$SESSION" "$PICKER_RE" 45
 
-"$SCRIPT_DIR/capture-pane-png.sh" "$SESSION" "$VERIFY_ARTIFACTS/sessionizer-project-picker.png"
+"$SCRIPT_DIR/capture-pane-png.sh" "$SESSION" "$VERIFY_ARTIFACTS/sessionizer-project-picker.png" \
+  --require "$PICKER_RE" \
+  --extract visible
 
 tmux_cmd send-keys -t "$SESSION" "demo-app" C-m
 
-for _ in $(seq 1 60); do
-  if tmux_cmd capture-pane -t "$SESSION" -p | grep -q "sessionizer-layout-ok\\|✓ workspace"; then
-    break
-  fi
-  sleep 0.25
-done
+"$SCRIPT_DIR/wait-for-pane-text.sh" "$SESSION" "$SUCCESS_RE" 60
 
-tmux_cmd capture-pane -t "$SESSION" -e -J -p | tee "$LOG"
+tmux_cmd capture-pane -t "$SESSION" -S -32000 -E - -e -J -p | tee "$LOG"
 
-"$SCRIPT_DIR/capture-pane-png.sh" "$SESSION" "$VERIFY_ARTIFACTS/sessionizer-new-project.png"
+"$SCRIPT_DIR/capture-pane-png.sh" "$SESSION" "$VERIFY_ARTIFACTS/sessionizer-new-project.png" \
+  --require "$SUCCESS_RE" \
+  --extract success-context
 
 if ! grep -q "workspace create" "$VERIFY_HERDR_TRACE"; then
   echo "Expected mock herdr workspace create in trace" >&2
@@ -51,7 +49,7 @@ if ! grep -q "pane run" "$VERIFY_HERDR_TRACE"; then
   echo "Expected layout pane run in trace" >&2
   exit 1
 fi
-if ! grep -q "✓ workspace 'demo-app' created" "$LOG"; then
+if ! grep -qF "$SUCCESS_RE" "$LOG"; then
   echo "Expected success line in drive log" >&2
   exit 1
 fi

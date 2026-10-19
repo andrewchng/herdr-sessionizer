@@ -29,4 +29,4 @@ Harness sends `demo-app` + Enter on prompt `Project:` (see `src/sessionizer/sess
 
 - **fzf** requires a real TTY — use tmux, not bare pipes.
 - Default smoke uses **mock Herdr**; real server layout timing differs.
-- README preview may invoke `bat`; optional on PATH.
+- Project preview runs `head -50 README.md` (or `bat` when installed). Scratch fixtures ship a multi-line `demo-app/README.md` so the preview pane is not only the title line; without `bat`, ANSI theming is absent.

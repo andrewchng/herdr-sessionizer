@@ -67,14 +67,15 @@ Proof standard: drive the **user-visible path** (fzf selection → Herdr workspa
 
 Capture after each drive:
 
-| Artifact                                           | Contents                                                      |
-| -------------------------------------------------- | ------------------------------------------------------------- |
-| `$VERIFY_ARTIFACTS/sessionizer-project-picker.png` | fzf project list (tmux pane render)                           |
-| `$VERIFY_ARTIFACTS/sessionizer-new-project.png`    | Success line + shell after bootstrap                          |
-| `$VERIFY_ARTIFACTS/sessionizer-drive.log`          | Full tmux pane transcript                                     |
-| `$VERIFY_ARTIFACTS/herdr-trace.log`                | Mock Herdr argv (must include `workspace create`, `pane run`) |
+| Artifact                                           | Contents                                                       |
+| -------------------------------------------------- | -------------------------------------------------------------- |
+| `$VERIFY_ARTIFACTS/sessionizer-project-picker.png` | fzf project list (tmux pane render)                            |
+| `$VERIFY_ARTIFACTS/sessionizer-new-project.png`    | Success line (`✓ workspace 'demo-app' created…`) in scrollback |
+| `$VERIFY_ARTIFACTS/sessionizer-new-project.mp4`    | Optional Xvfb+xterm screen recording of the same flow          |
+| `$VERIFY_ARTIFACTS/sessionizer-drive.log`          | Full tmux scrollback transcript                                |
+| `$VERIFY_ARTIFACTS/herdr-trace.log`                | Mock Herdr argv (must include `workspace create`, `pane run`)  |
 
-PNG helper waits for pane text, strips ANSI, renders with Pillow (`helpers/capture-pane-png.sh`).
+`wait-for-pane-text.sh` polls tmux scrollback until required text appears (fails on timeout). `capture-pane-png.sh` refuses to render until `--require` matches; success shots use `--extract success-context` so the checkmark line is not scrolled off-screen.
 
 **Cleanup must not delete `VERIFY_ARTIFACTS`.** After `cleanup.sh`, confirm files still exist.
 
@@ -99,8 +100,10 @@ All scripts in `helpers/` are executable.
 | `doctor.sh`                        | Preflight                     |
 | `drive-sessionizer-new-project.sh` | PTY drive Sessionizer flow    |
 | `drive-worktree-scripted.sh`       | `worktree --project --branch` |
+| `wait-for-pane-text.sh`            | Poll tmux scrollback for text |
 | `capture-pane-png.sh`              | Terminal → PNG                |
+| `record-mp4.sh`                    | Xvfb + xterm + ffmpeg MP4     |
 | `cleanup.sh`                       | Tear down scratch             |
-| `run-e2e-smoke.sh`                 | End-to-end proof              |
+| `run-e2e-smoke.sh`                 | End-to-end proof (+ MP4)      |
 
 Maintenance: run `/maintain-verification-skill` when UX or Herdr APIs change.

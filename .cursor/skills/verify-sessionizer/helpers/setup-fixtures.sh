@@ -15,7 +15,14 @@ mkdir -p "$demo"
 git -C "$demo" init -q
 git -C "$demo" config user.email "verify@sessionizer.local"
 git -C "$demo" config user.name "Sessionizer Verify"
-echo "# demo-app" >"$demo/README.md"
+cat >"$demo/README.md" <<'EOF'
+# demo-app
+
+Scratch fixture repo for verify-sessionizer.
+
+- Used by fzf project picker previews (`head README.md` when bat is absent)
+- Safe to delete; lives under `/tmp/sessionizer-verify-*`
+EOF
 git -C "$demo" add README.md
 git -C "$demo" commit -q -m "init"
 
@@ -27,6 +34,8 @@ git -C "$second" config user.name "Sessionizer Verify"
 echo "# other" >"$second/README.md"
 git -C "$second" add README.md
 git -C "$second" commit -q -m "init"
+
+reset_mock_herdr_state
 
 cat >"$VERIFY_CONFIG_DIR/config.toml" <<EOF
 [projects]

@@ -33,6 +33,12 @@ ensure_artifacts_dir() {
   mkdir -p "$VERIFY_ARTIFACTS"
 }
 
+reset_mock_herdr_state() {
+  verify_paths
+  mkdir -p "$(dirname "$VERIFY_STATE")"
+  echo '{"workspaces":[],"next_id":1,"pane_seq":1}' >"$VERIFY_STATE"
+}
+
 sessionizer_bin() {
   verify_paths
   echo "${VERIFY_REPO_ROOT}/dist/sessionizer"

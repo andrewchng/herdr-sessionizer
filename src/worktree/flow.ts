@@ -3,7 +3,7 @@ import { normalizePath, sanitizeName } from "../discovery/discovery.ts";
 import { HerdrError } from "../client/errors.ts";
 import type { Workspace } from "../client/types.ts";
 import type { SessionizerConfig } from "../config/config.ts";
-import { resolveLayoutConfig } from "../config/config.ts";
+import { previewWindow, resolveLayoutConfig } from "../config/config.ts";
 import type { PickOptions } from "../ui/fzf.ts";
 import { PROJECT_PREVIEW, WORKTREE_CANDIDATE_PREVIEW } from "../ui/previews.ts";
 import type { WorktreeResolver } from "./resolver.ts";
@@ -208,7 +208,7 @@ async function resolveInteractiveIntent(
     prompt: "Base project for worktree: ",
     header: "Select a repo to spin off a worktree workspace",
     preview: PROJECT_PREVIEW,
-    previewWindow: "right:50%",
+    previewWindow: previewWindow(runtime.config.ui),
   });
 
   if (!selected || selected.length === 0) return { kind: "cancelled" };
@@ -230,7 +230,7 @@ async function resolveInteractiveIntent(
       delimiter: WORKTREE_CANDIDATE_ROW_DELIMITER,
       withNth: "2,3",
       preview: WORKTREE_CANDIDATE_PREVIEW,
-      previewWindow: "right:50%",
+      previewWindow: previewWindow(runtime.config.ui),
     });
 
     if (picked && picked.length > 0) {

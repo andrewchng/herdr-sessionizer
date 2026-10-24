@@ -1,10 +1,13 @@
+import { basename } from "node:path";
+
 import {
   listProjects,
+  normalizePath,
   sanitizeName,
   type ProjectDiscoveryOptions,
 } from "../discovery/discovery.ts";
 
-import type { Workspace } from "../client/types.ts";
+import type { Pane, Workspace } from "../client/types.ts";
 import { Herdr } from "../client/herdr.ts";
 import type { SessionizerConfig } from "../config/config.ts";
 import { loadConfig, resolveLayoutConfig } from "../config/config.ts";
@@ -17,10 +20,13 @@ import { Panes } from "../ops/panes.ts";
 import { Tabs } from "../ops/tabs.ts";
 import { Workspaces } from "../ops/workspaces.ts";
 import { pick, type PickOptions } from "../ui/fzf.ts";
-import { PROJECT_PREVIEW, WORKSPACE_PREVIEW } from "../ui/previews.ts";
+import { WORKSPACE_PREVIEW } from "../ui/previews.ts";
 import {
+  extractRowCwd,
   extractWorkspaceId,
-  workspaceRow,
+  openWorkspaceRow,
+  projectRow,
+  workspacePath,
   WORKSPACE_ROW_DELIMITER,
 } from "../ui/workspace-row.ts";
 
@@ -55,9 +61,32 @@ interface SessionizerRuntime {
     roots: string[],
     options?: ProjectDiscoveryOptions
   ) => string[];
+  listPanes: () => Promise<Pane[]>;
   createLayout: LayoutApplier;
   logger: Pick<typeof console, "log" | "error">;
   exit: (code: number) => never;
+}
+
+/**
+ * Path relative to the configured root it was found under, so nested repos
+ * (`org/repo`) stay matchable by their parent; basename otherwise.
+ */
+function projectDisplayName(project: string, roots: readonly string[]): string {
+  for (const root of roots) {
+    const base = normalizePath(root);
+    if (base && project.startsWith(`${base}/`)) {
+      return project.slice(base.length + 1);
+    }
+  }
+
+  return basename(project);
+}
+
+/** True when a workspace or pane sits in the project or below it. */
+function isOpen(project: string, openPaths: readonly string[]): boolean {
+  return openPaths.some(
+    (path) => path === project || path.startsWith(`${project}/`)
+  );
 }
 
 export async function runSessionizer(
@@ -65,48 +94,72 @@ export async function runSessionizer(
 ): Promise<void> {
   const { workspaces, tabs, panes, config } = runtime;
 
+  const [listed, openPanes] = await Promise.all([
+    workspaces.list(),
+    runtime.listPanes(),
+  ]);
   // Group rows by repo so a repo's parent/main workspace and its linked
   // worktrees sit next to each other in the picker (fzf keeps input order
   // until a query re-sorts by score). The sort is stable, so Herdr's list
   // order is preserved within a repo cluster; rows without worktree
   // provenance have an empty key and keep their original relative order,
   // appearing before the repo clusters (empty string sorts first).
-  const workspaceRows = (await workspaces.list())
-    .sort((a, b) =>
-      (a.worktree?.repo_name ?? "").localeCompare(b.worktree?.repo_name ?? "")
-    )
-    .map(workspaceRow);
+  listed.sort((a, b) =>
+    (a.worktree?.repo_name ?? "").localeCompare(b.worktree?.repo_name ?? "")
+  );
+  // `workspace list` omits cwd for workspaces Sessionizer did not create;
+  // their panes still report it.
+  const openWorkspaces = listed.map((workspace) =>
+    workspacePath(workspace)
+      ? workspace
+      : {
+          ...workspace,
+          cwd: openPanes.find(
+            (pane) => pane.workspace_id === workspace.workspace_id && pane.cwd
+          )?.cwd,
+        }
+  );
+  const openPaths = [
+    ...openWorkspaces.map((workspace) => workspacePath(workspace)),
+    ...openPanes.map((pane) => pane.cwd),
+  ]
+    .map(normalizePath)
+    .filter(Boolean);
+  // A project that already has a workspace is reached through that
+  // workspace's row (ADR-0001: focus, never recreate).
+  const projects = runtime
+    .listProjects(config.projects.roots, config.projects)
+    .filter((project) => !isOpen(normalizePath(project), openPaths));
 
-  const existing = await runtime.pickRows(workspaceRows, {
-    prompt: "Switch session (Esc for new): ",
-    header: "↑↓ navigate, Enter select, Esc → new project",
+  const rows = [
+    ...openWorkspaces.map(openWorkspaceRow),
+    ...projects.map((project) =>
+      projectRow(project, projectDisplayName(project, config.projects.roots))
+    ),
+  ];
+  if (rows.length === 0) {
+    runtime.logger.error("No projects found in configured directories.");
+    runtime.exit(1);
+  }
+
+  const selected = await runtime.pickRows(rows, {
+    prompt: "Open: ",
     delimiter: WORKSPACE_ROW_DELIMITER,
     withNth: "2",
     preview: WORKSPACE_PREVIEW,
     previewWindow: "right:50%",
   });
 
-  if (existing && existing.length > 0) {
-    await workspaces.focus(extractWorkspaceId(existing[0]!));
+  if (!selected || selected.length === 0) return;
+
+  const row = selected[0]!;
+  const workspaceId = extractWorkspaceId(row);
+  if (workspaceId) {
+    await workspaces.focus(workspaceId);
     return;
   }
 
-  const projects = runtime.listProjects(config.projects.roots, config.projects);
-  if (projects.length === 0) {
-    runtime.logger.error("No projects found in configured directories.");
-    runtime.exit(1);
-  }
-
-  const selected = await runtime.pickRows(projects, {
-    prompt: "Project: ",
-    header: "Select a project to create a workspace",
-    preview: PROJECT_PREVIEW,
-    previewWindow: "right:50%",
-  });
-
-  if (!selected || selected.length === 0) return;
-
-  const project = selected[0]!;
+  const project = extractRowCwd(row);
   const projectName = project.split("/").pop() ?? project;
   const label = sanitizeName(projectName);
   const workspace = await workspaces.create({
@@ -126,14 +179,16 @@ export async function runSessionizer(
 
 function createRuntime(): SessionizerRuntime {
   const herdr = new Herdr();
+  const panes = new Panes(herdr);
 
   return {
     workspaces: new Workspaces(herdr),
     tabs: new Tabs(herdr),
-    panes: new Panes(herdr),
+    panes,
     config: loadConfig(),
     pickRows: pick,
     listProjects,
+    listPanes: () => panes.list(),
     createLayout: createProjectLayout,
     logger: console,
     exit: (code) => process.exit(code),

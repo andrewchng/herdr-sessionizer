@@ -2,7 +2,10 @@ import { describe, expect, it } from "bun:test";
 
 import type { Workspace } from "../client/types.ts";
 import {
+  extractRowCwd,
   extractWorkspaceId,
+  openWorkspaceRow,
+  projectRow,
   workspaceRow,
   WORKSPACE_ROW_DELIMITER,
 } from "./workspace-row.ts";
@@ -95,6 +98,43 @@ describe("workspaceRow", () => {
     );
 
     expect(row.split(WORKSPACE_ROW_DELIMITER)[1]).toBe("ws-feature");
+  });
+});
+
+describe("openWorkspaceRow", () => {
+  it("marks the label with ● and leaves workspaceRow unmarked", () => {
+    const workspace = testWorkspace({
+      worktree: { repo_name: "repo", is_linked_worktree: true },
+    });
+
+    expect(openWorkspaceRow(workspace).split(WORKSPACE_ROW_DELIMITER)).toEqual(
+      workspaceRow(workspace)
+        .split(WORKSPACE_ROW_DELIMITER)
+        .map((column, index) => (index === 1 ? `● ${column}` : column))
+    );
+    expect(workspaceRow(workspace).split(WORKSPACE_ROW_DELIMITER)[1]).toBe(
+      "repo / feature/test-flow"
+    );
+  });
+});
+
+describe("projectRow", () => {
+  it("has the workspace row's columns with an empty id and the path as cwd", () => {
+    const row = projectRow("/projects/org/repo", "org/repo");
+
+    expect(row.split(WORKSPACE_ROW_DELIMITER)).toEqual([
+      "",
+      "  org/repo",
+      "new workspace",
+      "/projects/org/repo",
+      "",
+      "",
+      "",
+      "",
+      "",
+    ]);
+    expect(extractWorkspaceId(row)).toBe("");
+    expect(extractRowCwd(row)).toBe("/projects/org/repo");
   });
 });
 

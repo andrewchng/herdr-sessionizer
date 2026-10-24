@@ -19,6 +19,38 @@ export const WORKSPACE_ROW_DELIMITER = "\t";
  *   {9} panes       workspace.pane_count
  */
 export function workspaceRow(workspace: Workspace): string {
+  return buildWorkspaceRow(workspace, "");
+}
+
+/**
+ * The Sessionizer lists open workspaces and projects in one picker; the `●`
+ * before an open workspace's label tells the two apart.
+ */
+export function openWorkspaceRow(workspace: Workspace): string {
+  return buildWorkspaceRow(workspace, "● ");
+}
+
+/**
+ * A project row has the workspace row's shape so one fzf list and one
+ * preview cover both: an empty id marks it as "create", the cwd column holds
+ * the project path, and the preview skips the tab/pane counts it does not
+ * have.
+ */
+export function projectRow(project: string, name: string): string {
+  return [
+    "",
+    `  ${rowField(name)}`,
+    "new workspace",
+    rowField(project),
+    "",
+    "",
+    "",
+    "",
+    "",
+  ].join(WORKSPACE_ROW_DELIMITER);
+}
+
+function buildWorkspaceRow(workspace: Workspace, labelPrefix: string): string {
   const baseLabel = rowField(workspace.label || workspaceName(workspace));
   // Linked worktree checkouts are shown as "repo / label" so the user can
   // tell which repo a worktree belongs to at a glance.
@@ -26,9 +58,9 @@ export function workspaceRow(workspace: Workspace): string {
     workspace.worktree?.is_linked_worktree === true
       ? workspace.worktree.repo_name
       : undefined;
-  const label = linkedRepoName
-    ? rowField(`${linkedRepoName} / ${baseLabel}`)
-    : baseLabel;
+  const label = `${labelPrefix}${
+    linkedRepoName ? rowField(`${linkedRepoName} / ${baseLabel}`) : baseLabel
+  }`;
   const summary = rowField(workspaceSummary(workspace));
   const cwd = rowField(workspacePath(workspace));
   const branch = rowField(workspace.worktree?.branch);
@@ -53,6 +85,10 @@ export function workspaceRow(workspace: Workspace): string {
 
 export function extractWorkspaceId(row: string): string {
   return row.split(WORKSPACE_ROW_DELIMITER)[0] ?? row;
+}
+
+export function extractRowCwd(row: string): string {
+  return row.split(WORKSPACE_ROW_DELIMITER)[3] ?? "";
 }
 
 function workspaceName(workspace: Workspace): string {
@@ -81,7 +117,7 @@ function workspaceSummary(workspace: Workspace): string {
   return `${tabs} tabs · ${panes} panes`;
 }
 
-function workspacePath(workspace: Workspace): string | undefined {
+export function workspacePath(workspace: Workspace): string | undefined {
   return (
     workspace.cwd ??
     workspace.worktree?.checkout_path ??

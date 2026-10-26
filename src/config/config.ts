@@ -35,6 +35,7 @@ interface RawConfig {
     placement?: string;
     width?: unknown;
     height?: unknown;
+    preview_window?: unknown;
   };
   layout?: {
     focus?: string;
@@ -68,6 +69,15 @@ interface UiConfig {
   width?: number | string;
   /** Outer popup height (cells or `"100%"`). Only used when placement is `popup`. */
   height?: number | string;
+  /** fzf `--preview-window` spec for every picker; see `previewWindow()`. */
+  preview_window?: string;
+}
+
+const DEFAULT_PREVIEW_WINDOW = "right:50%";
+
+/** The fzf `--preview-window` spec pickers use (`"hidden"` turns previews off). */
+export function previewWindow(ui: UiConfig): string {
+  return ui.preview_window ?? DEFAULT_PREVIEW_WINDOW;
 }
 
 export interface SessionizerConfig {
@@ -293,6 +303,7 @@ function resolveUiConfig(config: RawConfig | undefined): UiConfig {
   const placement = asPlacement(config?.ui?.placement);
   const width = asOptionalPopupSize(config?.ui?.width, "width");
   const height = asOptionalPopupSize(config?.ui?.height, "height");
+  const preview_window = asOptionalPreviewWindow(config?.ui?.preview_window);
 
   if ((width !== undefined || height !== undefined) && placement !== "popup") {
     throw new Error(
@@ -304,7 +315,18 @@ function resolveUiConfig(config: RawConfig | undefined): UiConfig {
     placement,
     ...(width !== undefined ? { width } : {}),
     ...(height !== undefined ? { height } : {}),
+    ...(preview_window !== undefined ? { preview_window } : {}),
   };
+}
+
+function asOptionalPreviewWindow(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value.trim();
+  }
+  throw new Error(
+    'Config [ui].preview_window must be an fzf --preview-window spec, like "down:40%" or "hidden".'
+  );
 }
 
 function asPlacement(value: string | undefined): PanePlacement {

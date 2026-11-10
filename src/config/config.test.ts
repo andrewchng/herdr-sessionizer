@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 import {
+  escCreates,
   loadConfig,
   previewWindow,
   REPO_LAYOUT_CONFIG_RELATIVE,
@@ -109,6 +110,7 @@ describe("loadConfig", () => {
         placement: "popup",
         width: "100%",
         height: "100%",
+        esc_creates: true,
       });
     });
   });
@@ -208,6 +210,82 @@ describe("loadConfig", () => {
 
       expect(() => loadConfig()).toThrow(
         "Config [worktree].github_prs must be a boolean (true or false)."
+      );
+    });
+  });
+
+  it("defaults [ui].esc_creates to true when the key is absent", () => {
+    withPluginConfigDir((dir) => {
+      writeFileSync(
+        join(dir, "config.toml"),
+        minimalGlobalConfig(['roots = ["~/Projects"]']),
+        "utf-8"
+      );
+
+      expect(escCreates(loadConfig().ui)).toBe(true);
+    });
+  });
+
+  it("reads [ui].esc_creates = false", () => {
+    withPluginConfigDir((dir) => {
+      writeFileSync(
+        join(dir, "config.toml"),
+        [
+          "[projects]",
+          'roots = ["~/Projects"]',
+          "",
+          "[ui]",
+          'placement = "overlay"',
+          "esc_creates = false",
+          "",
+          "[layout]",
+          'focus = "editor"',
+          "",
+          "[tabs.dev]",
+          'label = "dev"',
+          "",
+          "[[tabs.dev.panes]]",
+          'id = "editor"',
+          'title = "nvim"',
+          'command = "nvim"',
+          "",
+        ].join("\n"),
+        "utf-8"
+      );
+
+      expect(escCreates(loadConfig().ui)).toBe(false);
+    });
+  });
+
+  it("throws a clear error when [ui].esc_creates is not a boolean", () => {
+    withPluginConfigDir((dir) => {
+      writeFileSync(
+        join(dir, "config.toml"),
+        [
+          "[projects]",
+          'roots = ["~/Projects"]',
+          "",
+          "[ui]",
+          'placement = "overlay"',
+          'esc_creates = "no"',
+          "",
+          "[layout]",
+          'focus = "editor"',
+          "",
+          "[tabs.dev]",
+          'label = "dev"',
+          "",
+          "[[tabs.dev.panes]]",
+          'id = "editor"',
+          'title = "nvim"',
+          'command = "nvim"',
+          "",
+        ].join("\n"),
+        "utf-8"
+      );
+
+      expect(() => loadConfig()).toThrow(
+        "Config [ui].esc_creates must be a boolean (true or false)."
       );
     });
   });

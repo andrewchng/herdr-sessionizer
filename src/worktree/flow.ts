@@ -3,7 +3,11 @@ import { normalizePath, sanitizeName } from "../discovery/discovery.ts";
 import { HerdrError } from "../client/errors.ts";
 import type { Workspace } from "../client/types.ts";
 import type { SessionizerConfig } from "../config/config.ts";
-import { previewWindow, resolveLayoutConfig } from "../config/config.ts";
+import {
+  escCreates,
+  previewWindow,
+  resolveLayoutConfig,
+} from "../config/config.ts";
 import type { PickOptions } from "../ui/fzf.ts";
 import { PROJECT_PREVIEW, WORKTREE_CANDIDATE_PREVIEW } from "../ui/previews.ts";
 import type { WorktreeResolver } from "./resolver.ts";
@@ -221,12 +225,16 @@ async function resolveInteractiveIntent(
     workspaces,
     githubPrs: runtime.config.worktree.github_prs,
   });
+  const allowCreate = escCreates(runtime.config.ui);
   if (candidates.length > 0) {
     const rows = candidates.map(worktreeCandidateRow);
     const picked = await runtime.pickWorktreeCandidate(rows, {
-      prompt: "Worktree branch (Esc for new): ",
-      header:
-        "Enter opens existing or creates from branch; Esc creates a new branch",
+      prompt: allowCreate
+        ? "Worktree branch (Esc for new): "
+        : "Worktree branch: ",
+      header: allowCreate
+        ? "Enter opens existing or creates from branch; Esc creates a new branch"
+        : "Enter opens existing or creates from branch; Esc cancel",
       delimiter: WORKTREE_CANDIDATE_ROW_DELIMITER,
       withNth: "2,3",
       preview: WORKTREE_CANDIDATE_PREVIEW,
@@ -241,6 +249,8 @@ async function resolveInteractiveIntent(
       return intentFromCandidate(project, candidate);
     }
   }
+
+  if (!allowCreate) return { kind: "cancelled" };
 
   const branch = await runtime.promptBranch();
   if (branch === null) return { kind: "cancelled" };

@@ -8,6 +8,7 @@ import type { Workspace } from "../client/types.ts";
 import { Herdr } from "../client/herdr.ts";
 import type { SessionizerConfig } from "../config/config.ts";
 import {
+  escCreates,
   loadConfig,
   previewWindow,
   resolveLayoutConfig,
@@ -81,9 +82,12 @@ export async function runSessionizer(
     )
     .map(workspaceRow);
 
+  const allowCreate = escCreates(config.ui);
   const existing = await runtime.pickRows(workspaceRows, {
-    prompt: "Switch session (Esc for new): ",
-    header: "↑↓ navigate, Enter select, Esc → new project",
+    prompt: allowCreate ? "Switch session (Esc for new): " : "Switch session: ",
+    header: allowCreate
+      ? "↑↓ navigate, Enter select, Esc → new project"
+      : "↑↓ navigate, Enter select, Esc cancel",
     delimiter: WORKSPACE_ROW_DELIMITER,
     withNth: "2",
     preview: WORKSPACE_PREVIEW,
@@ -94,6 +98,8 @@ export async function runSessionizer(
     await workspaces.focus(extractWorkspaceId(existing[0]!));
     return;
   }
+
+  if (!allowCreate) return;
 
   const projects = runtime.listProjects(config.projects.roots, config.projects);
   if (projects.length === 0) {

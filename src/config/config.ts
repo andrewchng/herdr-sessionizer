@@ -36,6 +36,7 @@ interface RawConfig {
     width?: unknown;
     height?: unknown;
     preview_window?: unknown;
+    esc_creates?: unknown;
   };
   layout?: {
     focus?: string;
@@ -71,6 +72,8 @@ interface UiConfig {
   height?: number | string;
   /** fzf `--preview-window` spec for every picker; see `previewWindow()`. */
   preview_window?: string;
+  /** false: Esc cancels and closes pickers; see `escCreates()`. */
+  esc_creates?: boolean;
 }
 
 const DEFAULT_PREVIEW_WINDOW = "right:50%";
@@ -78,6 +81,11 @@ const DEFAULT_PREVIEW_WINDOW = "right:50%";
 /** The fzf `--preview-window` spec pickers use (`"hidden"` turns previews off). */
 export function previewWindow(ui: UiConfig): string {
   return ui.preview_window ?? DEFAULT_PREVIEW_WINDOW;
+}
+
+/** Whether Esc from a picker continues to the create flow (default true). */
+export function escCreates(ui: UiConfig): boolean {
+  return ui.esc_creates ?? true;
 }
 
 export interface SessionizerConfig {
@@ -259,6 +267,10 @@ function defaultConfigToml(): string {
     'width = "100%"',
     'height = "100%"',
     "",
+    "# false: Esc from a picker cancels and closes it",
+    "# true (default): Esc continues to the create flow (new project / new branch)",
+    "esc_creates = true",
+    "",
     "[worktree]",
     "# true: list open GitHub PRs as worktree candidates (requires gh + auth)",
     "# false (default): git-only flow, no gh spawn",
@@ -304,6 +316,7 @@ function resolveUiConfig(config: RawConfig | undefined): UiConfig {
   const width = asOptionalPopupSize(config?.ui?.width, "width");
   const height = asOptionalPopupSize(config?.ui?.height, "height");
   const preview_window = asOptionalPreviewWindow(config?.ui?.preview_window);
+  const esc_creates = asOptionalEscCreates(config?.ui?.esc_creates);
 
   if ((width !== undefined || height !== undefined) && placement !== "popup") {
     throw new Error(
@@ -316,7 +329,18 @@ function resolveUiConfig(config: RawConfig | undefined): UiConfig {
     ...(width !== undefined ? { width } : {}),
     ...(height !== undefined ? { height } : {}),
     ...(preview_window !== undefined ? { preview_window } : {}),
+    ...(esc_creates !== undefined ? { esc_creates } : {}),
   };
+}
+
+function asOptionalEscCreates(value: unknown): boolean | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "boolean") {
+    throw new Error(
+      "Config [ui].esc_creates must be a boolean (true or false)."
+    );
+  }
+  return value;
 }
 
 function asOptionalPreviewWindow(value: unknown): string | undefined {

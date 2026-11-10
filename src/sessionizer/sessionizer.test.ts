@@ -7,6 +7,8 @@ import type { SessionizerConfig } from "../config/config.ts";
 import type { Workspace } from "../client/types.ts";
 import type { LayoutPanes, LayoutTabs } from "../layouts/project.ts";
 import type { PickOptions } from "../ui/fzf.ts";
+import { WORKSPACE_PREVIEW } from "../ui/previews.ts";
+import { WORKSPACE_ROW_DELIMITER } from "../ui/workspace-row.ts";
 import { runSessionizer } from "./sessionizer.ts";
 
 function testConfig(): SessionizerConfig {
@@ -132,6 +134,85 @@ describe("runSessionizer", () => {
       panes
     );
     expect(focus).toHaveBeenCalledWith("ws-project");
+  });
+
+  it("exits on Esc without creating when [ui].esc_creates is false", async () => {
+    const create = mock(async (_options) => testWorkspace());
+    const focus = mock(async () => {});
+    const listProjects = mock(() => ["/projects/fieldnotes"]);
+    const pickRows = mock(
+      async (_rows: readonly string[], _options?: PickOptions) => null
+    );
+
+    await runSessionizer({
+      workspaces: {
+        list: mock(async () => [testWorkspace()]),
+        create,
+        focus,
+      },
+      tabs: testTabs(),
+      panes: testPanes(),
+      config: {
+        ...testConfig(),
+        ui: { ...testConfig().ui, esc_creates: false },
+      },
+      pickRows,
+      listProjects,
+      createLayout: mock(async (workspace: Workspace) => workspace),
+      logger: { log: mock(() => {}), error: mock(() => {}) },
+      exit: (code) => {
+        throw new Error(`unexpected exit ${code}`);
+      },
+    });
+
+    expect(pickRows).toHaveBeenCalledTimes(1);
+    expect(pickRows).toHaveBeenCalledWith(expect.any(Array), {
+      prompt: "Switch session: ",
+      header: "↑↓ navigate, Enter select, Esc cancel",
+      delimiter: WORKSPACE_ROW_DELIMITER,
+      withNth: "2",
+      preview: WORKSPACE_PREVIEW,
+      previewWindow: "right:50%",
+    });
+    expect(create).not.toHaveBeenCalled();
+    expect(focus).not.toHaveBeenCalled();
+    expect(listProjects).not.toHaveBeenCalled();
+  });
+
+  it("still shows the create hint when [ui].esc_creates is true", async () => {
+    const pickRows = mock(
+      async (_rows: readonly string[], _options?: PickOptions) => [""]
+    );
+
+    await runSessionizer({
+      workspaces: {
+        list: mock(async () => [testWorkspace()]),
+        create: mock(async (_options) => testWorkspace()),
+        focus: mock(async () => {}),
+      },
+      tabs: testTabs(),
+      panes: testPanes(),
+      config: {
+        ...testConfig(),
+        ui: { ...testConfig().ui, esc_creates: true },
+      },
+      pickRows,
+      listProjects: mock(() => ["/projects/fieldnotes"]),
+      createLayout: mock(async (workspace: Workspace) => workspace),
+      logger: { log: mock(() => {}), error: mock(() => {}) },
+      exit: (code) => {
+        throw new Error(`unexpected exit ${code}`);
+      },
+    });
+
+    expect(pickRows).toHaveBeenCalledWith(expect.any(Array), {
+      prompt: "Switch session (Esc for new): ",
+      header: "↑↓ navigate, Enter select, Esc → new project",
+      delimiter: WORKSPACE_ROW_DELIMITER,
+      withNth: "2",
+      preview: WORKSPACE_PREVIEW,
+      previewWindow: "right:50%",
+    });
   });
 
   it("exits with an error when no projects are found", async () => {

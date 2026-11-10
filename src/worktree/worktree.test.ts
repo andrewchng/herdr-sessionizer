@@ -854,6 +854,84 @@ describe("runWorktree", () => {
     expect(create).not.toHaveBeenCalled();
   });
 
+  it("cancels when Esc dismisses candidates and [ui].esc_creates is false", async () => {
+    const candidate: WorktreeCandidate = {
+      id: "local:feature/existing",
+      kind: "local-branch",
+      label: "local branch        feature/existing",
+      branch: "feature/existing",
+      previewPath: "/repo",
+    };
+    const pickWorktreeCandidate = mock(async () => null);
+    const promptBranch = mock(async () => "feature/new");
+    const create = mock(async () => testWorkspace());
+
+    await runWorktree(
+      [],
+      testRuntime({
+        config: {
+          projects: { roots: ["/repo"], git_only: false, depth: 1 },
+          ui: { placement: "overlay", esc_creates: false },
+          layout: { focus: "terminal" },
+          worktree: { github_prs: false },
+          tabs: [],
+        },
+        worktrees: {
+          open: mock(async () => {
+            throw new HerdrError(["worktree", "open"], 1, "not found");
+          }),
+          create,
+        },
+        discoverCandidates: mock(async () => [candidate]),
+        pickWorktreeCandidate,
+        promptBranch,
+      })
+    );
+
+    expect(pickWorktreeCandidate).toHaveBeenCalledWith(
+      [worktreeCandidateRow(candidate)],
+      {
+        prompt: "Worktree branch: ",
+        header: "Enter opens existing or creates from branch; Esc cancel",
+        delimiter: WORKTREE_CANDIDATE_ROW_DELIMITER,
+        withNth: "2,3",
+        preview: WORKTREE_CANDIDATE_PREVIEW,
+        previewWindow: "right:50%",
+      }
+    );
+    expect(promptBranch).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("cancels without prompting for a branch when there are no candidates and [ui].esc_creates is false", async () => {
+    const promptBranch = mock(async () => "feature/new");
+    const create = mock(async () => testWorkspace());
+
+    await runWorktree(
+      [],
+      testRuntime({
+        config: {
+          projects: { roots: ["/repo"], git_only: false, depth: 1 },
+          ui: { placement: "overlay", esc_creates: false },
+          layout: { focus: "terminal" },
+          worktree: { github_prs: false },
+          tabs: [],
+        },
+        worktrees: {
+          open: mock(async () => {
+            throw new HerdrError(["worktree", "open"], 1, "not found");
+          }),
+          create,
+        },
+        discoverCandidates: mock(async () => []),
+        promptBranch,
+      })
+    );
+
+    expect(promptBranch).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it("applies the layout when opening an existing worktree checkout", async () => {
     const candidate: WorktreeCandidate = {
       id: "worktree:/worktrees/repo/feature-test-flow",
